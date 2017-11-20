@@ -48,7 +48,7 @@ class OECT(object):
         Each DataFrame is Id-Vd, with index of DataFrame set to Vd.
         All other columns removed (Id-error, Ig, Ig-error)
     output_raw : dict
-        dit of DataFrames
+        dict of DataFrames
         same as output except columns maintained
     outputs : DataFrame
         Single DataFrame of all outputs in one file.
