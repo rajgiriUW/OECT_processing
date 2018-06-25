@@ -11,13 +11,13 @@ __email__ = "rgiri@uw.edu"
 
 import pandas as pd
 import os
-from matplotlib import pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
+
 from scipy import interpolate as spi
 from scipy import signal as sps
 import numpy as np
-from itertools import cycle
 
+
+from OECT_plotting import *
 
 def loadOECT(path):
     """
@@ -95,26 +95,6 @@ class OECT(object):
 
         self.num_outputs = 0
         self.num_transfers = 0
-
-
-    def transfer_curve(self, path):
-        """Loads Id-Vg transfer curve from a path"""
-        self.transfer_raw = pd.read_csv(path, delimiter='\t',
-                                        skipfooter=3, engine='python')
-        self.transfer = self.transfer_raw
-        self.transfer = self.transfer.drop(['I_DS Error (A)', 'I_G (A)',
-                                            'I_G Error (A)'], 1)
-        self.transfer = self.transfer.set_index('V_G')
-
-        h = open(path)
-        for line in h:
-
-            if 'V_DS' in line:
-                self.transfer_Vd = line.split()[-1]
-            if 'Averages' in line:
-                self.transfer_avgs = line.split()[-1]
-
-        h.close()
 
     def calc_gm(self):
         """
@@ -243,6 +223,26 @@ class OECT(object):
         self.transfers.columns
 
         return
+
+    def transfer_curve(self, path):
+        """Loads Id-Vg transfer curve from a path"""
+        self.transfer_raw = pd.read_csv(path, delimiter='\t',
+                                        skipfooter=3, engine='python')
+        self.transfer = self.transfer_raw
+        self.transfer = self.transfer.drop(['I_DS Error (A)', 'I_G (A)',
+                                            'I_G Error (A)'], 1)
+        self.transfer = self.transfer.set_index('V_G')
+
+        # Finds the parameters for this transfer Curve
+        h = open(path)
+        for line in h:
+
+            if 'V_DS' in line:
+                self.transfer_Vd = line.split()[-1]
+            if 'Averages' in line:
+                self.transfer_avgs = line.split()[-1]
+
+        h.close()
 
     def loaddata(self):
         """Loads transfer and output files from a folder"""

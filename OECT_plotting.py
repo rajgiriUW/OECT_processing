@@ -6,8 +6,12 @@ Created on Sun Nov 19 18:17:40 2017
 """
 
 from matplotlib import pyplot as plt
-import OECT
 
+from matplotlib import pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
+
+import OECT
+from itertools import cycle
 
 """ PLOTTING FUNCTIONS """
 def plot_transfer(dv):
@@ -32,7 +36,7 @@ def plot_outputs(dv):
 
     for k in dv.outputs.columns:
         plt.plot(dv.outputs.index, dv.outputs[k]*1000,
-                 linewidth=2, marker = mk.next(), markersize = 7)
+                 linewidth=2, marker = next(mk), markersize = 7)
 
     plt.legend(labels=dv.Vg_labels, frameon=False,
                fontsize=16, loc=4)
@@ -124,5 +128,5 @@ def plot_transfer_gms_total(dv):
 
     if any(dv.gm_bwd.values):
 
-        print 'a'
+        print( 'a')
         ax2.plot(dv.gm_bwd.index, dv.gm_bwd*1000, 'g', linewidth=2)
