@@ -16,10 +16,9 @@ from scipy import interpolate as spi
 from scipy import signal as sps
 import numpy as np
 
+import OECT_plotting 
 
-from OECT_plotting import *
-
-def loadOECT(path):
+def loadOECT(path, gm_plot=True):
     """
     Wrapper function for processing OECT data
 
@@ -30,11 +29,13 @@ def loadOECT(path):
 
     device = OECT(path)
     device.loaddata()
-    device.all_outputs()
     device.calc_gms()
 
-    plot_transfer_gm(device)
-    plot_outputs(device)
+    fig = OECT_plotting.plot_transfer_gm(device, gm_plot=gm_plot)
+    fig.savefig(path+r'\transfer.tif', format='tiff')
+
+    fig = OECT_plotting.plot_outputs(device)
+    fig.savefig(path+r'\output.tif', format='tiff')
 
     return device
 
@@ -79,8 +80,8 @@ class OECT(object):
         self.output_raw = {}
         self.outputs = pd.DataFrame()
 
-        self.transfer = []
-        self.transfer_raw = []
+        self.transfer = {}
+        self.transfer_raw = {}
         self.transfers = pd.DataFrame()
 
         self.Vg_array = []
@@ -88,23 +89,23 @@ class OECT(object):
         self.transfer_avgs = 1
         self.folder = folder
 
-        self.gm_fwd = pd.DataFrame()
-        self.gm_bwd = pd.DataFrame()
-        self.gms_fwd = pd.DataFrame()
-        self.gms_bwd = pd.DataFrame()
+        self.gm_fwd = {}
+        self.gm_bwd = {}
+        self.gms_fwd = {}
+        self.gms_bwd = {}
 
         self.num_outputs = 0
         self.num_transfers = 0
 
-    def calc_gm(self):
+    def calc_gm(self, df):
         """
         Calculates single gm curve in milli-Siemens
         Splits data into "forward" and "backward"
         Assumes curves taken neg to positive Vg
         """
 
-        v = np.array(self.transfer.index)
-        i = np.array(self.transfer.values)
+        v = np.array(df.index)
+        i = np.array(df.values)
 
         # creates resample voltage range for smoothed gm splines
         mx = np.argmax(v)
@@ -123,7 +124,7 @@ class OECT(object):
         
         funclo = spi.UnivariateSpline(v[0:mx], i[0:mx], k=4, s=s)
         gml = funclo.derivative()
-        self.gm_fwd = pd.DataFrame(data=gml(vl_lo),
+        gm_fwd = pd.DataFrame(data=gml(vl_lo),
                                    index=vl_lo)
         self.spline = pd.DataFrame(data=funclo(vl_lo),
                                    index=vl_lo)
@@ -132,13 +133,15 @@ class OECT(object):
         if mx != len(v)-1:
 
             vl_hi = np.arange(v[mx], v[-1], -0.01)
-            funchi = spi.UnivariateSpline(v[mx:], i[mx:], k=4, s=s)
+            funchi = spi.UnivariateSpline(v[mx:], i[mx:], k=4)
             gmh = funchi.derivative()
-            self.gm_bwd = pd.DataFrame(data=gmh(vl_hi),
+            gm_bwd = pd.DataFrame(data=gmh(vl_hi),
                                        index=vl_hi)
         else:
 
-            self.gm_bwd = pd.DataFrame()
+            gm_bwd = pd.DataFrame()
+            
+        return gm_fwd, gm_bwd
 
     def calc_gms(self):
         """
@@ -146,28 +149,12 @@ class OECT(object):
         Assigns each one to gm_fwd (forward) and gm_bwd (reverse)
         """
 
-        for i in self.transfers:
+        for i in self.transfer:
 
-            self.transfer = self.transfers[i]
-            self.calc_gm()
-
-            if self.gms_fwd.values.any():
-
-                self.gms_fwd[i] = self.gm_fwd
-
-            else:
-                self.gms_fwd = self.gm_fwd
-
-
-            if any(self.gm_bwd):
-
-                if self.gms_bwd.values.any():
-                    self.gms_bwd[i] = self.gm_bwd
-
-                else:
-                    self.gms_bwd = self.gm_bwd
-
+            self.gms_fwd[i], self.gms_bwd[i] = self.calc_gm(self.transfer[i])
+            
         return
+            
 
     def output_curve(self, path):
         """Loads Id-Vd output curves from a folder as Series in a list"""
@@ -198,6 +185,7 @@ class OECT(object):
         self.Vg_labels = []  # corrects for labels below
         for op in self.output:
 
+            print(op)
             self.Vg_labels.append(float(op))
             self.outputs[op] = self.output[op]['I_DS (A)'].values
             self.outputs = self.outputs.set_index(self.output[op].index)
@@ -206,44 +194,47 @@ class OECT(object):
 
         return
 
-    def all_transfers(self, path):
-
-        V = len(self.transfers.columns)
-
-        op = pd.read_csv(path, delimiter='\t', skipfooter=3, engine='python')
-        df = op
-        df = df.drop(['I_DS Error (A)','I_G (A)', 'I_G Error (A)'],1)
-        df = df.set_index('V_G')
-
-        if any(self.transfers.columns):
-            self.transfers[V] = df
-            return
-
-        self.transfers = df
-        self.transfers.columns
-
-        return
-
     def transfer_curve(self, path):
         """Loads Id-Vg transfer curve from a path"""
-        self.transfer_raw = pd.read_csv(path, delimiter='\t',
+        transfer_raw = pd.read_csv(path, delimiter='\t',
                                         skipfooter=3, engine='python')
-        self.transfer = self.transfer_raw
-        self.transfer = self.transfer.drop(['I_DS Error (A)', 'I_G (A)',
-                                            'I_G Error (A)'], 1)
-        self.transfer = self.transfer.set_index('V_G')
 
         # Finds the parameters for this transfer Curve
         h = open(path)
         for line in h:
 
             if 'V_DS' in line:
-                self.transfer_Vd = line.split()[-1]
+                transfer_Vd = line.split()[-1]
             if 'Averages' in line:
-                self.transfer_avgs = line.split()[-1]
+                transfer_avgs = line.split()[-1]
 
         h.close()
+        
+        self.transfer[transfer_Vd] = transfer_raw
+        self.transfer_raw[transfer_Vd] = transfer_raw
+        self.transfer[transfer_Vd] = self.transfer[transfer_Vd].drop(['I_DS Error (A)', 'I_G (A)', 
+                                                                     'I_G Error (A)'], 1)
+        self.transfer[transfer_Vd] = self.transfer[transfer_Vd].set_index('V_G')
 
+        return
+
+    def all_transfers(self):
+
+        """
+        Creates a single dataFrame with all transfer curves (in case more than 1)
+        This assumes that all data were taken at the same Vgs range
+        """
+        
+        self.Vd_labels = []
+        
+        for tf in self.transfer:
+            
+            self.Vd_labels.append(tf)
+            self.transfers[tf] = self.transfer[tf]['I_DS (A)'].values
+            self.transfers = self.transfers.set_index(self.transfer[tf].index)
+        
+        return
+        
     def loaddata(self):
         """Loads transfer and output files from a folder"""
 
@@ -254,7 +245,7 @@ class OECT(object):
         for t in files:
 
             if 'transfer' in t:
-                self.all_transfers(t)
+                self.transfer_curve(t)
 
             elif 'output' in t:
                 self.output_curve(t)
@@ -262,4 +253,9 @@ class OECT(object):
         self.num_transfers = len(self.transfers.columns)
         self.num_outputs = len(self.outputs.columns)
 
-        self.transfers = self.transfers.rename(columns={'I_DS (A)': 0})
+        self.all_transfers()
+        self.all_outputs()
+        
+        self.files = files
+        
+        return
