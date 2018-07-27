@@ -34,13 +34,22 @@ def load_avg(path, thickness = 30e-9):
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04']
     
-    pixels = {}
+    # removes all but the folders in pixel_names
+    f = filelist[:]
     for k in filelist:
         if k not in pixel_names:
-            filelist.remove(k)
+            f.remove(k)
+    filelist = f[:]
+    del f
     
     paths = [os.path.join(path, name) for name in filelist]
 
+    # removes random files instead of the sub-folders
+    for p in paths:
+        if not os.path.isdir(p):
+            paths.remove(p)
+
+    # loads all the folders
     for p, f in zip(paths, filelist):
         
         dv = loadOECT(p, params)
@@ -103,10 +112,12 @@ def uC_scale(path, thickness=30e-9):
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04']
     
-    pixel_names = []
+    f = filelist[:]
     for k in filelist:
         if k not in pixel_names:
-            filelist.remove(k)
+            f.remove(k)
+    filelist = f[:]
+    del f
 
     params_super = {'01': {'W': 2000e-6 ,'L': 20e-6, 'd': thickness},
                     '02': {'W': 1000e-6, 'L': 20e-6, 'd': thickness},
@@ -116,9 +127,29 @@ def uC_scale(path, thickness=30e-9):
 
     paths = [os.path.join(path, name) for name in filelist]
 
-    
+    # removes random files instead of the sub-folders
+    for p in paths:
+        if not os.path.isdir(p):
+            paths.remove(p)
+            
+    # loads all the folders
+    for p, f in zip(paths, filelist):
+        
+        dv = loadOECT(p, params_super[f])
+        pixels[f] = dv
 
-    return
+    # do uC* graphs, need gm vs W*d/L        
+    Wd_L = np.array([])
+    gms = np.array([])
+    
+    for f, pixel in zip(filelist, pixels):
+        Wd_L = np.append(Wd_L, params_super[f]['W']*thickness/params_super[f]['L'])
+        
+        c = list(pixels[pixel].gms_fwd.keys())[0]
+        gm = np.max(pixels[pixel].gms_fwd[c].values)
+        gms = np.append(gms, gm)
+        
+    return pixels, Wd_L, gms
 
 def loadOECT(path, params, gm_plot=True):
     """
@@ -139,7 +170,8 @@ def loadOECT(path, params, gm_plot=True):
     scaling = params['W'] * params['d']/params['L']
     
     for key in device.gms_fwd:
-        print(key,':', np.max(device.gms_fwd[key].values)/scaling, 'S/m'  )
+        print(key,':', np.max(device.gms_fwd[key].values)/scaling, 'S/m scaled'  )
+        print(key,':', np.max(device.gms_fwd[key].values), 'S max' )
 
     fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot)
     fig.savefig(path+r'\transfer.tif', format='tiff')
