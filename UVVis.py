@@ -95,9 +95,9 @@ class uv_vis(object):
             The spectra at each voltage in a large dataframe
         self.vt : pandas Series
             The voltage spectra at a particular wavelength (for threshold measurement)
-        self.time_spectra : pandas Series
+        self.time_spectra_norm : pandas Series
             Normalized Time spectra at a given wavelength and potential over time
-        self.time_spectra_raw : pandas Series
+        self.time_spectra : pandas Series
             Time spectra at a given wavelength and potential over time
         '''
         self.steps = steps
@@ -127,13 +127,6 @@ class uv_vis(object):
         which_run : int, optional
             Which run to select and save. By default is the last (the final time slice)
             
-        Returns
-        -------
-        df : pandas Dataframe
-        
-        vt: pandas Dataframe
-            voltage at each bias
-        
         '''  
         pp = pd.read_csv(self.specs[0], sep='\t')
         
@@ -156,19 +149,43 @@ class uv_vis(object):
         wl = idx.searchsorted(wavelength)
         vt = df.loc[idx[wl]]
         
-        self._single_wl_voltage(wavelength)
         self.spectra = df
+        self._single_wl_voltage(wavelength) # absorbance vs voltage @ a wavelength
         
-        return df, vt
+        return 
+
+    def single_wl_time(self, potential=0, wavelength=800):
+        '''
+        Extracts the time-dependent data from a single wavelength
+        
+        potential : float
+            Find run corresponding to potential
+            
+        wavelength : int, float
+            Wavelength to extract. This will search for nearest wavelength row
+            
+        '''
+        spectra_path = self.specs[self.volt(potential)]
+        df = self._single_time_spectra(spectra_path)
+        
+        idx = df.index
+        wl = idx.searchsorted(wavelength)
+        
+        data = df.loc[idx[wl]] - np.min(df.loc[idx[wl]])
+        data =  data / np.max(data)
+       
+        self.time_spectra = df.loc[idx[wl]]
+        self.time_spectra_norm = pd.Series(data.values, index=df.loc[idx[wl]].index)
+    
+        return 
     
     def _single_wl_voltage(self, wavelength=800):
         '''
-        Extracts the absorbance vs voltage at a particular wavelength
+        Extracts the absorbance vs voltage at a particular wavelength (threshold visualizing)
         '''
-        
-        idx = self.df[v].index
+        idx = self.spectra.index
         wl = idx.searchsorted(wavelength)
-        self.vt = self.df.loc[idx[wl]]
+        self.vt = self.spectra.loc[idx[wl]]
         
         return 
     
@@ -198,38 +215,7 @@ class uv_vis(object):
         
         return df
     
-    def single_wl_time(self, potential=0, wavelength=800):
-        '''
-        Extracts the time-dependent data from a single wavelength
-        
-        potential : float
-            Find run corresponding to potential
-            
-        wavelength : int, float
-            Wavelength to extract. This will search for nearest wavelength row
-            
-        Returns
-        -------
-        dfraw : Series
-            Pandas Series of the time-series at that wavelength
-        dfnorm : Series
-            Normalzied data from 0 to 1
-        
-        '''
-        spectra_path = self.specs[self.volt(potential)]
-        df = self._single_time_spectra(spectra_path)
-        
-        idx = df.index
-        wl = idx.searchsorted(wavelength)
-        
-        data = df.loc[idx[wl]] - np.min(df.loc[idx[wl]])
-        data =  data / np.max(data)
-       
-        self.time_spectra = df.loc[idx[wl]]
-        self.time_spectra_raw = pd.Series(data.values, index=df.loc[idx[wl]].index)
-    
-        return self.time_spectra, self.time_spectra_raw
-    
+
     def volt(self,bias):
         '''
         returns voltage from potential list
@@ -239,11 +225,15 @@ class uv_vis(object):
         
         return out
     
-def plot_time(uv, ax=None):
+def plot_time(uv, ax=None, norm=True):
     
     if ax == None:
         fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
-    uv.time_spectra.plot(ax=ax)
+    
+    if norm == True:
+        uv.time_spectra_norm.plot(ax=ax)
+    else:
+        uv.time_spectra.plot(ax=ax)
     ax.set_xlabel('Time (s)')
     ax.set_ylabel('Normalize absorbance (a.u.)')
     
@@ -260,12 +250,18 @@ def plot_spectra(uv, ax=None):
     
     return ax
 
-def plot_voltage(uv, ax=None):
-    
+def plot_voltage(uv, ax=None, norm=None):
+    '''
+    norm = normalize the threshold UV-Vis data
+    '''
     if ax == None:
         fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
     
-    ax.plot(uv.potentials*-1, uv.vt.values)
+    if norm == None:
+        ax.plot(uv.potentials*-1, uv.vt.values)
+    else:
+        numerator = (uv.vt.values-uv.vt.values.min())
+        ax.plot(uv.potentials*-1, numerator/numerator.max())
     ax.set_xlabel('Gate Bias (V)')
     ax.set_ylabel('Absorbance (a.u.)')
     

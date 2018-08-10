@@ -19,6 +19,60 @@ def plot_transfer(dv):
     plt.figure()
     plt.plot(dv.transfer.index, dv.transfer)
 
+def plot_transfer_avg(dv):
+    
+    fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
+    
+    plt.rc('axes', linewidth=4)
+    ax.tick_params(labeltop=False, labelright=False)
+    ax.tick_params(axis='both', length=10, width=3, which='major',
+                    bottom='on', left='on', right='on', top='on')
+    ax.tick_params(axis='both', length=6, width=3, which='minor',
+                    bottom='on', left='on', right='on', top='on')
+    plt.rcParams.update({'font.size': 14, 'font.weight': 'bold',
+                         'font.sans-serif': 'Arial'})
+
+    ax.plot(dv.index.values, dv.values*1000, marker='o')
+
+    ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial')
+    ax.set_xlabel('Vgs Voltage (V)', fontweight='bold', fontname='Arial')
+
+    xminor = AutoMinorLocator(4)
+    ax.xaxis.set_minor_locator(xminor)
+    xminor = AutoMinorLocator(4)
+    ax.yaxis.set_minor_locator(xminor)
+
+    plt.title('Average', y=1.05) 
+
+    return
+
+def plot_output_avg(dv):
+    
+    fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
+    
+    plt.rc('axes', linewidth=4)
+    ax.tick_params(labeltop=False, labelright=False)
+    ax.tick_params(axis='both', length=10, width=3, which='major',
+                    bottom='on', left='on', right='on', top='on')
+    ax.tick_params(axis='both', length=6, width=3, which='minor',
+                    bottom='on', left='on', right='on', top='on')
+    plt.rcParams.update({'font.size': 14, 'font.weight': 'bold',
+                         'font.sans-serif': 'Arial'})
+
+    ax.plot(dv.index.values, dv.values*1000, marker='o')
+
+    ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial')
+    ax.set_xlabel('Vds Voltage (V)', fontweight='bold', fontname='Arial')
+
+    xminor = AutoMinorLocator(4)
+    ax.xaxis.set_minor_locator(xminor)
+    xminor = AutoMinorLocator(4)
+    ax.yaxis.set_minor_locator(xminor)
+
+    plt.title('Output Average', y=1.05) 
+
+    return
+
 def plot_outputs(dv):
 
     fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
@@ -53,7 +107,7 @@ def plot_outputs(dv):
     
     return fig
 
-def plot_transfer_gm(dv, gm_plot=True):
+def plot_transfers_gm(dv, gm_plot=True):
 
     fig, ax1 = plt.subplots(facecolor='white', figsize=(10,8))
     ax2 = ax1.twinx()
