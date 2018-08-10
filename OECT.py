@@ -49,6 +49,7 @@ def load_avg(path, thickness = 30e-9):
         if not os.path.isdir(p):
             paths.remove(p)
 
+    pixels = {}
     # loads all the folders
     for p, f in zip(paths, filelist):
         
@@ -71,7 +72,10 @@ def load_avg(path, thickness = 30e-9):
    
     Id_Vg /= len(pixels)
     Id_Vg = pd.DataFrame(data= Id_Vg)
-    Id_Vg = Id_Vg.set_index(first_pxl.transfers.index)
+    try:
+        Id_Vg = Id_Vg.set_index(first_pxl.transfers.index)
+    except: 
+        Id_Vg = Id_Vg.set_index(pixels[list(pixels.keys())[-1]])
     
     # average Id-Vd at max Vd
     Id_Vd = []
@@ -92,7 +96,11 @@ def load_avg(path, thickness = 30e-9):
    
     Id_Vd /= len(pixels)
     Id_Vd = pd.DataFrame(data= Id_Vd)
-    Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[0]].outputs[volt].index)
+    
+    try:
+        Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[0]].outputs[volt].index)
+    except:
+        Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[-1]].outputs[volt].index)
         
     return pixels, Id_Vg, Id_Vd
 
@@ -131,7 +139,8 @@ def uC_scale(path, thickness=30e-9):
     for p in paths:
         if not os.path.isdir(p):
             paths.remove(p)
-            
+    
+    pixels = {}
     # loads all the folders
     for p, f in zip(paths, filelist):
         
@@ -262,6 +271,10 @@ class OECT(object):
 
         # creates resample voltage range for smoothed gm splines
         mx = np.argmax(v)
+        
+        if mx == 0 :
+            mx = np.argmin(v)
+        
         vl_lo = np.arange(v[0], v[mx], 0.01)
 
         #Savitsky-Golay method
