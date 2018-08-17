@@ -20,7 +20,7 @@ import os
 
 import OECT_plotting 
 
-def load_avg(path, thickness = 30e-9):
+def load_avg(path, thickness = 30e-9, plot=True):
     '''
     averages data in this particular path (for folders 'avg')
     
@@ -72,10 +72,17 @@ def load_avg(path, thickness = 30e-9):
    
     Id_Vg /= len(pixels)
     Id_Vg = pd.DataFrame(data= Id_Vg)
+    
     try:
         Id_Vg = Id_Vg.set_index(first_pxl.transfers.index)
     except: 
         Id_Vg = Id_Vg.set_index(pixels[list(pixels.keys())[-1]])
+    
+    # find gm of the average
+    temp_dv = OECT(path, params)
+    Id_Vg['gm'] = temp_dv.calc_gm(Id_Vg)[0]
+    Id_Vg = Id_Vg.rename(columns = {0: 'avg'}) # fix a naming bug
+    del temp_dv
     
     # average Id-Vd at max Vd
     Id_Vd = []
@@ -86,7 +93,7 @@ def load_avg(path, thickness = 30e-9):
     
     for dv in pixels:
     
-        if not any(Id_Vg):
+        if not any(Id_Vd):
             
             Id_Vd = pixels[dv].outputs[volt].values
         
@@ -101,7 +108,13 @@ def load_avg(path, thickness = 30e-9):
         Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[0]].outputs[volt].index)
     except:
         Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[-1]].outputs[volt].index)
-        
+    
+    if plot:
+            fig = OECT_plotting.plot_transfer_avg(Id_Vg)
+            fig.savefig(path+r'\transfer_avg.tif', format='tiff')
+            fig = OECT_plotting.plot_output_avg(Id_Vd)
+            fig.savefig(path+r'\output_avg.tif', format='tiff')
+    
     return pixels, Id_Vg, Id_Vd
 
 
@@ -182,10 +195,14 @@ def loadOECT(path, params, gm_plot=True):
         print(key,':', np.max(device.gms_fwd[key].values)/scaling, 'S/m scaled'  )
         print(key,':', np.max(device.gms_fwd[key].values), 'S max' )
 
-    fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot)
-    fig.savefig(path+r'\transfer.tif', format='tiff')
+    fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
+    fig.savefig(path+r'\transfer_leakage.tif', format='tiff')
+    fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=False)
+    fig.savefig(path+r'\transfer.tif', format='tiff')   
 
-    fig = OECT_plotting.plot_outputs(device)
+    fig = OECT_plotting.plot_outputs(device, leakage=True)
+    fig.savefig(path+r'\output_leakage.tif', format='tiff')
+    fig = OECT_plotting.plot_outputs(device, leakage=False)
     fig.savefig(path+r'\output.tif', format='tiff')
 
     return device
