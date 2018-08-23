@@ -9,8 +9,10 @@
 (05 being a copy of any of the avg pixels)
 
 Where you set variables:
+```
   path_avg = r'.../avg'
   path_uC = r'.../uC' 
+```
 
 and replace '...' with the actual system path
 
