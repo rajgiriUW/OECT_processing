@@ -19,7 +19,6 @@ and replace '...' with the actual system path
 #### Usage (in Spyder or equivalent):
 ```
 >> import OECT, OECT_plotting, OECT_loading
->> path_avg = r'path_to_avg_folder' 
 >> pixels, Id_Vg, Id_Vd = OECT_loading.load_avg(path_avg, thickness=100e-9, plot=True)
 >> pixels, Wd_L, gms = OECT_loading.uC_scale(path_uC, thickness=100e-9, plot=True
 ```
