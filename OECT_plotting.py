@@ -32,7 +32,7 @@ def plot_transfer_avg(dv):
                          'font.sans-serif': 'Arial'})
 
     ax.plot(dv.index.values, dv['avg'].values*1000, marker='o')
-    ax2.plot(dv.index.values, dv['gm'], linestyle='--')
+    ax2.plot(dv.index.values, dv['gm']*1000, linestyle='--')
     ax2.set_ylabel('Transconductance (mS)', rotation=-90, labelpad=20,
                    fontweight='bold', fontname='Arial', fontsize=18)
 
@@ -78,7 +78,9 @@ def plot_output_avg(dv):
 def plot_outputs(dv, leakage=False):
 
     fig, ax = plt.subplots(facecolor='white', figsize=(12,8))
-    ax2 = ax.twinx()
+    
+    if leakage:
+        ax2 = ax.twinx()
     
     plt.rc('axes', linewidth=4)
     ax.tick_params(labeltop=False, labelright=False)
@@ -210,5 +212,4 @@ def plot_transfer_gms_total(dv):
 
     if any(dv.gm_bwd.values):
 
-        print( 'a')
         ax2.plot(dv.gm_bwd.index, dv.gm_bwd*1000, 'g', linewidth=2)
