@@ -114,8 +114,6 @@ class OECT(object):
 
         #univariate spline method
         s = 1e-7
-        if v[2] - v[1] > 0.01:
-            s = 1e-15
         
 #        funclo = spi.UnivariateSpline(v[0:mx], i[0:mx], k=4, s=s)
 #        gml = funclo.derivative()
@@ -247,7 +245,48 @@ class OECT(object):
             self.transfers = self.transfers.set_index(self.transfer[tf].index)
         
         return
+    
+    def thresh(self):
+        """
+        Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
+            x-offset
+        """
         
+        Vts = np.array([])
+        
+        # is there a forward/reverse sweep
+        # lo = -0.7 to 0.3, e.g and hi = 0.3 to -0.7, e.g
+        mx = np.argmax(np.array(self.transfers.index))
+        v_lo = self.transfers.index
+        reverse = False
+        if mx != len(v_lo)-1:
+            reverse = True
+            v_lo = self.transfers.index[:mx]
+            v_hi = self.transfers.index[mx:]
+        
+        for tf in self.transfers:
+        
+            # use second derivative to find inflection, then fit line to get Vt
+            Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
+            d2 = np.gradient(np.gradient(Id_lo))
+            fit_lo = v_lo[:np.argmax(d2)] # voltages up until inflection
+            
+            # fits line, finds threshold from x-intercept
+            fit = np.polyfit(fit_lo, Id_lo[:np.argmax(d2)],1)
+            Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
+            
+            if reverse:
+                Id_hi = np.sqrt(np.abs(self.transfers[tf]).values[mx:])
+                d2 = np.gradient(np.gradient(Id_hi))
+                fit_hi = v_hi[:np.argmax(d2)] # voltages up until inflection
+            
+                fit = np.polyfit(fit_hi, Id_hi[:np.argmax(d2)],1)
+                Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
+        
+        self.Vt = np.mean(Vts)
+        
+        return
+    
     def loaddata(self):
         """Loads transfer and output files from a folder"""
 

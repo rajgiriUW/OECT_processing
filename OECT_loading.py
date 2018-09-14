@@ -27,6 +27,18 @@ def load_avg(path, thickness = 30e-9, plot=True):
     path should be to folder '.../avg' 
     
     thickness  of the film
+    
+    Returns
+    -------
+    pixels : dict of OECT
+        Contains the various OECT class devices
+        
+    Id_Vg : pandas dataframe
+        Contains the averaged Id vs Vg (drain current vs gate voltage, transfer)
+        
+    Id_Vd : pandas dataframe
+        Contains the averaged Id vs Vg (drain current vs drain voltages, output)
+        
     '''
 
     params = {'W': 100e-6, 'L': 100e-6, 'd': thickness}
@@ -129,6 +141,20 @@ def uC_scale(path, thickness=30e-9, plot=True):
     From Lucas:
         100umx100 um on the top 4 and 2000/20 1000/20 200/20 50/20 for the bottom row
     
+    Returns
+    -------
+    pixels : dict of OECT
+        Contains the various OECT class devices
+        
+    Wd_L : ndarray
+        coefficient for plotting on x-axis
+    
+    gms : ndarray
+        average transconductance for plotting on y-axis
+    
+    Vg_Vt : ndarray
+        threshold voltage shifts for correcting uC* fit
+    
     '''
     
     filelist = os.listdir(path)
@@ -164,6 +190,7 @@ def uC_scale(path, thickness=30e-9, plot=True):
 
     # do uC* graphs, need gm vs W*d/L        
     Wd_L = np.array([])
+    Vg_Vt = np.array([]) # threshold offset
     gms = np.array([])
     
     for f, pixel in zip(filelist, pixels):
@@ -171,17 +198,25 @@ def uC_scale(path, thickness=30e-9, plot=True):
         
         c = list(pixels[pixel].gms_fwd.keys())[0]
         gm = np.max(pixels[pixel].gms_fwd[c].values)
+        Vg = pixels[pixel].gms_fwd[c].index[np.argmax(pixels[pixel].gms_fwd[c].values)]
+        Vg_Vt = np.append(Vg_Vt, Vg - pixels[pixel].Vt)
         gms = np.append(gms, gm)
+
+    uC = np.polyfit(Wd_L*Vg_Vt, gms, 1)
         
     if plot:
         
         fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
-        ax.plot(Wd_L*1e9, gms*1000, 's')
+        ax.plot(Wd_L*1e9, gms*1000, 's', markersize=6)
         ax.set_xlabel('Wd/L (nm)')
         ax.set_ylabel('gm (mS)')
         fig.savefig(path+r'\scaling_uC.tif', format='tiff')
         
-    return pixels, Wd_L, gms
+        Wd_L_fitx = np.arange(Wd_L[-1], Wd_L[0], 1e-9)
+        ax.plot(Wd_L_fitx*1e9, (uC[0]*Wd_L_fitx + uC[1])*1000, 'k--')
+
+        
+    return pixels, Wd_L, gms, Vg_Vt
 
 def loadOECT(path, params, gm_plot=True):
     """
@@ -198,6 +233,7 @@ def loadOECT(path, params, gm_plot=True):
     device = OECT.OECT(path, params)
     device.loaddata()
     device.calc_gms()
+    device.thresh()
     
     scaling = params['W'] * params['d']/params['L']
     
