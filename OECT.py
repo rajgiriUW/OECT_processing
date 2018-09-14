@@ -269,25 +269,31 @@ class OECT(object):
             # use second derivative to find inflection, then fit line to get Vt
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
             d2 = np.gradient(np.gradient(Id_lo))
-            mx = np.argmax(d2)
+            mxd2 = np.argmax(d2)
             #error checks
-            if mx == 0:
+            if mxd2 == 0:
                 
-                mx = np.argmax(d2[1:])-1
+                mxd2 = np.argmax(d2[1:])-1
             
-            fit_lo = v_lo[:mz] # voltages up until inflection
+            fit_lo = v_lo[:mxd2] # voltages up until inflection
             
             # fits line, finds threshold from x-intercept
-            fit = np.polyfit(fit_lo, Id_lo[:mx],1)
+            fit = np.polyfit(fit_lo, Id_lo[:mxd2],1)
             Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
             
             if reverse:
                 Id_hi = np.sqrt(np.abs(self.transfers[tf]).values[mx:])
                 d2 = np.gradient(np.gradient(Id_hi))
-                mx = np.argmax(d2)
-                fit_hi = v_hi[:mx] # voltages up until inflection
+                mxd2 = np.argmax(d2)
+                if mxd2 == 0:
+                
+                    mxd2 = np.argmax(d2[1:])-1
+                    
+                fit_hi = v_hi[:mxd2] # voltages up until inflection
+                print(fit_hi)
+                print(Id_hi)
             
-                fit = np.polyfit(fit_hi, Id_hi[:mx],1)
+                fit = np.polyfit(fit_hi, Id_hi[:mxd2],1)
                 Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
         
         self.Vt = np.mean(Vts)
