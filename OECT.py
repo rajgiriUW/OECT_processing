@@ -56,6 +56,8 @@ class OECT(object):
         Transconductance for forward sweep (in Siemens)
     gm_bwd : DataFrame
         Transconductance for reverse sweep (in Siemens)
+    Vt : float
+        Threshold voltage calculated from sqrt(Id) fit
     """
 
     def __init__(self, folder, params={}):
@@ -85,6 +87,7 @@ class OECT(object):
         self.L = params['L']
         self.d = params['d']
         
+        self.Vt = np.nan
 
     def calc_gm(self, df):
         """
@@ -246,10 +249,15 @@ class OECT(object):
         
         return
     
-    def thresh(self):
+    def thresh(self, negative_Vt = True):
         """
         Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
             x-offset
+            
+        negative_Vt : bool
+            assumes Threshold is a negative value (typical for p-type polymers)
+            
+        Uses a spline to fit Id curve first
         """
         
         Vts = np.array([])
@@ -264,34 +272,25 @@ class OECT(object):
             v_lo = self.transfers.index[:mx]
             v_hi = self.transfers.index[mx:]
         
+        # Find and fit at inflection between regimes
         for tf in self.transfers:
         
             # use second derivative to find inflection, then fit line to get Vt
+            #univariate spline method to find Id
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
-            d2 = np.gradient(np.gradient(Id_lo))
-            mxd2 = np.argmax(d2)
-            #error checks
-            if mxd2 == 0:
-                
-                mxd2 = np.argmax(d2[1:])-1
-            
-            fit_lo = v_lo[:mxd2] # voltages up until inflection
+
+            mx_d2 = self._find_peak(Id_lo, v_lo)
+            fit_lo = v_lo[:mx_d2] # voltages up until inflection
             
             # fits line, finds threshold from x-intercept
-            fit = np.polyfit(fit_lo, Id_lo[:mxd2],1)
+            fit = np.polyfit(fit_lo, Id_lo[:mx_d2],1)
             Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
             
             if reverse:
                 Id_hi = np.sqrt(np.abs(self.transfers[tf]).values[mx:])
-                d2 = np.gradient(np.gradient(Id_hi))
-                mxd2 = np.argmax(d2)
-                if mxd2 == 0:
                 
-                    mxd2 = np.argmax(d2[1:])-1
-                    
+                mxd2 = self._find_peak(Id_hi, v_hi)
                 fit_hi = v_hi[:mxd2] # voltages up until inflection
-                print(fit_hi)
-                print(Id_hi)
             
                 fit = np.polyfit(fit_hi, Id_hi[:mxd2],1)
                 Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
@@ -299,6 +298,42 @@ class OECT(object):
         self.Vt = np.mean(Vts)
         
         return
+    
+    def _find_peak(Id, Vg, negative_Vt = True):
+        '''
+        Uses spline to find the transition point then return it for fitting Vt
+          to sqrt(Id) vs Vg
+        
+        Id : array
+            Id vs Vg, currents
+            
+        Vg : array
+            Id vs Vg, voltages
+        
+        negative_Vt : bool
+            Assumes Vt is a negative voltage (typical for many p-type polymer)
+        '''
+        
+        Id_spl = spi.UnivariateSpline(Vg, Id, k=4, s=1e-7)
+        V_spl= np.arange(Vg[0], Vg[-1], 0.01)
+        d2 = np.gradient(np.gradient(Id_spl(V_spl)))
+          
+        peaks = sps.find_peaks_cwt(d2, np.arange(1,15))
+        
+        if negative_Vt:
+                
+            peaks = peaks[np.where(V_spl[peaks] < 0)]
+            mx_d2 = peaks[-1] #peak closest to 0 V
+            
+        else:
+                
+            peaks = peaks[np.where(V_spl[peaks] > 0)]
+            mx_d2 = peaks[0] #peak closest to 0 V
+        
+        # find splined index in original array
+        mx_d2 = np.searchsorted(Vg, V_spl[mx_d2]) 
+        
+        return mx_d2
     
     def loaddata(self):
         """Loads transfer and output files from a folder"""
