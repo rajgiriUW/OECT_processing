@@ -208,7 +208,7 @@ def uC_scale(path, thickness=30e-9, plot=True):
         
         fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
         ax.plot(Wd_L*1e9, gms*1000, 's', markersize=6)
-        ax.set_xlabel('Wd/L (nm)')
+        ax.set_xlabel('Wd/L * (Vg-Vt) (nm*V)')
         ax.set_ylabel('gm (mS)')
         fig.savefig(path+r'\scaling_uC.tif', format='tiff')
         

@@ -289,6 +289,9 @@ class OECT(object):
             if reverse:
                 Id_hi = np.sqrt(np.abs(self.transfers[tf]).values[mx:])
                 
+                Id_hi = np.flip(Id_hi)
+                v_hi = np.flip(v_hi)
+                
                 mxd2 = self._find_peak(Id_hi, v_hi)
                 fit_hi = v_hi[:mxd2] # voltages up until inflection
             
@@ -299,7 +302,7 @@ class OECT(object):
         
         return
     
-    def _find_peak(Id, Vg, negative_Vt = True):
+    def _find_peak(self, Id, Vg, negative_Vt = True):
         '''
         Uses spline to find the transition point then return it for fitting Vt
           to sqrt(Id) vs Vg
