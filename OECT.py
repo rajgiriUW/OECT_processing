@@ -16,10 +16,6 @@ from scipy import interpolate as spi
 from scipy import signal as sps
 import numpy as np
 
-import os
-
-import OECT_plotting 
-
 class OECT(object):
     """
     Attributes

@@ -8,7 +8,6 @@ Created on Sun Nov 19 18:17:40 2017
 from matplotlib import pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 
-import OECT
 from itertools import cycle
 
 """ PLOTTING FUNCTIONS """
