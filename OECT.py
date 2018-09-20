@@ -14,6 +14,8 @@ import os
 
 from scipy import interpolate as spi
 from scipy import signal as sps
+from scipy.optimize import curve_fit as cf
+
 import numpy as np
 
 class OECT(object):
@@ -49,9 +51,13 @@ class OECT(object):
     folder : string
         path to data folder on the computer
     gm_fwd : DataFrame
-        Transconductance for forward sweep (in Siemens)
+        Transconductance for forward sweep (in Siemens) as one DataFrame
     gm_bwd : DataFrame
-        Transconductance for reverse sweep (in Siemens)
+        Transconductance for reverse sweep (in Siemens) as one DataFrame
+    gms_fwd : dict
+        dict of Dataframes of all forward sweep gms
+    gms_bwd : dict    
+        dict of Dataframes of all backward sweep gms
     Vt : float
         Threshold voltage calculated from sqrt(Id) fit
     """
@@ -73,8 +79,8 @@ class OECT(object):
 
         self.gm_fwd = {}
         self.gm_bwd = {}
-        self.gms_fwd = {}
-        self.gms_bwd = {}
+        self.gms_fwd = pd.DataFrame()
+        self.gms_bwd = pd.DataFrame()
 
         self.num_outputs = 0
         self.num_transfers = 0
@@ -85,7 +91,7 @@ class OECT(object):
         
         self.Vt = np.nan
 
-    def calc_gm(self, df):
+    def _calc_gm(self, df):
         """
         Calculates single gm curve in milli-Siemens
         Splits data into "forward" and "backward"
@@ -131,13 +137,19 @@ class OECT(object):
 #                                       index=vl_hi)
         funclo = np.polyfit(v[0:mx], i[0:mx], 8)
         gml = np.gradient(np.polyval(funclo, v[0:mx]), (v[2]-v[1]))
-        gm_fwd = pd.DataFrame(data=gml, index=v[0:mx])
+        gm_fwd = pd.DataFrame(data=gml, index=v[0:mx], columns=['gm'])
+        gm_fwd.index.name = 'Voltage (V)'
 
         if mx != len(v)-1:
-            vl_hi = np.arange(v[mx], v[-1], -0.01)
-            funchi = np.polyfit(v[mx:], i[mx:], 8)
-            gmh = np.gradient(np.polyval(funchi, v[mx:]),  (v[2]-v[1]))
-            gm_bwd = pd.DataFrame(data=gmh, index=v[mx:])
+            # vl_hi = np.arange(v[mx], v[-1], -0.01)
+            
+            vl_hi = np.flip(v[mx:])
+            i_hi = np.flip(i[mx:])
+            funchi = np.polyfit(vl_hi, i_hi, 8)
+            
+            gmh = np.gradient(np.polyval(funchi, vl_hi),  (vl_hi[2]-vl_hi[1]))
+            gm_bwd = pd.DataFrame(data=gmh, index=vl_hi, columns=['gm'])
+            gm_bwd.index.name = 'Voltage (V)'
 
         else:
 
@@ -148,13 +160,34 @@ class OECT(object):
     def calc_gms(self):
         """
         Calculates all the gms in the set of data.
-        Assigns each one to gm_fwd (forward) and gm_bwd (reverse)
+        Assigns each one to gm_fwd (forward) and gm_bwd (reverse) as a dict
+        
+        Creates a single dataFrame gms_fwd and another gms_bwd
         """
 
         for i in self.transfer:
 
-            self.gms_fwd[i], self.gms_bwd[i] = self.calc_gm(self.transfer[i])
+            self.gm_fwd[i], self.gm_bwd[i] = self._calc_gm(self.transfer[i])
             
+        # assemble the gms into single dataframes
+        for g in self.gm_fwd:
+            
+            gm_fwd = self.gm_fwd[g]
+            
+            if not gm_fwd.empty:
+            
+                self.gms_fwd[g] = self.gm_fwd[g]['gm'].values
+                self.gms_fwd = self.gms_fwd.set_index(self.gm_fwd[g].index)
+        
+        for g in self.gm_bwd:
+        
+            gm_bwd = self.gm_bwd[g]
+            
+            if not gm_bwd.empty:
+                
+                self.gms_bwd[g] = self.gm_bwd[g]['gm'].values
+                self.gms_bwd = self.gms_bwd.set_index(self.gm_bwd[g].index)
+        
         return
             
 
@@ -268,6 +301,33 @@ class OECT(object):
             v_lo = self.transfers.index[:mx]
             v_hi = self.transfers.index[mx:]
         
+        else:
+            v_lo = self.transfers.index[:mx]
+        
+        # linear curve-fitting
+        def line_f(x, f0, f1):
+        
+            return f1 + f0*x
+        
+        # find minimum residual through fitting a line to several found peaks
+        def _min_fit(Id, V):
+        
+            _residuals = np.array([])
+            _fits = np.array([0,0])
+            mx_d2 = self._find_peak(Id, V)
+            
+            for m in mx_d2:
+            
+                fit, _ = cf(line_f, V[:m], Id[:m], bounds=([-np.inf, -np.inf], [0, np.inf]))
+                _res = np.sum( np.array((Id[:m] - line_f(V[:m], fit[0], fit[1])) **2))
+                _fits = np.vstack((_fits,fit))
+                _residuals = np.append(_residuals, _res)
+                
+            _fits = _fits[1:, :]
+            fit = _fits[np.argmin(_residuals),:]
+            
+            return fit
+        
         # Find and fit at inflection between regimes
         for tf in self.transfers:
         
@@ -275,26 +335,24 @@ class OECT(object):
             #univariate spline method to find Id
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
 
-            mx_d2 = self._find_peak(Id_lo, v_lo)
-            fit_lo = v_lo[:mx_d2] # voltages up until inflection
+            # minimize residuals by finding right peak
+            fit = _min_fit(Id_lo, v_lo)
             
             # fits line, finds threshold from x-intercept
-            fit = np.polyfit(fit_lo, Id_lo[:mx_d2],1)
             Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
             
             if reverse:
                 Id_hi = np.sqrt(np.abs(self.transfers[tf]).values[mx:])
                 
+                # so signs on gradient work
                 Id_hi = np.flip(Id_hi)
                 v_hi = np.flip(v_hi)
                 
-                mxd2 = self._find_peak(Id_hi, v_hi)
-                fit_hi = v_hi[:mxd2] # voltages up until inflection
-            
-                fit = np.polyfit(fit_hi, Id_hi[:mxd2],1)
+                fit = _min_fit(Id_hi, v_hi)
                 Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
         
         self.Vt = np.mean(Vts)
+        self.Vts = Vts
         
         return
     
@@ -318,20 +376,19 @@ class OECT(object):
         d2 = np.gradient(np.gradient(Id_spl(V_spl)))
           
         peaks = sps.find_peaks_cwt(d2, np.arange(1,15))
+        peaks = peaks[peaks > 5] #edge errors
         
         if negative_Vt:
                 
             peaks = peaks[np.where(V_spl[peaks] < 0)]
-            mx_d2 = peaks[-1] #peak closest to 0 V
             
         else:
                 
             peaks = peaks[np.where(V_spl[peaks] > 0)]
-            mx_d2 = peaks[0] #peak closest to 0 V
         
         # find splined index in original array
-        mx_d2 = np.searchsorted(Vg, V_spl[mx_d2]) 
-        
+        mx_d2 = [np.searchsorted(Vg, V_spl[p]) for p in peaks]
+    
         return mx_d2
     
     def loaddata(self):

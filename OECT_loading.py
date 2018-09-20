@@ -14,13 +14,15 @@ from matplotlib import pyplot as plt
 import OECT_plotting 
 import OECT
 
+from scipy.optimize import curve_fit as cf
+
 '''
 Load_avg : for loading all the subfolders that are the 4 "averaging" pixels
 load_uC : for loading the four pixels to generate a uC* plot
 
 '''
 
-def load_avg(path, thickness = 30e-9, plot=True):
+def load_avg(path, thickness = 40e-9, plot=True):
     '''
     averages data in this particular path (for folders 'avg')
     
@@ -65,7 +67,7 @@ def load_avg(path, thickness = 30e-9, plot=True):
     # loads all the folders
     for p, f in zip(paths, filelist):
         
-        dv = loadOECT(p, params, gm_plot=plot)
+        dv = loadOECT(p, params, gm_plot=plot, plot=plot)
         pixels[f] = dv
     
     # average Id-Vg
@@ -92,8 +94,10 @@ def load_avg(path, thickness = 30e-9, plot=True):
     
     # find gm of the average
     temp_dv = OECT.OECT(path, params)
-    Id_Vg['gm'] = temp_dv.calc_gm(Id_Vg)[0]
-    Id_Vg = Id_Vg.rename(columns = {0: 'avg'}) # fix a naming bug
+    _gm_fwd, _gm_bwd = temp_dv._calc_gm(Id_Vg)
+    Id_Vg['gm_fwd'] = _gm_fwd
+    Id_Vg['gm_bwd'] = _gm_bwd
+    Id_Vg = Id_Vg.rename(columns = {0: 'Id average'}) # fix a naming bug
     del temp_dv
     
     # average Id-Vd at max Vd
@@ -130,7 +134,7 @@ def load_avg(path, thickness = 30e-9, plot=True):
     return pixels, Id_Vg, Id_Vd
 
 
-def uC_scale(path, thickness=30e-9, plot=True):
+def uC_scale(path, thickness=40e-9, plot=True):
     '''
     01 = 2000/20
     02 = 1000/20
@@ -185,40 +189,99 @@ def uC_scale(path, thickness=30e-9, plot=True):
     # loads all the folders
     for p, f in zip(paths, filelist):
         
-        dv = loadOECT(p, params_super[f], gm_plot=plot)
+        dv = loadOECT(p, params_super[f], gm_plot=plot, plot=plot)
         pixels[f] = dv
 
     # do uC* graphs, need gm vs W*d/L        
     Wd_L = np.array([])
     Vg_Vt = np.array([]) # threshold offset
+    Vt = np.array([])
     gms = np.array([])
     
     for f, pixel in zip(filelist, pixels):
         Wd_L = np.append(Wd_L, params_super[f]['W']*thickness/params_super[f]['L'])
         
-        c = list(pixels[pixel].gms_fwd.keys())[0]
-        gm = np.max(pixels[pixel].gms_fwd[c].values)
-        Vg = pixels[pixel].gms_fwd[c].index[np.argmax(pixels[pixel].gms_fwd[c].values)]
-        Vg_Vt = np.append(Vg_Vt, Vg - pixels[pixel].Vt)
-        gms = np.append(gms, gm)
-
-    uC = np.polyfit(Wd_L*Vg_Vt, gms, 1)
+        # peak gms
+        reverse = False
+        c = list(pixels[pixel].gm_fwd.keys())[0]
         
+        if not pixels[pixel].gm_fwd[c].empty:
+            
+            gm_fwd = np.max(pixels[pixel].gm_fwd[c].values)
+            gm_argmax = np.argmax(pixels[pixel].gm_fwd[c].values)
+            
+            Vg_fwd = pixels[pixel].gm_fwd[c].index[gm_argmax]
+            Vg_Vt_fwd = pixels[pixel].Vts[0] - Vg_fwd
+        
+        # backwards
+        c = list(pixels[pixel].gm_bwd.keys())[0]
+        
+        if not pixels[pixel].gm_bwd[c].empty:
+            reverse = True
+            gm_bwd = np.max(pixels[pixel].gm_bwd[c].values)
+        
+            gm_argmax = np.argmax(pixels[pixel].gm_bwd[c].values)
+            Vg_bwd = pixels[pixel].gm_bwd[c].index[gm_argmax]
+            Vt = np.append(Vt, pixels[pixel].Vts[1])
+            Vg_Vt_bwd = pixels[pixel].Vts[1] - Vg_bwd
+        
+        if reverse:
+            gm = np.mean([gm_fwd, gm_bwd])
+            gms = np.append(gms, gm)
+            
+            Vg_Vt = np.append(Vg_Vt, np.mean([Vg_Vt_fwd, Vg_Vt_bwd]))
+            
+        else:
+            gms = np.append(gms, gm_fwd)
+            Vg_Vt = np.append(Vg_Vt, pixels[pixel].Vts[0] - Vg_fwd)
+        
+        Vt = np.append(Vt, pixels[pixel].Vt)
+            
+    # fit functions
+    def line_f(x, a, b):
+        
+        return a + b*x
+    
+    def line_0(x, b):
+        'no y-offset --> better log-log fits'
+        return b * x
+
+    # * 1e2 to get into right mobility units (cm)
+    uC_0, _ = cf(line_0, Wd_L*Vg_Vt, gms)
+    uC, _ = cf(line_f, Wd_L*Vg_Vt, gms)
+
     if plot:
         
         fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
-        ax.plot(Wd_L*1e9, gms*1000, 's', markersize=6)
-        ax.set_xlabel('Wd/L * (Vg-Vt) (nm*V)')
+        ax.plot(np.abs(Wd_L*Vg_Vt)*1e2, gms*1000, 's', markersize=10, color='b')
+        ax.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
         ax.set_ylabel('gm (mS)')
+        ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
+        ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
         fig.savefig(path+r'\scaling_uC.tif', format='tiff')
         
-        Wd_L_fitx = np.arange(Wd_L[-1], Wd_L[0], 1e-9)
-        ax.plot(Wd_L_fitx*1e9, (uC[0]*Wd_L_fitx + uC[1])*1000, 'k--')
-
+        Wd_L_fitx = np.arange(Wd_L[-1]*Vg_Vt[-1], Wd_L[0]*Vg_Vt[0], 1e-9)
+        ax.plot(Wd_L_fitx*1e2, (uC[1]*Wd_L_fitx + uC[0])*1000, 'k--')
+        ax.plot(Wd_L_fitx*1e2, (uC_0[0]*Wd_L_fitx)*1000, 'r--')
+        ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
+        fig.savefig(path+r'\scaling_uC_+fit.tif', format='tiff')
         
-    return pixels, Wd_L, gms, Vg_Vt
+        fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.plot(np.abs(Wd_L*Vg_Vt)*1e2, gms, 's', markersize=6)
+        ax.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
+        ax.set_ylabel('gm (S)')
+        ax.plot(Wd_L_fitx*1e2, (uC[1]*Wd_L_fitx + uC[0]), 'k--')
+        ax.plot(Wd_L_fitx*1e2, (uC_0[0]*Wd_L_fitx), 'r--')
+        ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
+        fig.savefig(path+r'\scaling_uC_loglog.tif', format='tiff')
+        
+        print('uC* = ',str(uC_0*1e-2),' F/cm*V*s')
+        
+    return pixels, Wd_L, gms, Vg_Vt, uC
 
-def loadOECT(path, params, gm_plot=True):
+def loadOECT(path, params, gm_plot=True, plot=True):
     """
     Wrapper function for processing OECT data
 
@@ -241,14 +304,16 @@ def loadOECT(path, params, gm_plot=True):
         print(key,':', np.max(device.gms_fwd[key].values)/scaling, 'S/m scaled'  )
         print(key,':', np.max(device.gms_fwd[key].values), 'S max' )
 
-    fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
-    fig.savefig(path+r'\transfer_leakage.tif', format='tiff')
-    fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=False)
-    fig.savefig(path+r'\transfer.tif', format='tiff')   
-
-    fig = OECT_plotting.plot_outputs(device, leakage=True)
-    fig.savefig(path+r'\output_leakage.tif', format='tiff')
-    fig = OECT_plotting.plot_outputs(device, leakage=False)
-    fig.savefig(path+r'\output.tif', format='tiff')
+    if plot:
+    
+        fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
+        fig.savefig(path+r'\transfer_leakage.tif', format='tiff')
+        fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=False)
+        fig.savefig(path+r'\transfer.tif', format='tiff')   
+    
+        fig = OECT_plotting.plot_outputs(device, leakage=True)
+        fig.savefig(path+r'\output_leakage.tif', format='tiff')
+        fig = OECT_plotting.plot_outputs(device, leakage=False)
+        fig.savefig(path+r'\output.tif', format='tiff')
 
     return device

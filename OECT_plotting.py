@@ -30,8 +30,9 @@ def plot_transfer_avg(dv):
     plt.rcParams.update({'font.size': 14, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
 
-    ax.plot(dv.index.values, dv['avg'].values*1000, marker='o')
-    ax2.plot(dv.index.values, dv['gm']*1000, linestyle='--')
+    ax.plot(dv.index.values, dv['Id average'].values*1000, marker='o')
+    ax2.plot(dv.index.values, dv['gm_fwd']*1000, linestyle='--')
+    ax2.plot(dv.index.values, dv['gm_bwd']*1000, linestyle='--')
     ax2.set_ylabel('Transconductance (mS)', rotation=-90, labelpad=20,
                    fontweight='bold', fontname='Arial', fontsize=18)
 
