@@ -98,6 +98,11 @@ def load_avg(path, thickness = 40e-9, plot=True):
     Id_Vg['gm_fwd'] = _gm_fwd
     Id_Vg['gm_bwd'] = _gm_bwd
     Id_Vg = Id_Vg.rename(columns = {0: 'Id average'}) # fix a naming bug
+    
+    if temp_dv.reverse:
+        Id_Vg.reverse = True
+        Id_Vg.rev_point = temp_dv.rev_point
+        
     del temp_dv
     
     # average Id-Vd at max Vd

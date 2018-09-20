@@ -30,11 +30,16 @@ def plot_transfer_avg(dv):
     plt.rcParams.update({'font.size': 14, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
 
-    ax.plot(dv.index.values, dv['Id average'].values*1000, marker='o')
-    ax2.plot(dv.index.values, dv['gm_fwd']*1000, linestyle='--')
-    ax2.plot(dv.index.values, dv['gm_bwd']*1000, linestyle='--')
+    if dv.reverse:
+        ax.plot(dv['Id average'][:dv.rev_point]*1000, marker='o', color='b')
+        ax.plot(dv['Id average'][dv.rev_point:]*1000, marker='o', color='r')
+    else:
+        ax.plot(dv['Id average']*1000, marker='o', color='b')
+        
+    ax2.plot(dv['gm_fwd']*1000, linestyle='--', color='b')
+    ax2.plot(dv['gm_bwd']*1000, linestyle='--', color='r')
     ax2.set_ylabel('Transconductance (mS)', rotation=-90, labelpad=20,
-                   fontweight='bold', fontname='Arial', fontsize=18)
+               fontweight='bold', fontname='Arial', fontsize=18)
 
     ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial')
     ax.set_xlabel('Vgs Voltage (V)', fontweight='bold', fontname='Arial')
@@ -61,7 +66,7 @@ def plot_output_avg(dv):
     plt.rcParams.update({'font.size': 14, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
 
-    ax.plot(dv.index.values, dv.values*1000, marker='o')
+    ax.plot(dv*1000, marker='o')
 
     ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial')
     ax.set_xlabel('Vds Voltage (V)', fontweight='bold', fontname='Arial')
@@ -142,8 +147,11 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
 
     for k in dv.transfers.columns:
 
-        ax1.plot(dv.transfers.index, dv.transfers[k]*1000,
-                 linewidth=2, marker= next(mk), markersize=7)
+        if dv.reverse:
+            ax1.plot(dv.transfers[k][:dv.rev_point]*1000,
+                     linewidth=2, marker= next(mk), markersize=7, color='b')
+            ax1.plot(dv.transfers[k][dv.rev_point:]*1000,
+                     linewidth=2, marker= next(mk), markersize=7, color='r')
         
         if leakage:
             
@@ -155,7 +163,9 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
    
     if gm_plot:
         for k in dv.gms_fwd:
-            ax2.plot(dv.gms_fwd[k].index, dv.gms_fwd[k]*1000, '--', linewidth=2)
+            ax2.plot(dv.gms_fwd[k].index, dv.gms_fwd[k]*1000, 'b--', linewidth=2)
+        for k in dv.gms_bwd:
+            ax2.plot(dv.gms_bwd[k].index, dv.gms_bwd[k]*1000, 'r--', linewidth=2)
             
     ax1.set_ylabel('Ids Current (mA)', fontweight='bold',
                    fontsize=18, fontname='Arial')
@@ -174,42 +184,3 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     plt.title(dv.folder, y=1.05)
     
     return fig
-
-def plot_transfer_gms_total(dv):
-
-    fig, ax1 = plt.subplots(facecolor='white', figsize=(10,6))
-    ax2 = ax1.twinx()
-
-    plt.rc('axes', linewidth=4)
-    plt.rcParams.update({'font.size': 14, 'font.weight': 'bold',
-                         'font.sans-serif': 'Arial'})
-
-    ax1.tick_params(axis='both', length=10, width=3, which='major', top='on')
-    ax1.tick_params(axis='both', length=6, width=3, which='minor', top='on')
-    ax2.tick_params(axis='both', length=10, width=3, which='major')
-    ax2.tick_params(axis='both', length=6, width=3, which='minor')
-
-    ax1.plot(dv.transfer.index, dv.transfer*1000, 'bs--',
-             linewidth=2, markersize=7)
-
-    ax2.plot(dv.gm_fwd.index, dv.gm_fwd*1000, 'r', linewidth=2)
-
-    ax1.set_ylabel('Ids Current (mA)', fontweight='bold',
-                   fontsize=14, fontname='Arial')
-    ax2.set_ylabel('Transconductance (mS)', rotation=-90, labelpad=20,
-                   fontweight='bold', fontname='Arial', fontsize=14)
-    ax1.set_xlabel('Vgs Voltage (V)', fontweight='bold', fontname='Arial',
-                   fontsize = 14)
-
-    xminor = AutoMinorLocator(4)
-    ax1.xaxis.set_minor_locator(xminor)
-    xminor = AutoMinorLocator(4)
-    ax1.yaxis.set_minor_locator(xminor)
-    xminor = AutoMinorLocator(4)
-    ax2.yaxis.set_minor_locator(xminor)
-
-    plt.title(dv.folder, y=1.05)
-
-    if any(dv.gm_bwd.values):
-
-        ax2.plot(dv.gm_bwd.index, dv.gm_bwd*1000, 'g', linewidth=2)

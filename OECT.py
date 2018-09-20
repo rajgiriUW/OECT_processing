@@ -60,6 +60,12 @@ class OECT(object):
         dict of Dataframes of all backward sweep gms
     Vt : float
         Threshold voltage calculated from sqrt(Id) fit
+    Vts : ndarray
+        Threshold voltage for forward and reverse trace, 0: forward, 1: reverse
+    reverse : bool
+        If a reverse trace exists
+    rev_point : float
+        Voltage where the Id trace starts reverse sweep
     """
 
     def __init__(self, folder, params={}):
@@ -90,6 +96,10 @@ class OECT(object):
         self.d = params['d']
         
         self.Vt = np.nan
+        self.Vts = np.nan
+        
+        self.reverse = False
+        self.rev_point = np.nan
 
     def _calc_gm(self, df):
         """
@@ -140,8 +150,12 @@ class OECT(object):
         gm_fwd = pd.DataFrame(data=gml, index=v[0:mx], columns=['gm'])
         gm_fwd.index.name = 'Voltage (V)'
 
+        # if reverse trace exists
         if mx != len(v)-1:
             # vl_hi = np.arange(v[mx], v[-1], -0.01)
+            
+            self.reverse = True
+            self.rev_point = v[mx]
             
             vl_hi = np.flip(v[mx:])
             i_hi = np.flip(i[mx:])
@@ -295,9 +309,8 @@ class OECT(object):
         # lo = -0.7 to 0.3, e.g and hi = 0.3 to -0.7, e.g
         mx = np.argmax(np.array(self.transfers.index))
         v_lo = self.transfers.index
-        reverse = False
-        if mx != len(v_lo)-1:
-            reverse = True
+        if self.reverse:
+
             v_lo = self.transfers.index[:mx]
             v_hi = self.transfers.index[mx:]
         
@@ -341,7 +354,7 @@ class OECT(object):
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
             
-            if reverse:
+            if self.reverse:
                 Id_hi = np.sqrt(np.abs(self.transfers[tf]).values[mx:])
                 
                 # so signs on gradient work
