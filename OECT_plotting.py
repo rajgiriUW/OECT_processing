@@ -7,6 +7,7 @@ Created on Sun Nov 19 18:17:40 2017
 
 from matplotlib import pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
+import numpy as np
 
 from itertools import cycle
 
@@ -15,6 +16,61 @@ def plot_transfer(dv):
 
     plt.figure()
     plt.plot(dv.transfer.index, dv.transfer)
+    
+    
+def plot_uC(dv):
+    
+    Wd_L = dv.Wd_L
+    Vg_Vt = dv.Vg_Vt
+    uC = dv.uC
+    uC_0 = dv.uC_0
+    gms = dv.gms
+    path = dv.folder    
+    
+    fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
+
+    plt.rcParams.update({'font.size': 17, 'font.weight': 'bold',
+                         'font.sans-serif': 'Arial'})
+    plt.rc('axes', linewidth=4)
+    ax.tick_params(labeltop=False, labelright=False)
+    ax.tick_params(axis='both', length=14, width=3, which='major',
+                    bottom='on', left='on', right='on', top='on')
+    ax.tick_params(axis='both', length=10, width=3, which='minor',
+                    bottom='on', left='on', right='on', top='on')
+
+    ax.plot(np.abs(Wd_L*Vg_Vt)*1e2, gms*1000, 's', markersize=10, color='b')
+    ax.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
+    ax.set_ylabel('gm (mS)')
+    ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
+    ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
+    fig.savefig(path+r'\scaling_uC.tif', format='tiff')
+    
+    Wd_L_fitx = np.arange(Wd_L[-1]*Vg_Vt[-1], Wd_L[0]*Vg_Vt[0], 1e-9)
+    ax.plot(Wd_L_fitx*1e2, (uC[1]*Wd_L_fitx + uC[0])*1000, 'k--')
+    ax.plot(Wd_L_fitx*1e2, (uC_0[0]*Wd_L_fitx)*1000, 'r--')
+    ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
+    ax.tick_params(axis='both', length=17, width=3, which='major',
+                   bottom='on', left='on', right='on', top='on')
+    ax.tick_params(axis='both', length=10, width=3, which='minor',
+                    bottom='on', left='on', right='on', top='on')
+    fig.savefig(path+r'\scaling_uC_+fit.tif', format='tiff')
+    
+    fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.plot(np.abs(Wd_L*Vg_Vt)*1e2, gms, 's', markersize=6)
+    ax.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
+    ax.set_ylabel('gm (S)')
+    ax.plot(Wd_L_fitx*1e2, (uC[1]*Wd_L_fitx + uC[0]), 'k--')
+    ax.plot(Wd_L_fitx*1e2, (uC_0[0]*Wd_L_fitx), 'r--')
+    ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
+    ax.tick_params(axis='both', length=17, width=3, which='major',
+                   bottom='on', left='on', right='on', top='on')
+    ax.tick_params(axis='both', length=10, width=3, which='minor',
+                    bottom='on', left='on', right='on', top='on')
+    fig.savefig(path+r'\scaling_uC_loglog.tif', format='tiff')
+    
+    return fig
 
 def plot_transfer_avg(dv):
     

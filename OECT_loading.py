@@ -26,9 +26,14 @@ def load_avg(path, thickness = 40e-9, plot=True):
     '''
     averages data in this particular path (for folders 'avg')
     
-    path should be to folder '.../avg' 
+    path: str
+        string path to folder '.../avg'. Note Windows path are of form r'Path_name'
     
-    thickness  of the film
+    thickness : float
+        thickness  of the film
+    
+    plot : bool
+        Whether to plot or not. Not plotting is very fast!
     
     Returns
     -------
@@ -254,8 +259,19 @@ def uC_scale(path, thickness=40e-9, plot=True):
     # * 1e2 to get into right mobility units (cm)
     uC_0, _ = cf(line_0, Wd_L*Vg_Vt, gms)
     uC, _ = cf(line_f, Wd_L*Vg_Vt, gms)
+    
+    # Create an OECT and add arrays 
+    uC_dv = OECT.OECT(path, params_super['01'])
+    uC_dv.Wd_L = Wd_L
+    uC_dv.Vg_Vt = Vg_Vt
+    uC_dv.Vt = Vt
+    uC_dv.uC = uC
+    uC_dv.uC_0 = uC_0
+    uC_dv.gms = gms
 
     if plot:
+        
+        fig = OECT_plotting.plot_uC(uC_dv)
         
         fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
         ax.plot(np.abs(Wd_L*Vg_Vt)*1e2, gms*1000, 's', markersize=10, color='b')
@@ -284,7 +300,7 @@ def uC_scale(path, thickness=40e-9, plot=True):
         
         print('uC* = ',str(uC_0*1e-2),' F/cm*V*s')
         
-    return pixels, Wd_L, gms, Vg_Vt, uC
+    return pixels, uC_dv
 
 def loadOECT(path, params, gm_plot=True, plot=True):
     """
