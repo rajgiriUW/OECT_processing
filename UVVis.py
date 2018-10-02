@@ -7,6 +7,7 @@ Created on Tue Jul  3 13:36:20 2018
 
 import numpy as np
 import pandas as pd
+from scipy import signal as sg
 import os
 import re
 
@@ -93,6 +94,8 @@ class uv_vis(object):
         self.potentials
         self.spectra : pandas Dataframe
             The spectra at each voltage in a large dataframe
+        self.spectra_sm : pandas DataFrame
+            The smoothed spectra at each voltage in a large dataFrame
         self.vt : pandas Series
             The voltage spectra at a particular wavelength (for threshold measurement)
         self.time_spectra_norm : pandas Series
@@ -108,7 +111,7 @@ class uv_vis(object):
         
         return
     
-    def spec_echem_voltage(self, wavelength=800, which_run=-1):
+    def spec_echem_voltage(self, wavelength=800, which_run=-1, smooth=3):
         '''
         Takes the list of spectra files specfiles, then extracts the final spectra
         from each file and returns as a single dataframe
@@ -126,6 +129,16 @@ class uv_vis(object):
             
         which_run : int, optional
             Which run to select and save. By default is the last (the final time slice)
+
+        smooth : int
+            simple boxcar smooth of data for plotting/analysis purposes, controls
+            size of filter 
+            
+        Saves:
+        ------
+        spectra : time=0 spectra at each voltage
+        spectra_sm : time=0 spectra (smoothed) at each voltage
+        vt : absorbance at 'wavelength' vs voltage (like a transfer curve)
             
         '''  
         pp = pd.read_csv(self.specs[0], sep='\t')
@@ -135,8 +148,12 @@ class uv_vis(object):
     #    last_run = runs[-1]
         wl = pp['Wavelength (nm)'][0:per_run]
         
-        # Set up dataframe
+        # Set up dataFrame
         df = pd.DataFrame(index=wl)
+        vt = []
+        
+        # Set up a "smoothed" dataFrame
+        dfs = pd.DataFrame(index=wl)
         vt = []
     
         for fl,v in zip(self.specs, self.potentials):
@@ -144,22 +161,25 @@ class uv_vis(object):
             pp = pd.read_csv(fl, sep='\t')
             data = pp[pp['Spectrum number']==runs[which_run]]['Absorbance'].values
             df[v] = pd.Series(data, index=df.index)
+            data = sg.fftconvolve(data, np.ones(smooth)/smooth, mode='same')
+            dfs[v] = pd.Series(data, index=df.index)
     
         idx = df[v].index
         wl = idx.searchsorted(wavelength)
         vt = df.loc[idx[wl]]
         
         self.spectra = df
+        self.spectra_sm = dfs
         self._single_wl_voltage(wavelength) # absorbance vs voltage @ a wavelength
         
         return 
 
-    def single_wl_time(self, potential=0, wavelength=800):
+    def single_wl_time(self, potential=0, wavelength=800, smooth=3):
         '''
         Extracts the time-dependent data from a single wavelength
         
         potential : float
-            Find run corresponding to potential
+            Find run corresponding to potential. Note in UV-Vis substrate is biased, not gate electrode
             
         wavelength : int, float
             Wavelength to extract. This will search for nearest wavelength row
@@ -173,10 +193,20 @@ class uv_vis(object):
         
         data = df.loc[idx[wl]] - np.min(df.loc[idx[wl]])
         data =  data / np.max(data)
-       
+        
         self.time_spectra = df.loc[idx[wl]]
         self.time_spectra_norm = pd.Series(data.values, index=df.loc[idx[wl]].index)
-    
+
+        # smooth
+        for c in df.columns:
+            df[c] = sg.fftconvolve(df[c], np.ones(smooth)/smooth, mode='same')
+
+        data = df.loc[idx[wl]] - np.min(df.loc[idx[wl]])
+        data = data / np.max(data)
+        
+        self.time_spectra_sm = df.loc[idx[wl]]
+        self.time_spectra_norm_sm = pd.Series(data.values, index=df.loc[idx[wl]].index)
+        
         return 
     
     def _single_wl_voltage(self, wavelength=800):
@@ -225,32 +255,46 @@ class uv_vis(object):
         
         return out
     
-def plot_time(uv, ax=None, norm=True):
+def plot_time(uv, ax=None, norm=True, smooth=False, **kwargs):
     
     if ax == None:
         fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
     
-    if norm == True:
-        uv.time_spectra_norm.plot(ax=ax)
+    if smooth:
+
+        if norm:
+            uv.time_spectra_norm_sm.plot(ax=ax, **kwargs)
+        else:
+            uv.time_spectra_sm.plot(ax=ax, **kwargs)
+            
     else:
-        uv.time_spectra.plot(ax=ax)
+        
+        if norm:
+            uv.time_spectra_norm.plot(ax=ax, **kwargs)
+        else:
+            uv.time_spectra.plot(ax=ax, **kwargs)
+        
     ax.set_xlabel('Time (s)')
     ax.set_ylabel('Normalize absorbance (a.u.)')
     
     return ax
 
-def plot_spectra(uv, ax=None):
+def plot_spectra(uv, ax=None, smooth=False, **kwargs):
     
     if ax == None:
         fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
         
-    uv.spectra.plot(ax=ax)
+    if smooth:
+        uv.spectra_sm.plot(ax=ax, **kwargs)
+    else:
+        uv.spectra.plot(ax=ax, **kwargs)
+        
     ax.set_xlabel('Wavelength (nm)')
     ax.set_ylabel('Absorbance (a.u.)')
     
     return ax
 
-def plot_voltage(uv, ax=None, norm=None):
+def plot_voltage(uv, ax=None, norm=None, **kwargs):
     '''
     norm = normalize the threshold UV-Vis data
     '''
@@ -258,10 +302,10 @@ def plot_voltage(uv, ax=None, norm=None):
         fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
     
     if norm == None:
-        ax.plot(uv.potentials*-1, uv.vt.values)
+        ax.plot(uv.potentials*-1, uv.vt.values, **kwargs)
     else:
         numerator = (uv.vt.values-uv.vt.values.min())
-        ax.plot(uv.potentials*-1, numerator/numerator.max())
+        ax.plot(uv.potentials*-1, numerator/numerator.max(), **kwargs)
     ax.set_xlabel('Gate Bias (V)')
     ax.set_ylabel('Absorbance (a.u.)')
     
