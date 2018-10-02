@@ -29,7 +29,7 @@ def plot_uC(dv):
     
     fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
 
-    plt.rcParams.update({'font.size': 17, 'font.weight': 'bold',
+    plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
     plt.rc('axes', linewidth=4)
     ax.tick_params(labeltop=False, labelright=False)
@@ -83,7 +83,7 @@ def plot_transfer_avg(dv):
                     bottom='on', left='on', right='on', top='on')
     ax.tick_params(axis='both', length=6, width=3, which='minor',
                     bottom='on', left='on', right='on', top='on')
-    plt.rcParams.update({'font.size': 14, 'font.weight': 'bold',
+    plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
 
     if dv.reverse:
@@ -119,7 +119,7 @@ def plot_output_avg(dv):
                     bottom='on', left='on', right='on', top='on')
     ax.tick_params(axis='both', length=6, width=3, which='minor',
                     bottom='on', left='on', right='on', top='on')
-    plt.rcParams.update({'font.size': 14, 'font.weight': 'bold',
+    plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
 
     ax.plot(dv*1000, marker='o')
@@ -149,7 +149,7 @@ def plot_outputs(dv, leakage=False):
                     bottom='on', left='on', right='on', top='on', labelsize=18)
     ax.tick_params(axis='both', length=6, width=3, which='minor',
                     bottom='on', left='on', right='on', top='on', labelsize=18)
-    plt.rcParams.update({'font.size': 18, 'font.weight': 'bold',
+    plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
 
     markers = ['o', 's', '^', 'd', 'x']
@@ -187,7 +187,7 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     ax2 = ax1.twinx()
 
     plt.rc('axes', linewidth=4)
-    plt.rcParams.update({'font.size': 14, 'font.weight': 'bold',
+    plt.rcParams.update({'font.size': 18, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
 
     ax1.tick_params(axis='both', length=10, width=3, which='major', top='on')

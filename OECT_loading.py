@@ -105,6 +105,7 @@ def load_avg(path, thickness = 40e-9, plot=True):
     Id_Vg = Id_Vg.rename(columns = {0: 'Id average'}) # fix a naming bug
     
     if temp_dv.reverse:
+        print('reverse')
         Id_Vg.reverse = True
         Id_Vg.rev_point = temp_dv.rev_point
         
@@ -272,31 +273,6 @@ def uC_scale(path, thickness=40e-9, plot=True):
     if plot:
         
         fig = OECT_plotting.plot_uC(uC_dv)
-        
-        fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
-        ax.plot(np.abs(Wd_L*Vg_Vt)*1e2, gms*1000, 's', markersize=10, color='b')
-        ax.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
-        ax.set_ylabel('gm (mS)')
-        ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
-        ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
-        fig.savefig(path+r'\scaling_uC.tif', format='tiff')
-        
-        Wd_L_fitx = np.arange(Wd_L[-1]*Vg_Vt[-1], Wd_L[0]*Vg_Vt[0], 1e-9)
-        ax.plot(Wd_L_fitx*1e2, (uC[1]*Wd_L_fitx + uC[0])*1000, 'k--')
-        ax.plot(Wd_L_fitx*1e2, (uC_0[0]*Wd_L_fitx)*1000, 'r--')
-        ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
-        fig.savefig(path+r'\scaling_uC_+fit.tif', format='tiff')
-        
-        fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
-        ax.set_xscale('log')
-        ax.set_yscale('log')
-        ax.plot(np.abs(Wd_L*Vg_Vt)*1e2, gms, 's', markersize=6)
-        ax.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
-        ax.set_ylabel('gm (S)')
-        ax.plot(Wd_L_fitx*1e2, (uC[1]*Wd_L_fitx + uC[0]), 'k--')
-        ax.plot(Wd_L_fitx*1e2, (uC_0[0]*Wd_L_fitx), 'r--')
-        ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
-        fig.savefig(path+r'\scaling_uC_loglog.tif', format='tiff')
         
         print('uC* = ',str(uC_0*1e-2),' F/cm*V*s')
         
