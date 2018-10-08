@@ -43,9 +43,13 @@ def plot_uC(dv):
     ax.set_ylabel('gm (mS)')
     ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
     ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
+    plt.tight_layout()
     fig.savefig(path+r'\scaling_uC.tif', format='tiff')
     
-    Wd_L_fitx = np.arange(Wd_L[-1]*Vg_Vt[-1], Wd_L[0]*Vg_Vt[0], 1e-9)
+    # create x-axis for fits
+    _xl = np.argmin(Wd_L)
+    _xh = np.argmax(Wd_L)
+    Wd_L_fitx = np.arange(Wd_L[_xl]*Vg_Vt[_xl], Wd_L[_xh]*Vg_Vt[_xh], 1e-9)
     ax.plot(Wd_L_fitx*1e2, (uC[1]*Wd_L_fitx + uC[0])*1000, 'k--')
     ax.plot(Wd_L_fitx*1e2, (uC_0[0]*Wd_L_fitx)*1000, 'r--')
     ax.set_title('uC* = ' + str(uC_0*1e-2)+' F/cm*V*s')
@@ -53,6 +57,7 @@ def plot_uC(dv):
                    bottom='on', left='on', right='on', top='on')
     ax.tick_params(axis='both', length=10, width=3, which='minor',
                     bottom='on', left='on', right='on', top='on')
+    plt.tight_layout()
     fig.savefig(path+r'\scaling_uC_+fit.tif', format='tiff')
     
     fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
@@ -68,11 +73,12 @@ def plot_uC(dv):
                    bottom='on', left='on', right='on', top='on')
     ax.tick_params(axis='both', length=10, width=3, which='minor',
                     bottom='on', left='on', right='on', top='on')
+    plt.tight_layout()
     fig.savefig(path+r'\scaling_uC_loglog.tif', format='tiff')
     
     return fig
 
-def plot_transfer_avg(dv):
+def plot_transfer_avg(dv, params):
     
     fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
     ax2 = ax.twinx()
@@ -105,11 +111,51 @@ def plot_transfer_avg(dv):
     xminor = AutoMinorLocator(4)
     ax.yaxis.set_minor_locator(xminor)
 
+    plt.tight_layout()
     plt.title('Average', y=1.05) 
+    
+    # normalized gm
+    fig, ax = plt.subplots(facecolor='white', figsize=(12,9))
+    ax2 = ax.twinx()
+    
+    plt.rc('axes', linewidth=4)
+    ax.tick_params(labeltop=False, labelright=False)
+    ax.tick_params(axis='both', length=10, width=3, which='major',
+                    bottom='on', left='on', right='on', top='on')
+    ax.tick_params(axis='both', length=6, width=3, which='minor',
+                    bottom='on', left='on', right='on', top='on')
+    plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
+                         'font.sans-serif': 'Arial'})
+
+    if dv.reverse:
+        ax.plot(dv['Id average'][:dv.rev_point]*1000, marker='o', color='b')
+        ax.plot(dv['Id average'][dv.rev_point:]*1000, marker='o', color='r')
+    else:
+        ax.plot(dv['Id average']*1000, marker='o', color='b')
+        
+    ax2.plot(dv['gm_fwd']*1000 / (1e9*params['W']*params['d']/params['L']), linestyle='--', color='b')
+    ax2.plot(dv['gm_bwd']*1000 / (1e9*params['W']*params['d']/params['L']), linestyle='--', color='r')
+    ax2.set_ylabel('Norm gm (mS/nm)', rotation=-90, labelpad=20,
+               fontweight='bold', fontname='Arial', fontsize=18)
+
+    ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial')
+    ax.set_xlabel('Vgs Voltage (V)', fontweight='bold', fontname='Arial')
+
+    xminor = AutoMinorLocator(4)
+    ax.xaxis.set_minor_locator(xminor)
+    xminor = AutoMinorLocator(4)
+    ax.yaxis.set_minor_locator(xminor)
+    plt.title('Average', y=1.05) 
+    plt.tight_layout()
 
     return fig
 
-def plot_output_avg(dv):
+def plot_output_avg(dv, params):
+    '''
+    called by OECT_loading functions
+    
+    dv = dataFrame
+    '''
     
     fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
     
@@ -137,7 +183,10 @@ def plot_output_avg(dv):
     return fig
 
 def plot_outputs(dv, leakage=False):
-
+    '''
+    dv : OECT class object
+    '''
+    
     fig, ax = plt.subplots(facecolor='white', figsize=(12,8))
     
     if leakage:

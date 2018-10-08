@@ -9,7 +9,6 @@ import pandas as pd
 import os
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 import OECT_plotting 
 import OECT
@@ -17,24 +16,67 @@ import OECT
 from scipy.optimize import curve_fit as cf
 
 '''
-Load_avg : for loading all the subfolders that are the 4 "averaging" pixels
+load_avg : for loading all the subfolders that are the 4 "averaging" pixels
 load_uC : for loading the four pixels to generate a uC* plot
 
+Usage:
+    
+    >> pixels, Id_Vg, Id_Vd = OECT_loading.load_avg(r'path_to_avg', new_geom=False)
+    >> pixels, uC_dv = OECT_loading.uC_scale(r'path_to_uC_scale', new_geom=False)
+    
 '''
 
-def load_avg(path, thickness = 40e-9, plot=True):
+# Global variables
+def _setup_params(NEW_GEOM = True):
+    '''
+    Called by functions below to setup new parameters
+    '''
+
+    thickness = 40e-9 # film thickness
+
+    if NEW_GEOM:
+        # New geometry
+        params_avg =  {'W': 100e-6, 
+                       'L': 20e-6, 
+                       'd': thickness}
+        
+        params_super = {'05': {'W': 100e-6, 'L': 20e-6, 'd': thickness},
+                        '04': {'W': 2000e-6 ,'L': 20e-6, 'd': thickness},
+                        '03': {'W': 1000e-6, 'L': 20e-6, 'd': thickness},
+                        '02': {'W': 200e-6, 'L': 20e-6, 'd': thickness},
+                        '01': {'W': 50e-6, 'L': 20e-6, 'd': thickness}
+                        }
+    else:
+        
+        # Old geometry
+        params_avg =  {'W': 100e-6, 
+                       'L': 100e-6, 
+                       'd': thickness}
+        
+        params_super = {'01': {'W': 2000e-6 ,'L': 20e-6, 'd': thickness},
+                        '02': {'W': 1000e-6, 'L': 20e-6, 'd': thickness},
+                        '03': {'W': 200e-6, 'L': 20e-6, 'd': thickness},
+                        '04': {'W': 50e-6, 'L': 20e-6, 'd': thickness},
+                        '05': {'W': 100e-6, 'L': 100e-6, 'd': thickness}
+                        }
+        
+    return thickness, params_avg, params_super
+
+
+def load_avg(path, new_geom = True, plot=True):
     '''
     averages data in this particular path (for folders 'avg')
     
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
-    
-    thickness : float
-        thickness  of the film
-    
+      
+    new_geom : bool
+        Whether the older or new geometry should be used
+        
     plot : bool
         Whether to plot or not. Not plotting is very fast!
-    
+        
+   
     Returns
     -------
     pixels : dict of OECT
@@ -48,10 +90,10 @@ def load_avg(path, thickness = 40e-9, plot=True):
         
     '''
 
-    params = {'W': 100e-6, 'L': 100e-6, 'd': thickness}
-    
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04']
+    
+    thickness, params, _ = _setup_params(new_geom)
     
     # removes all but the folders in pixel_names
     f = filelist[:]
@@ -105,7 +147,7 @@ def load_avg(path, thickness = 40e-9, plot=True):
     Id_Vg = Id_Vg.rename(columns = {0: 'Id average'}) # fix a naming bug
     
     if temp_dv.reverse:
-        print('reverse')
+
         Id_Vg.reverse = True
         Id_Vg.rev_point = temp_dv.rev_point
         
@@ -137,15 +179,15 @@ def load_avg(path, thickness = 40e-9, plot=True):
         Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[-1]].outputs[volt].index)
     
     if plot:
-            fig = OECT_plotting.plot_transfer_avg(Id_Vg)
+            fig = OECT_plotting.plot_transfer_avg(Id_Vg, params)
             fig.savefig(path+r'\transfer_avg.tif', format='tiff')
-            fig = OECT_plotting.plot_output_avg(Id_Vd)
+            fig = OECT_plotting.plot_output_avg(Id_Vd, params)
             fig.savefig(path+r'\output_avg.tif', format='tiff')
     
     return pixels, Id_Vg, Id_Vd
 
 
-def uC_scale(path, thickness=40e-9, plot=True):
+def uC_scale(path, new_geom = True, plot=True):
     '''
     01 = 2000/20
     02 = 1000/20
@@ -156,24 +198,36 @@ def uC_scale(path, thickness=40e-9, plot=True):
     From Lucas:
         100umx100 um on the top 4 and 2000/20 1000/20 200/20 50/20 for the bottom row
     
+    path: str
+        string path to folder '.../avg'. Note Windows path are of form r'Path_name'
+      
+    new_geom : bool
+        Whether the older or new geometry should be used
+        
+    plot : bool
+        Whether to plot or not. Not plotting is very fast!    
+    
     Returns
     -------
     pixels : dict of OECT
         Contains the various OECT class devices
         
-    Wd_L : ndarray
-        coefficient for plotting on x-axis
-    
-    gms : ndarray
-        average transconductance for plotting on y-axis
-    
-    Vg_Vt : ndarray
-        threshold voltage shifts for correcting uC* fit
+    uC_dv : OECT Class containing
+        Wd_L : ndarray
+            coefficient for plotting on x-axis
+        
+        gms : ndarray
+            average transconductance for plotting on y-axis
+        
+        Vg_Vt : ndarray
+            threshold voltage shifts for correcting uC* fit
     
     '''
     
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04', '05']
+    
+    thickness, _, params_super = _setup_params(new_geom)
     
     f = filelist[:]
     for k in filelist:
@@ -181,13 +235,6 @@ def uC_scale(path, thickness=40e-9, plot=True):
             f.remove(k)
     filelist = f[:]
     del f
-
-    params_super = {'01': {'W': 2000e-6 ,'L': 20e-6, 'd': thickness},
-                    '02': {'W': 1000e-6, 'L': 20e-6, 'd': thickness},
-                    '03': {'W': 200e-6, 'L': 20e-6, 'd': thickness},
-                    '04': {'W': 50e-6, 'L': 20e-6, 'd': thickness},
-                    '05': {'W': 100e-6, 'L': 100e-6, 'd': thickness}
-                    }
 
     paths = [os.path.join(path, name) for name in filelist]
 

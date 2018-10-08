@@ -125,7 +125,8 @@ class OECT(object):
 #        gmt = sps.savgol_filter(i[0:mx], 25, 1, deriv=1,
 #                                       delta=v[2]-v[1])
 #
-#        self.gm_fwd = pd.DataFrame(data = gmt, index = v[0:mx])
+#        gm_fwd = pd.DataFrame(data = gmt, index = v[0:mx], columns=['gm'])
+#        gm_fwd.index.name = 'Voltage (V)'
 
         #univariate spline method
         s = 1e-7
