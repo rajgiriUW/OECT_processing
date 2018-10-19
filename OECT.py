@@ -11,6 +11,7 @@ __email__ = "rgiri@uw.edu"
 
 import pandas as pd
 import os
+import re
 
 from scipy import interpolate as spi
 from scipy import signal as sps
@@ -91,15 +92,16 @@ class OECT(object):
         self.num_outputs = 0
         self.num_transfers = 0
         
-        self.W = params['W']
-        self.L = params['L']
-        self.d = params['d']
-        
         self.Vt = np.nan
         self.Vts = np.nan
         
         self.reverse = False
         self.rev_point = np.nan
+        
+        # load data
+        self.loaddata()
+
+        self.W, self.L, self.d = self.get_WdL(params)
 
     def _calc_gm(self, df):
         """
@@ -430,5 +432,66 @@ class OECT(object):
         self.num_outputs = len(self.outputs.columns)
         
         self.files = files
+        
+        return
+    
+    def get_WdL(self,params):
+        '''
+        Finds the electrode parameters and stores internally
+        '''
+        
+        keys = ['W', 'L', 'd']
+        vals = {}
+        
+        for key in keys:
+            if key in params.keys():
+                vals[key] = params[key]
+        
+        # search params in first file in this folder for missing params
+        fl = self.files[0]
+                
+        h = open(fl)
+        for line in h:
+                
+            if 'Width' in line and 'W' not in vals.keys():
+                vals['W'] = re.findall('\d+', line)[0]
+            if 'Length' in line and 'L' not in vals.keys():
+                vals['L'] = re.findall('\d+', line)[0]
+            if 'Thickness' in line and 'd' not in vals.keys():
+                vals['d'] = re.findall('\d+', line)[0]
+
+        h.close()
+
+        # default thickness= 40 nm
+        if 'd' not in vals.keys():
+            vals['d'] = 40e-9
+                
+        return vals['W'], vals['L'], vals['d']
+    
+    def get_metadata(self):
+        
+        metadata = ['Width', 'Length', 'thickness',
+                    'Vd', 'Vg', 'Averages']
+        
+        # search params in first file in this folder for missing params
+        fl = self.files[0]
+                
+        h = open(fl)
+        for line in h:
+                
+            if 'Width' in line:
+                self.W = re.findall('\d+', line)[0]
+            if 'Length' in line:
+                self.L = re.findall('\d+', line)[0]
+            if 'Thickness' in line:
+                self.d = re.findall('\d+', line)[0]
+            if 'V_DS = ' in line:
+                self.Vd = re.findall('\d+', line)[0]
+            if 'V_G = ' in line:
+                self.Vg = re.findall('\d+', line)[0]
+            if 'Averages' in line:
+                self.num_avgs = re.findall('\d+', line)[0]
+                
+        h.close()
         
         return
