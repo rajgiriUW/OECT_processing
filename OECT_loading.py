@@ -63,15 +63,15 @@ def _setup_params(NEW_GEOM = True):
     return thickness, params_avg, params_super
 
 
-def load_avg(path, new_geom = True, plot=True):
+def load_avg(path, thickness = 40e-9, plot=True):
     '''
     averages data in this particular path (for folders 'avg')
     
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
       
-    new_geom : bool
-        Whether the older or new geometry should be used
+    thickness : float
+        approximate film thickness. Standard polymers (for Raj) are ~40 nm
         
     plot : bool
         Whether to plot or not. Not plotting is very fast!
@@ -93,8 +93,6 @@ def load_avg(path, new_geom = True, plot=True):
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04']
     
-    thickness, params, _ = _setup_params(new_geom)
-    
     # removes all but the folders in pixel_names
     f = filelist[:]
     for k in filelist:
@@ -114,7 +112,7 @@ def load_avg(path, new_geom = True, plot=True):
     # loads all the folders
     for p, f in zip(paths, filelist):
         
-        dv = loadOECT(p, params, gm_plot=plot, plot=plot)
+        dv = loadOECT(p, params = {'d': thickness}, gm_plot=plot, plot=plot)
         pixels[f] = dv
     
     # average Id-Vg
@@ -140,7 +138,7 @@ def load_avg(path, new_geom = True, plot=True):
         Id_Vg = Id_Vg.set_index(pixels[list(pixels.keys())[-1]])
     
     # find gm of the average
-    temp_dv = OECT.OECT(path, params)
+    temp_dv = OECT.OECT(path, {'d': thickness})
     _gm_fwd, _gm_bwd = temp_dv._calc_gm(Id_Vg)
     Id_Vg['gm_fwd'] = _gm_fwd
     Id_Vg['gm_bwd'] = _gm_bwd
@@ -179,30 +177,21 @@ def load_avg(path, new_geom = True, plot=True):
         Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[-1]].outputs[volt].index)
     
     if plot:
-            fig = OECT_plotting.plot_transfer_avg(Id_Vg, params)
+            fig = OECT_plotting.plot_transfer_avg(Id_Vg)
             fig.savefig(path+r'\transfer_avg.tif', format='tiff')
-            fig = OECT_plotting.plot_output_avg(Id_Vd, params)
+            fig = OECT_plotting.plot_output_avg(Id_Vd)
             fig.savefig(path+r'\output_avg.tif', format='tiff')
     
     return pixels, Id_Vg, Id_Vd
 
 
-def uC_scale(path, new_geom = True, plot=True):
+def uC_scale(path, thickness = 40e-9, plot=True):
     '''
-    01 = 2000/20
-    02 = 1000/20
-    03 = 200/20
-    04 = 50/20
-    05 = 100/100 (using an "averaging" pixel as a fifth data point)
-    
-    From Lucas:
-        100umx100 um on the top 4 and 2000/20 1000/20 200/20 50/20 for the bottom row
-    
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
       
-    new_geom : bool
-        Whether the older or new geometry should be used
+    thickness : float
+        approximate film thickness. Standard polymers (for Raj) are ~40 nm
         
     plot : bool
         Whether to plot or not. Not plotting is very fast!    
@@ -227,8 +216,6 @@ def uC_scale(path, new_geom = True, plot=True):
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04', '05']
     
-    thickness, _, params_super = _setup_params(new_geom)
-    
     f = filelist[:]
     for k in filelist:
         if k not in pixel_names:
@@ -244,10 +231,11 @@ def uC_scale(path, new_geom = True, plot=True):
             paths.remove(p)
     
     pixels = {}
+    
     # loads all the folders
     for p, f in zip(paths, filelist):
         
-        dv = loadOECT(p, params_super[f], gm_plot=plot, plot=plot)
+        dv = loadOECT(p, {'d':thickness}, gm_plot=plot, plot=plot)
         pixels[f] = dv
 
     # do uC* graphs, need gm vs W*d/L        
@@ -257,7 +245,7 @@ def uC_scale(path, new_geom = True, plot=True):
     gms = np.array([])
     
     for f, pixel in zip(filelist, pixels):
-        Wd_L = np.append(Wd_L, params_super[f]['W']*thickness/params_super[f]['L'])
+        Wd_L = np.append(Wd_L, pixels[pixel].WdL)
         
         # peak gms
         reverse = False
@@ -309,7 +297,7 @@ def uC_scale(path, new_geom = True, plot=True):
     uC, _ = cf(line_f, Wd_L*Vg_Vt, gms)
     
     # Create an OECT and add arrays 
-    uC_dv = OECT.OECT(path, params_super['01'])
+    uC_dv = OECT.OECT(path, {'d': thickness})
     uC_dv.Wd_L = Wd_L
     uC_dv.Vg_Vt = Vg_Vt
     uC_dv.Vt = Vt
@@ -338,11 +326,10 @@ def loadOECT(path, params, gm_plot=True, plot=True):
     """
 
     device = OECT.OECT(path, params)
-    device.loaddata()
     device.calc_gms()
     device.thresh()
     
-    scaling = params['W'] * params['d']/params['L']
+    scaling = device.WdL  # W *d / L
     
     for key in device.gms_fwd:
         print(key,':', np.max(device.gms_fwd[key].values)/scaling, 'S/m scaled'  )
