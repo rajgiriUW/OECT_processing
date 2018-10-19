@@ -454,11 +454,11 @@ class OECT(object):
         for line in h:
                 
             if 'Width' in line and 'W' not in vals.keys():
-                vals['W'] = re.findall('\d+', line)[0]
+                vals['W'] = float(re.findall('\d+', line)[0])
             if 'Length' in line and 'L' not in vals.keys():
-                vals['L'] = re.findall('\d+', line)[0]
+                vals['L'] = float(re.findall('\d+', line)[0])
             if 'Thickness' in line and 'd' not in vals.keys():
-                vals['d'] = re.findall('\d+', line)[0]
+                vals['d'] = float(re.findall('\d+', line)[0])
 
         h.close()
 
