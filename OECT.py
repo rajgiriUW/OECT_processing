@@ -149,8 +149,14 @@ class OECT(object):
 #            gmh = funchi.derivative()
 #            gm_bwd = pd.DataFrame(data=gmh(vl_hi),
 #                                       index=vl_hi)
-        funclo = np.polyfit(v[0:mx], i[0:mx], 8)
-        gml = np.gradient(np.polyval(funclo, v[0:mx]), (v[2]-v[1]))
+        
+        # if spacing is at least 0.2 mV, just do a derivative
+        if v[1]-v[0] > 0.2:
+            funclo = np.polyfit(v[0:mx], i[0:mx], 8)
+            gml = np.gradient(np.polyval(funclo, v[0:mx]), (v[2]-v[1]))
+        else:
+            gml = np.gradient(i[0:mx].flatten(), v[2]-v[1])
+
         gm_fwd = pd.DataFrame(data=gml, index=v[0:mx], columns=['gm'])
         gm_fwd.index.name = 'Voltage (V)'
 
@@ -163,9 +169,13 @@ class OECT(object):
             
             vl_hi = np.flip(v[mx:])
             i_hi = np.flip(i[mx:])
-            funchi = np.polyfit(vl_hi, i_hi, 8)
             
-            gmh = np.gradient(np.polyval(funchi, vl_hi),  (vl_hi[2]-vl_hi[1]))
+            if v[1]-v[0] > 0.2:
+                funchi = np.polyfit(vl_hi, i_hi, 8)
+                gmh = np.gradient(np.polyval(funchi, vl_hi),  (vl_hi[2]-vl_hi[1]))
+            else:
+                gmh = np.gradient(i_hi.flatten(), v[2]-v[1])
+            
             gm_bwd = pd.DataFrame(data=gmh, index=vl_hi, columns=['gm'])
             gm_bwd.index.name = 'Voltage (V)'
 
