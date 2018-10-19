@@ -63,7 +63,7 @@ def plot_uC(dv):
     fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.plot(np.abs(Wd_L*Vg_Vt)*1e2, gms, 's', markersize=6)
+    ax.plot(np.abs(Wd_L*Vg_Vt)*1e2, gms, 's', markersize=10, color='b')
     ax.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
     ax.set_ylabel('gm (S)')
     ax.plot(Wd_L_fitx*1e2, (uC[1]*Wd_L_fitx + uC[0]), 'k--')
