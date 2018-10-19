@@ -138,7 +138,7 @@ def load_avg(path, thickness = 40e-9, plot=True):
         Id_Vg = Id_Vg.set_index(pixels[list(pixels.keys())[-1]])
     
     # find gm of the average
-    temp_dv = OECT.OECT(path, {'d': thickness})
+    temp_dv = OECT.OECT(paths[0], {'d': thickness})
     _gm_fwd, _gm_bwd = temp_dv._calc_gm(Id_Vg)
     Id_Vg['gm_fwd'] = _gm_fwd
     Id_Vg['gm_bwd'] = _gm_bwd
@@ -149,8 +149,6 @@ def load_avg(path, thickness = 40e-9, plot=True):
         Id_Vg.reverse = True
         Id_Vg.rev_point = temp_dv.rev_point
         
-    del temp_dv
-    
     # average Id-Vd at max Vd
     Id_Vd = []
 
@@ -177,7 +175,7 @@ def load_avg(path, thickness = 40e-9, plot=True):
         Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[-1]].outputs[volt].index)
     
     if plot:
-            fig = OECT_plotting.plot_transfer_avg(Id_Vg)
+            fig = OECT_plotting.plot_transfer_avg(Id_Vg, temp_dv.WdL)
             fig.savefig(path+r'\transfer_avg.tif', format='tiff')
             fig = OECT_plotting.plot_output_avg(Id_Vd)
             fig.savefig(path+r'\output_avg.tif', format='tiff')
@@ -297,7 +295,7 @@ def uC_scale(path, thickness = 40e-9, plot=True):
     uC, _ = cf(line_f, Wd_L*Vg_Vt, gms)
     
     # Create an OECT and add arrays 
-    uC_dv = OECT.OECT(path, {'d': thickness})
+    uC_dv = OECT.OECT(path, {'W': 100e-6, 'L': 20e-6, 'd': thickness})
     uC_dv.Wd_L = Wd_L
     uC_dv.Vg_Vt = Vg_Vt
     uC_dv.Vt = Vt

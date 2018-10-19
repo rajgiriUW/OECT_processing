@@ -78,7 +78,7 @@ def plot_uC(dv):
     
     return fig
 
-def plot_transfer_avg(dv):
+def plot_transfer_avg(dv, Wd_L):
     
     fig, ax = plt.subplots(facecolor='white', figsize=(10,8))
     ax2 = ax.twinx()
@@ -133,8 +133,8 @@ def plot_transfer_avg(dv):
     else:
         ax.plot(dv['Id average']*1000, marker='o', color='b')
         
-    ax2.plot(dv['gm_fwd']*1000 / (1e9*dv.WdL), linestyle='--', color='b')
-    ax2.plot(dv['gm_bwd']*1000 / (1e9*dv.WdL), linestyle='--', color='r')
+    ax2.plot(dv['gm_fwd']*1000 / (1e9*Wd_L), linestyle='--', color='b')
+    ax2.plot(dv['gm_bwd']*1000 / (1e9*Wd_L), linestyle='--', color='r')
     
     ax2.set_ylabel('Norm gm (mS/nm)', rotation=-90, labelpad=20,
                fontweight='bold', fontname='Arial', fontsize=18)

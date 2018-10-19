@@ -451,20 +451,27 @@ class OECT(object):
             if key in params.keys():
                 vals[key] = params[key]
         
-        # search params in first file in this folder for missing params
-        fl = self.files[0]
-                
-        h = open(fl)
-        for line in h:
-                
-            if 'Width' in line and 'W' not in vals.keys():
-                vals['W'] = float(line.split()[-1])
-            if 'Length' in line and 'L' not in vals.keys():
-                vals['L'] = float(line.split()[-1])
-            if 'Thickness' in line and 'd' not in vals.keys():
-                vals['d'] = float(line.split()[-1])
-
-        h.close()
+        # any missing keys?
+        check_files = False
+        for key in keys:
+            if key not in vals.keys():
+                check_files = True
+            
+        if check_files: 
+            # search params in first file in this folder for missing params
+            fl = self.files[0]
+                    
+            h = open(fl)
+            for line in h:
+                    
+                if 'Width' in line and 'W' not in vals.keys():
+                    vals['W'] = float(line.split()[-1])
+                if 'Length' in line and 'L' not in vals.keys():
+                    vals['L'] = float(line.split()[-1])
+                if 'Thickness' in line and 'd' not in vals.keys():
+                    vals['d'] = float(line.split()[-1])
+    
+            h.close()
 
         # default thickness= 40 nm
         if 'd' not in vals.keys():
