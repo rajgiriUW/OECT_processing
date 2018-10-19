@@ -11,7 +11,7 @@ __email__ = "rgiri@uw.edu"
 
 import pandas as pd
 import os
-import re
+import warnings
 
 from scipy import interpolate as spi
 from scipy import signal as sps
@@ -102,7 +102,8 @@ class OECT(object):
         self.loaddata()
 
         self.W, self.L, self.d = self.get_WdL(params)
-
+        self.WdL = self.W * self.d/self.L
+        
     def _calc_gm(self, df):
         """
         Calculates single gm curve in milli-Siemens
@@ -211,21 +212,21 @@ class OECT(object):
     def output_curve(self, path):
         """Loads Id-Vd output curves from a folder as Series in a list"""
 
-        V = '0'
-        h = open(path)
-        for line in h:
+        V = self.Vg
 
-            if 'V_G' in line:
-                V = line.split()[-1]
-
-        h.close()
-
-        op = pd.read_csv(path, delimiter='\t', skipfooter=3, engine='python')
+        op = pd.read_csv(path, delimiter='\t', engine='python')
+        
+        # Remove junk rows
+        _junk = pd.to_numeric(op['V_DS'], errors='coerce')
+        _junk = _junk.notnull()
+        op = op.loc[_junk]
+        op = op.set_index('V_DS')
+        op = op.set_index(pd.to_numeric(op.index.values))
+        
         self.output[V] = op
         self.output_raw[V] = op
         self.output[V] = self.output[V].drop(['I_DS Error (A)', 'I_G (A)',
                                               'I_G Error (A)'], 1)
-        self.output[V] = self.output[V].set_index('V_DS')
         self.Vg_array.append(V)
 
     def all_outputs(self):
@@ -247,21 +248,17 @@ class OECT(object):
 
     def transfer_curve(self, path):
         """Loads Id-Vg transfer curve from a path"""
-        transfer_raw = pd.read_csv(path, delimiter='\t',
-                                        skipfooter=3, engine='python')
-
-        transfer_Vd = '0'
-        # Finds the parameters for this transfer Curve
-        h = open(path)
-        for line in h:
-
-            if 'V_DS' in line:
-                transfer_Vd = line.split()[-1]
-            if 'Averages' in line:
-                transfer_avgs = line.split()[-1]
-
-        h.close()
+        transfer_raw = pd.read_csv(path, delimiter='\t', engine='python')
         
+        # Remove junk rows
+        _junk = pd.to_numeric(transfer_raw['V_G'], errors='coerce')
+        _junk = _junk.notnull()
+        transfer_raw = transfer_raw.loc[_junk]
+        transfer_raw = transfer_raw.set_index('V_G')
+        transfer_raw = transfer_raw.set_index(pd.to_numeric(transfer_raw.index.values))
+
+        transfer_Vd = str(self.Vd)
+
         if (transfer_Vd + '_0') in self.transfer:
             c = list(self.transfer.keys())[-1]
             c = str(int(c[-1])+1)
@@ -274,7 +271,6 @@ class OECT(object):
         self.transfer_raw[transfer_Vd] = transfer_raw
         self.transfer[transfer_Vd] = self.transfer[transfer_Vd].drop(['I_DS Error (A)', 'I_G (A)', 
                                                                      'I_G Error (A)'], 1)
-        self.transfer[transfer_Vd] = self.transfer[transfer_Vd].set_index('V_G')
 
         return
 
@@ -334,6 +330,7 @@ class OECT(object):
             
             for m in mx_d2:
             
+#                Id = Id - np.min(Id) # 0-offset
                 fit, _ = cf(line_f, V[:m], Id[:m], bounds=([-np.inf, -np.inf], [0, np.inf]))
                 _res = np.sum( np.array((Id[:m] - line_f(V[:m], fit[0], fit[1])) **2))
                 _fits = np.vstack((_fits,fit))
@@ -352,7 +349,7 @@ class OECT(object):
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
 
             # minimize residuals by finding right peak
-            fit = _min_fit(Id_lo, v_lo)
+            fit = _min_fit(Id_lo-np.min(Id_lo), v_lo)
             
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
@@ -364,8 +361,12 @@ class OECT(object):
                 Id_hi = np.flip(Id_hi)
                 v_hi = np.flip(v_hi)
                 
-                fit = _min_fit(Id_hi, v_hi)
-                Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
+                try:
+                    fit = _min_fit(Id_hi-np.min(Id_hi), v_hi)
+                    Vts = np.append(Vts,-fit[1]/fit[0]) # x-intercept
+                except:
+                    warnings.warn('Upper gm did not find correct Vt')
+                    Vts = np.append(Vts, Vts[0])
         
         self.Vt = np.mean(Vts)
         self.Vts = Vts
@@ -387,6 +388,7 @@ class OECT(object):
             Assumes Vt is a negative voltage (typical for many p-type polymer)
         '''
         
+        # uses second derivative for transition point
         Id_spl = spi.UnivariateSpline(Vg, Id, k=4, s=1e-7)
         V_spl= np.arange(Vg[0], Vg[-1], 0.01)
         d2 = np.gradient(np.gradient(Id_spl(V_spl)))
@@ -416,6 +418,8 @@ class OECT(object):
 
         for t in files:
 
+            self.get_metadata(t)
+            
             if 'transfer' in t:
                 self.transfer_curve(t)
 
@@ -454,11 +458,11 @@ class OECT(object):
         for line in h:
                 
             if 'Width' in line and 'W' not in vals.keys():
-                vals['W'] = float(re.findall('\d+', line)[0])
+                vals['W'] = float(line.split()[-1])
             if 'Length' in line and 'L' not in vals.keys():
-                vals['L'] = float(re.findall('\d+', line)[0])
+                vals['L'] = float(line.split()[-1])
             if 'Thickness' in line and 'd' not in vals.keys():
-                vals['d'] = float(re.findall('\d+', line)[0])
+                vals['d'] = float(line.split()[-1])
 
         h.close()
 
@@ -468,29 +472,21 @@ class OECT(object):
                 
         return vals['W'], vals['L'], vals['d']
     
-    def get_metadata(self):
+    def get_metadata(self, fl):
+        ''' Called in load_data to extract parameters '''
         
-        metadata = ['Width', 'Length', 'thickness',
-                    'Vd', 'Vg', 'Averages']
+        metadata = ['Vd', 'Vg', 'Averages']
         
         # search params in first file in this folder for missing params
-        fl = self.files[0]
-                
         h = open(fl)
         for line in h:
                 
-            if 'Width' in line:
-                self.W = re.findall('\d+', line)[0]
-            if 'Length' in line:
-                self.L = re.findall('\d+', line)[0]
-            if 'Thickness' in line:
-                self.d = re.findall('\d+', line)[0]
             if 'V_DS = ' in line:
-                self.Vd = re.findall('\d+', line)[0]
+                self.Vd = float(line.split()[-1])
             if 'V_G = ' in line:
-                self.Vg = re.findall('\d+', line)[0]
+                self.Vg = float(line.split()[-1])
             if 'Averages' in line:
-                self.num_avgs = re.findall('\d+', line)[0]
+                self.num_avgs = float(line.split()[-1])
                 
         h.close()
         
