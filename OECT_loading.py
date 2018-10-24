@@ -21,13 +21,13 @@ load_uC : for loading the four pixels to generate a uC* plot
 
 Usage:
     
-    >> pixels, Id_Vg, Id_Vd = OECT_loading.load_avg(r'path_to_avg', new_geom=False)
+    >> pixels, Id_Vg, Id_Vd = OECT_loading.average(r'path_to_avg', new_geom=False)
     >> pixels, uC_dv = OECT_loading.uC_scale(r'path_to_uC_scale', new_geom=False)
     
 '''
 
 
-def load_avg(path, thickness=40e-9, plot=True):
+def average(path='', thickness=40e-9, plot=True):
     '''
     averages data in this particular path (for folders 'avg')
     
@@ -53,6 +53,9 @@ def load_avg(path, thickness=40e-9, plot=True):
         Contains the averaged Id vs Vg (drain current vs drain voltages, output)
         
     '''
+
+    if not path:
+        path = file_open(caption='Select avg subfolder')
 
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04']
@@ -145,7 +148,7 @@ def load_avg(path, thickness=40e-9, plot=True):
     return pixels, Id_Vg, Id_Vd
 
 
-def uC_scale(path, thickness=40e-9, plot=True):
+def uC_scale(path='', thickness=40e-9, plot=True):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -172,6 +175,9 @@ def uC_scale(path, thickness=40e-9, plot=True):
             threshold voltage shifts for correcting uC* fit
     
     '''
+
+    if not path:
+        path = file_open(caption='Select uC subfolder')
 
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04', '05']
@@ -283,6 +289,9 @@ def loadOECT(path, params, gm_plot=True, plot=True):
 
     """
 
+    if not path:
+        path = file_open(caption='Select device subfolder')
+
     device = OECT.OECT(path, params)
     device.calc_gms()
     device.thresh()
@@ -305,3 +314,23 @@ def loadOECT(path, params, gm_plot=True, plot=True):
         fig.savefig(path + r'\output.tif', format='tiff')
 
     return device
+
+
+def file_open(caption='Select folder'):
+    '''
+    File dialog if path not given in load commands
+    :param
+        caption : str
+
+    :return:
+        path : str
+    '''
+
+    from PyQt5 import QtWidgets
+
+    app = QtWidgets.QApplication([])
+    path = QtWidgets.QFileDialog.getExistingDirectory(caption=caption)
+    app.closeAllWindows()
+    app.exit()
+
+    return str(path)
