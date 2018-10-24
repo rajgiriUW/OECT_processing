@@ -10,7 +10,7 @@ import os
 
 import numpy as np
 
-import OECT_plotting 
+import OECT_plotting
 import OECT
 
 from scipy.optimize import curve_fit as cf
@@ -26,44 +26,8 @@ Usage:
     
 '''
 
-# Global variables
-def _setup_params(NEW_GEOM = True):
-    '''
-    Called by functions below to setup new parameters
-    '''
 
-    thickness = 40e-9 # film thickness
-
-    if NEW_GEOM:
-        # New geometry
-        params_avg =  {'W': 100e-6, 
-                       'L': 20e-6, 
-                       'd': thickness}
-        
-        params_super = {'05': {'W': 100e-6, 'L': 20e-6, 'd': thickness},
-                        '04': {'W': 2000e-6 ,'L': 20e-6, 'd': thickness},
-                        '03': {'W': 1000e-6, 'L': 20e-6, 'd': thickness},
-                        '02': {'W': 200e-6, 'L': 20e-6, 'd': thickness},
-                        '01': {'W': 50e-6, 'L': 20e-6, 'd': thickness}
-                        }
-    else:
-        
-        # Old geometry
-        params_avg =  {'W': 100e-6, 
-                       'L': 100e-6, 
-                       'd': thickness}
-        
-        params_super = {'01': {'W': 2000e-6 ,'L': 20e-6, 'd': thickness},
-                        '02': {'W': 1000e-6, 'L': 20e-6, 'd': thickness},
-                        '03': {'W': 200e-6, 'L': 20e-6, 'd': thickness},
-                        '04': {'W': 50e-6, 'L': 20e-6, 'd': thickness},
-                        '05': {'W': 100e-6, 'L': 100e-6, 'd': thickness}
-                        }
-        
-    return thickness, params_avg, params_super
-
-
-def load_avg(path, thickness = 40e-9, plot=True):
+def load_avg(path, thickness=40e-9, plot=True):
     '''
     averages data in this particular path (for folders 'avg')
     
@@ -92,7 +56,7 @@ def load_avg(path, thickness = 40e-9, plot=True):
 
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04']
-    
+
     # removes all but the folders in pixel_names
     f = filelist[:]
     for k in filelist:
@@ -100,7 +64,7 @@ def load_avg(path, thickness = 40e-9, plot=True):
             f.remove(k)
     filelist = f[:]
     del f
-    
+
     paths = [os.path.join(path, name) for name in filelist]
 
     # removes random files instead of the sub-folders
@@ -111,79 +75,77 @@ def load_avg(path, thickness = 40e-9, plot=True):
     pixels = {}
     # loads all the folders
     for p, f in zip(paths, filelist):
-        
-        dv = loadOECT(p, params = {'d': thickness}, gm_plot=plot, plot=plot)
+        dv = loadOECT(p, params={'d': thickness}, gm_plot=plot, plot=plot)
         pixels[f] = dv
-    
+
     # average Id-Vg
     Id_Vg = []
     first_pxl = pixels[list(pixels.keys())[0]]
-    
+
     for dv in pixels:
-    
+
         if not any(Id_Vg):
-            
+
             Id_Vg = pixels[dv].transfers.values
-        
-        else:   
-            
+
+        else:
+
             Id_Vg += pixels[dv].transfers.values
-   
+
     Id_Vg /= len(pixels)
-    Id_Vg = pd.DataFrame(data= Id_Vg)
-    
+    Id_Vg = pd.DataFrame(data=Id_Vg)
+
     try:
         Id_Vg = Id_Vg.set_index(first_pxl.transfers.index)
-    except: 
+    except:
         Id_Vg = Id_Vg.set_index(pixels[list(pixels.keys())[-1]])
-    
+
     # find gm of the average
     temp_dv = OECT.OECT(paths[0], {'d': thickness})
     _gm_fwd, _gm_bwd = temp_dv._calc_gm(Id_Vg)
     Id_Vg['gm_fwd'] = _gm_fwd
     Id_Vg['gm_bwd'] = _gm_bwd
-    Id_Vg = Id_Vg.rename(columns = {0: 'Id average'}) # fix a naming bug
-    
-    if temp_dv.reverse:
+    Id_Vg = Id_Vg.rename(columns={0: 'Id average'})  # fix a naming bug
 
+    if temp_dv.reverse:
         Id_Vg.reverse = True
         Id_Vg.rev_point = temp_dv.rev_point
-        
+
     # average Id-Vd at max Vd
     Id_Vd = []
 
     # finds column corresponding to lowest voltage (most doping), but these are strings
     idx = np.argmin(np.array([float(i) for i in first_pxl.outputs.columns]))
     volt = first_pxl.outputs.columns[idx]
-    
+
     for dv in pixels:
-    
+
         if not any(Id_Vd):
-            
+
             Id_Vd = pixels[dv].outputs[volt].values
-        
-        else:   
-            
+
+        else:
+
             Id_Vd += pixels[dv].outputs[volt].values
-   
+
     Id_Vd /= len(pixels)
-    Id_Vd = pd.DataFrame(data= Id_Vd)
-    
+    Id_Vd = pd.DataFrame(data=Id_Vd)
+
     try:
         Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[0]].outputs[volt].index)
     except:
         Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[-1]].outputs[volt].index)
-    
+
     if plot:
-            fig = OECT_plotting.plot_transfer_avg(Id_Vg, temp_dv.WdL)
-            fig.savefig(path+r'\transfer_avg.tif', format='tiff')
-            fig = OECT_plotting.plot_output_avg(Id_Vd)
-            fig.savefig(path+r'\output_avg.tif', format='tiff')
-    
+        fig = OECT_plotting.plot_transfer_avg(Id_Vg, temp_dv.WdL)
+        fig.savefig(path + r'\transfer_avg.tif', format='tiff')
+        fig = OECT_plotting.plot_output_avg(Id_Vd)
+        fig.savefig(path + r'\output_avg.tif', format='tiff')
+
     return pixels, Id_Vg, Id_Vd
 
 
-def uC_scale(path, thickness = 40e-9, plot=True):
+def uC_scale(path, thickness=40e-9, plot=True):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -210,10 +172,10 @@ def uC_scale(path, thickness = 40e-9, plot=True):
             threshold voltage shifts for correcting uC* fit
     
     '''
-    
+
     filelist = os.listdir(path)
     pixel_names = ['01', '02', '03', '04', '05']
-    
+
     f = filelist[:]
     for k in filelist:
         if k not in pixel_names:
@@ -227,73 +189,71 @@ def uC_scale(path, thickness = 40e-9, plot=True):
     for p in paths:
         if not os.path.isdir(p):
             paths.remove(p)
-    
+
     pixels = {}
-    
+
     # loads all the folders
     for p, f in zip(paths, filelist):
-        
-        dv = loadOECT(p, {'d':thickness}, gm_plot=plot, plot=plot)
+        dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot)
         pixels[f] = dv
 
     # do uC* graphs, need gm vs W*d/L        
     Wd_L = np.array([])
-    Vg_Vt = np.array([]) # threshold offset
+    Vg_Vt = np.array([])  # threshold offset
     Vt = np.array([])
     gms = np.array([])
-    
+
     for f, pixel in zip(filelist, pixels):
         Wd_L = np.append(Wd_L, pixels[pixel].WdL)
-        
+
         # peak gms
         reverse = False
         c = list(pixels[pixel].gm_fwd.keys())[0]
-        
+
         if not pixels[pixel].gm_fwd[c].empty:
-            
             gm_fwd = np.max(pixels[pixel].gm_fwd[c].values)
             gm_argmax = np.argmax(pixels[pixel].gm_fwd[c].values)
-            
+
             Vg_fwd = pixels[pixel].gm_fwd[c].index[gm_argmax]
             Vg_Vt_fwd = pixels[pixel].Vts[0] - Vg_fwd
-        
+
         # backwards
         c = list(pixels[pixel].gm_bwd.keys())[0]
-        
+
         if not pixels[pixel].gm_bwd[c].empty:
             reverse = True
             gm_bwd = np.max(pixels[pixel].gm_bwd[c].values)
-        
+
             gm_argmax = np.argmax(pixels[pixel].gm_bwd[c].values)
             Vg_bwd = pixels[pixel].gm_bwd[c].index[gm_argmax]
             Vt = np.append(Vt, pixels[pixel].Vts[1])
             Vg_Vt_bwd = pixels[pixel].Vts[1] - Vg_bwd
-        
+
         if reverse:
             gm = np.mean([gm_fwd, gm_bwd])
             gms = np.append(gms, gm)
-            
+
             Vg_Vt = np.append(Vg_Vt, np.mean([Vg_Vt_fwd, Vg_Vt_bwd]))
-            
+
         else:
             gms = np.append(gms, gm_fwd)
             Vg_Vt = np.append(Vg_Vt, pixels[pixel].Vts[0] - Vg_fwd)
-        
+
         Vt = np.append(Vt, pixels[pixel].Vt)
-            
+
     # fit functions
     def line_f(x, a, b):
-        
-        return a + b*x
-    
+
+        return a + b * x
+
     def line_0(x, b):
         'no y-offset --> better log-log fits'
         return b * x
 
     # * 1e2 to get into right mobility units (cm)
-    uC_0, _ = cf(line_0, Wd_L*Vg_Vt, gms)
-    uC, _ = cf(line_f, Wd_L*Vg_Vt, gms)
-    
+    uC_0, _ = cf(line_0, Wd_L * Vg_Vt, gms)
+    uC, _ = cf(line_f, Wd_L * Vg_Vt, gms)
+
     # Create an OECT and add arrays 
     uC_dv = OECT.OECT(path, {'W': 100e-6, 'L': 20e-6, 'd': thickness})
     uC_dv.Wd_L = Wd_L
@@ -304,12 +264,12 @@ def uC_scale(path, thickness = 40e-9, plot=True):
     uC_dv.gms = gms
 
     if plot:
-        
         fig = OECT_plotting.plot_uC(uC_dv)
-        
-        print('uC* = ',str(uC_0*1e-2),' F/cm*V*s')
-        
+
+        print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
+
     return pixels, uC_dv
+
 
 def loadOECT(path, params, gm_plot=True, plot=True):
     """
@@ -326,23 +286,22 @@ def loadOECT(path, params, gm_plot=True, plot=True):
     device = OECT.OECT(path, params)
     device.calc_gms()
     device.thresh()
-    
+
     scaling = device.WdL  # W *d / L
-    
+
     for key in device.gms_fwd:
-        print(key,':', np.max(device.gms_fwd[key].values)/scaling, 'S/m scaled'  )
-        print(key,':', np.max(device.gms_fwd[key].values), 'S max' )
+        print(key, ':', np.max(device.gms_fwd[key].values) / scaling, 'S/m scaled')
+        print(key, ':', np.max(device.gms_fwd[key].values), 'S max')
 
     if plot:
-    
         fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
-        fig.savefig(path+r'\transfer_leakage.tif', format='tiff')
+        fig.savefig(path + r'\transfer_leakage.tif', format='tiff')
         fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=False)
-        fig.savefig(path+r'\transfer.tif', format='tiff')   
-    
+        fig.savefig(path + r'\transfer.tif', format='tiff')
+
         fig = OECT_plotting.plot_outputs(device, leakage=True)
-        fig.savefig(path+r'\output_leakage.tif', format='tiff')
+        fig.savefig(path + r'\output_leakage.tif', format='tiff')
         fig = OECT_plotting.plot_outputs(device, leakage=False)
-        fig.savefig(path+r'\output.tif', format='tiff')
+        fig.savefig(path + r'\output.tif', format='tiff')
 
     return device
