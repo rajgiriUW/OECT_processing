@@ -20,12 +20,23 @@ def plot_transfer(dv):
 
 
 def plot_uC(dv):
-    Wd_L = dv.Wd_L
-    Vg_Vt = dv.Vg_Vt
-    uC = dv.uC
-    uC_0 = dv.uC_0
-    gms = dv.gms
-    path = dv.folder
+    """
+    dv : OECT device with parameters in it or a dict
+    """
+    try:
+        Wd_L = dv.Wd_L
+        Vg_Vt = dv.Vg_Vt
+        uC = dv.uC
+        uC_0 = dv.uC_0
+        gms = dv.gms
+        path = dv.folder
+    except:
+        Wd_L = dv['Wd_L']
+        Vg_Vt = dv['Vg_Vt']
+        uC = dv['uC']
+        uC_0 = dv['uC_0']
+        gms = dv['gms']
+        path = dv['folder']
 
     fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
 

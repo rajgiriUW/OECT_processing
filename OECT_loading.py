@@ -58,12 +58,14 @@ def average(path='', thickness=40e-9, plot=True):
         path = file_open(caption='Select avg subfolder')
 
     filelist = os.listdir(path)
-    pixel_names = ['01', '02', '03', '04']
 
     # removes all but the folders in pixel_names
     f = filelist[:]
     for k in filelist:
-        if k not in pixel_names:
+        try:
+            sub_num = int(k)
+        except:
+            print('Ignoring',k)
             f.remove(k)
     filelist = f[:]
     del f
@@ -180,11 +182,13 @@ def uC_scale(path='', thickness=40e-9, plot=True):
         path = file_open(caption='Select uC subfolder')
 
     filelist = os.listdir(path)
-    pixel_names = ['01', '02', '03', '04', '05']
 
     f = filelist[:]
     for k in filelist:
-        if k not in pixel_names:
+        try:
+            sub_num = int(k)
+        except:
+            print('Ignoring',k)
             f.remove(k)
     filelist = f[:]
     del f
