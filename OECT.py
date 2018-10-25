@@ -111,6 +111,14 @@ class OECT:
         self.transfer_avgs = 1
         self.folder = folder
 
+        if not folder:
+            from PyQt5 import QtWidgets
+
+            app = QtWidgets.QApplication([])
+            self.folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select folder of data')
+            app.closeAllWindows()
+            app.exit()
+
         self.gm_fwd = {}
         self.gm_bwd = {}
         self.gms_fwd = pd.DataFrame()
@@ -161,17 +169,17 @@ class OECT:
 
             if method is 'sg':
                 # Savitsky-Golay method
-                if not fit_params['window'] & 1: # is odd
+                if not fit_params['window'] & 1:  # is odd
                     fit_params['window'] += 1
-                gml = sps.savgol_filter(i.T, window_length=fit_params['window'] ,
+                gml = sps.savgol_filter(i.T, window_length=fit_params['window'],
                                         polyorder=fit_params['polyorder'], deriv=1,
-                                        delta=v[2] - v[1])[0,:]
+                                        delta=v[2] - v[1])[0, :]
             elif method is 'raw':
-                #raw derivative
+                # raw derivative
                 gml = np.gradient(i.flatten(), v[2] - v[1])
 
             elif method is 'poly':
-                #polynomial fit
+                # polynomial fit
                 funclo = np.polyfit(v, i, fit_params['deg'])
                 gml = np.gradient(np.polyval(funclo, v), (v[2] - v[1]))
 
