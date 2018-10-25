@@ -20,8 +20,25 @@ from scipy.optimize import curve_fit as cf
 import numpy as np
 
 
-class OECT(object):
+class OECT:
     """
+    OECT class for processing transistor data from a folder of text files.
+
+    Extracts the Id-Vg (transfer), Id-Vd (output), and gm (transconductance)
+    Calculates Vt
+
+    Parameters
+    ----------
+    folder : string, optional
+        path to data folder on the computer. Default prompts a file dialog
+    params : dict, optional
+        device parameters, typically Width (W), length (L), thickness (d)
+    gm_method : str, optional
+        For calculating gm from the transfer curve Id-Vg
+        'sg' = Savitsky_golay smoothed derivative
+        'raw' = raw derivative
+        'poly' = 8th order polynomial fit
+
     Attributes
     ----------
     output : dict
@@ -50,8 +67,6 @@ class OECT(object):
         list of gate voltages (Vg) used during Id-Vd sweeps for plot labels
     transfer_avgs : int
         averages taken per point in transfer curve
-    folder : string
-        path to data folder on the computer
     gm_fwd : DataFrame
         Transconductance for forward sweep (in Siemens) as one DataFrame
     gm_bwd : DataFrame
@@ -68,9 +83,20 @@ class OECT(object):
         If a reverse trace exists
     rev_point : float
         Voltage where the Id trace starts reverse sweep
+
+
+    Examples
+    --------
+    >>> import OECT
+    >>>
+    >>> path = '../device_data/pixel_01'
+    >>>
+    >>> device = OECT.OECT(path)
+    >>> device.calc_gms()
+    >>> device.thresh()
     """
 
-    def __init__(self, folder, params={}):
+    def __init__(self, folder='', params={}, gm_method='sg'):
 
         self.output = {}
         self.output_raw = {}
@@ -89,6 +115,12 @@ class OECT(object):
         self.gm_bwd = {}
         self.gms_fwd = pd.DataFrame()
         self.gms_bwd = pd.DataFrame()
+
+        if gm_method not in ['raw', 'sg', 'poly']:
+            warnings.warn('Bad parameter: defaulting to Savitsky-Golay filtering')
+            self.gm_method = 'sg'
+        else:
+            self.gm_method = gm_method
 
         self.num_outputs = 0
         self.num_transfers = 0
@@ -125,38 +157,39 @@ class OECT(object):
 
         vl_lo = np.arange(v[0], v[mx], 0.01)
 
-        # Savitsky-Golay method
-        #        gmt = sps.savgol_filter(i[0:mx], 25, 1, deriv=1,
-        #                                       delta=v[2]-v[1])
-        #
-        #        gm_fwd = pd.DataFrame(data = gmt, index = v[0:mx], columns=['gm'])
-        #        gm_fwd.index.name = 'Voltage (V)'
+        def gm_deriv(v, i, method, fit_params={'window': 11, 'polyorder': 2, 'deg': 8}):
 
-        # univariate spline method
-        s = 1e-7
+            if method is 'sg':
+                # Savitsky-Golay method
+                if not fit_params['window'] & 1: # is odd
+                    fit_params['window'] += 1
+                gml = sps.savgol_filter(i.T, window_length=fit_params['window'] ,
+                                        polyorder=fit_params['polyorder'], deriv=1,
+                                        delta=v[2] - v[1])[0,:]
+            elif method is 'raw':
+                #raw derivative
+                gml = np.gradient(i.flatten(), v[2] - v[1])
 
-        #        funclo = spi.UnivariateSpline(v[0:mx], i[0:mx], k=4, s=s)
-        #        gml = funclo.derivative()
-        #        gm_fwd = pd.DataFrame(data=gml(vl_lo),
-        #                                   index=vl_lo)
-        #        self.spline = pd.DataFrame(data=funclo(vl_lo),
-        #                                   index=vl_lo)
+            elif method is 'poly':
+                #polynomial fit
+                funclo = np.polyfit(v, i, fit_params['deg'])
+                gml = np.gradient(np.polyval(funclo, v), (v[2] - v[1]))
 
-        #        # if backward sweep exists
-        #        if mx != len(v)-1:
-        #
-        #            vl_hi = np.arange(v[mx], v[-1], -0.01)
-        #            funchi = spi.UnivariateSpline(v[mx:], i[mx:], k=4)
-        #            gmh = funchi.derivative()
-        #            gm_bwd = pd.DataFrame(data=gmh(vl_hi),
-        #                                       index=vl_hi)
+            else:
+                warnings.warn('Bad gm_method, aborting')
+                return
 
-        # if spacing is at least 0.2 mV, just do a derivative
-        if v[1] - v[0] > 0.2:
-            funclo = np.polyfit(v[0:mx], i[0:mx], 8)
-            gml = np.gradient(np.polyval(funclo, v[0:mx]), (v[2] - v[1]))
-        else:
-            gml = np.gradient(i[0:mx].flatten(), v[2] - v[1])
+            return gml
+
+        # sg parameters
+        window = np.max([int(0.04 * self.transfers.shape[0]), 3])
+        polyorder = 2
+
+        # polynomial fit parameter
+        deg = 8
+
+        # Get gm
+        gml = gm_deriv(vl_lo, i[0:mx], self.gm_method, {'window': window, 'polyorder': polyorder, 'deg': deg})
 
         gm_fwd = pd.DataFrame(data=gml, index=v[0:mx], columns=['gm'])
         gm_fwd.index.name = 'Voltage (V)'
@@ -171,11 +204,7 @@ class OECT(object):
             vl_hi = np.flip(v[mx:])
             i_hi = np.flip(i[mx:])
 
-            if v[1] - v[0] > 0.2:
-                funchi = np.polyfit(vl_hi, i_hi, 8)
-                gmh = np.gradient(np.polyval(funchi, vl_hi), (vl_hi[2] - vl_hi[1]))
-            else:
-                gmh = np.gradient(i_hi.flatten(), v[2] - v[1])
+            gmh = gm_deriv(vl_hi, i_hi, self.gm_method, {'window': window, 'polyorder': polyorder, 'deg': deg})
 
             gm_bwd = pd.DataFrame(data=gmh, index=vl_hi, columns=['gm'])
             gm_bwd.index.name = 'Voltage (V)'
@@ -304,7 +333,6 @@ class OECT(object):
         negative_Vt : bool
             assumes Threshold is a negative value (typical for p-type polymers)
             
-        Uses a spline to fit Id curve first
         """
 
         Vts = np.array([])
@@ -349,7 +377,6 @@ class OECT(object):
         for tf in self.transfers:
 
             # use second derivative to find inflection, then fit line to get Vt
-            # univariate spline method to find Id
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
 
             # minimize residuals by finding right peak
