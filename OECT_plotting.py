@@ -19,9 +19,15 @@ def plot_transfer(dv):
     plt.plot(dv.transfer.index, dv.transfer)
 
 
-def plot_uC(dv):
+def plot_uC(dv, label='', savefig=True):
     """
     dv : OECT device with parameters in it or a dict
+
+    label : str, optional
+        For saving files, incldues this in the filename
+
+    savefig : bool, optional
+        Whether to save the figures
     """
     try:
         Wd_L = dv.Wd_L
@@ -55,11 +61,13 @@ def plot_uC(dv):
     ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
     ax.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
     plt.tight_layout()
-    fig.savefig(path + r'\scaling_uC.tif', format='tiff')
+
+    if savefig:
+        fig.savefig(path + r'\scaling_uC' + label + '.tif', format='tiff')
 
     # create x-axis for fits
-    _xl = np.argmin(Wd_L)
-    _xh = np.argmax(Wd_L)
+    _xl = np.argmin(Wd_L * Vg_Vt)
+    _xh = np.argmax(Wd_L * Vg_Vt)
     Wd_L_fitx = np.arange(Wd_L[_xl] * Vg_Vt[_xl], Wd_L[_xh] * Vg_Vt[_xh], 1e-9)
     ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]) * 1000, 'k--')
     ax.plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx) * 1000, 'r--')
@@ -69,7 +77,9 @@ def plot_uC(dv):
     ax.tick_params(axis='both', length=10, width=3, which='minor',
                    bottom='on', left='on', right='on', top='on')
     plt.tight_layout()
-    fig.savefig(path + r'\scaling_uC_+fit.tif', format='tiff')
+
+    if savefig:
+        fig.savefig(path + r'\scaling_uC_+fit' + label + '.tif', format='tiff')
 
     fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
     ax.set_xscale('log')
@@ -85,12 +95,14 @@ def plot_uC(dv):
     ax.tick_params(axis='both', length=10, width=3, which='minor',
                    bottom='on', left='on', right='on', top='on')
     plt.tight_layout()
-    fig.savefig(path + r'\scaling_uC_loglog.tif', format='tiff')
+
+    if savefig:
+        fig.savefig(path + r'\scaling_uC_loglog' + label + '.tif', format='tiff')
 
     return fig
 
 
-def plot_transfer_avg(dv, Wd_L):
+def plot_transfer_avg(dv, Wd_L, label=''):
     fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
     ax2 = ax.twinx()
 

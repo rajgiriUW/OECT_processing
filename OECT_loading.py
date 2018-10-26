@@ -65,7 +65,7 @@ def average(path='', thickness=40e-9, plot=True):
         try:
             sub_num = int(k)
         except:
-            print('Ignoring',k)
+            print('Ignoring', k)
             f.remove(k)
     filelist = f[:]
     del f
@@ -188,7 +188,7 @@ def uC_scale(path='', thickness=40e-9, plot=True):
         try:
             sub_num = int(k)
         except:
-            print('Ignoring',k)
+            print('Ignoring', k)
             f.remove(k)
     filelist = f[:]
     del f
@@ -214,10 +214,8 @@ def uC_scale(path='', thickness=40e-9, plot=True):
     gms = np.array([])
 
     for f, pixel in zip(filelist, pixels):
-        Wd_L = np.append(Wd_L, pixels[pixel].WdL)
 
         # peak gms
-        reverse = False
         c = list(pixels[pixel].gm_fwd.keys())[0]
 
         if not pixels[pixel].gm_fwd[c].empty:
@@ -227,29 +225,26 @@ def uC_scale(path='', thickness=40e-9, plot=True):
             Vg_fwd = pixels[pixel].gm_fwd[c].index[gm_argmax]
             Vg_Vt_fwd = pixels[pixel].Vts[0] - Vg_fwd
 
+            Wd_L = np.append(Wd_L, pixels[pixel].WdL)
+            Vt = np.append(Vt, pixels[pixel].Vts[0])
+            Vg_Vt = np.append(Vg_Vt, Vg_Vt_fwd)
+            gms = np.append(gms, gm_fwd)
+
         # backwards
         c = list(pixels[pixel].gm_bwd.keys())[0]
 
         if not pixels[pixel].gm_bwd[c].empty:
-            reverse = True
             gm_bwd = np.max(pixels[pixel].gm_bwd[c].values)
-
             gm_argmax = np.argmax(pixels[pixel].gm_bwd[c].values)
+
             Vg_bwd = pixels[pixel].gm_bwd[c].index[gm_argmax]
-            Vt = np.append(Vt, pixels[pixel].Vts[1])
             Vg_Vt_bwd = pixels[pixel].Vts[1] - Vg_bwd
 
-        if reverse:
-            gm = np.mean([gm_fwd, gm_bwd])
-            gms = np.append(gms, gm)
-
-            Vg_Vt = np.append(Vg_Vt, np.mean([Vg_Vt_fwd, Vg_Vt_bwd]))
-
-        else:
-            gms = np.append(gms, gm_fwd)
-            Vg_Vt = np.append(Vg_Vt, pixels[pixel].Vts[0] - Vg_fwd)
-
-        Vt = np.append(Vt, pixels[pixel].Vt)
+            # add extra x-axis point
+            Wd_L = np.append(Wd_L, pixels[pixel].WdL)
+            Vt = np.append(Vt, pixels[pixel].Vts[1])
+            Vg_Vt = np.append(Vg_Vt, Vg_Vt_bwd)
+            gms = np.append(gms, gm_bwd)
 
     # fit functions
     def line_f(x, a, b):
