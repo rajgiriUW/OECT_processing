@@ -75,7 +75,11 @@ for k in gm_average:
     ax2.plot(gm_average[k]['gm_fwd'] * 1e3, linestyle='--', linewidth=2, color=p[0]._color)
     ax2.plot(gm_average[k]['gm_bwd'] * 1e3, linestyle='--', linewidth=2, color=p[0]._color)
 
+path = r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\2018_1018,0918 uC aggregate'
+fig.savefig(path + r'\aggregate_Iv_averages.tif', format='tiff')
+
 fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
 ax.set_xlabel('Wd/L (nm)', fontweight='bold', fontsize=18, fontname='Arial')
-ax.set_ylabel('gm (mS))', fontweight='bold', fontsize=18, fontname='Arial')
+ax.set_ylabel('gm (mS)', fontweight='bold', fontsize=18, fontname='Arial')
 ax.plot(WdLs * 1e9, gm_peaks * 1e3, 's', markersize=12)
+fig.savefig(path + r'\gm_scatter.tif', format='tiff')

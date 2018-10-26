@@ -248,6 +248,7 @@ class OECT:
         for i in self.transfer:
             self.gm_fwd[i], self.gm_bwd[i] = self._calc_gm(self.transfer[i])
 
+        self.reverse = False
         # assemble the gms into single dataframes
         for g in self.gm_fwd:
 
@@ -259,6 +260,7 @@ class OECT:
 
         for g in self.gm_bwd:
 
+            self.reverse = True
             gm_bwd = self.gm_bwd[g]
 
             if not gm_bwd.empty:
