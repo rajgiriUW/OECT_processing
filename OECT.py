@@ -75,6 +75,8 @@ class OECT:
         dict of Dataframes of all forward sweep gms
     gms_bwd : dict    
         dict of Dataframes of all backward sweep gms
+    gm_peaks : ndarray
+        Peak gms calculated by taking simple peak
     Vt : float
         Threshold voltage calculated from sqrt(Id) fit
     Vts : ndarray
@@ -202,11 +204,13 @@ class OECT:
         gm_fwd = pd.DataFrame(data=gml, index=v[0:mx], columns=['gm'])
         gm_fwd.index.name = 'Voltage (V)'
 
+        gm_peaks = np.array([])
+        gm_peaks = np.append(gm_peaks, np.max(gm_fwd.values))
+
         # if reverse trace exists
         if mx != len(v) - 1:
             # vl_hi = np.arange(v[mx], v[-1], -0.01)
 
-            self.reverse = True
             self.rev_point = v[mx]
 
             vl_hi = np.flip(v[mx:])
@@ -217,9 +221,11 @@ class OECT:
             gm_bwd = pd.DataFrame(data=gmh, index=vl_hi, columns=['gm'])
             gm_bwd.index.name = 'Voltage (V)'
 
+            gm_peaks = np.append(gm_peaks, np.max(gm_bwd.values))
+
         else:
 
-            gm_bwd = pd.DataFrame()
+            gm_bwd = pd.DataFrame()  # empty dataframe
 
         return gm_fwd, gm_bwd
 

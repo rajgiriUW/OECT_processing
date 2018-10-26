@@ -20,19 +20,18 @@ def line_0(x, b):
 
 
 #%%
-# uC paths to average together
+# avg paths to average together
 
 # No Washing - 10 mg/mL - 4:6 wires
-paths_46_nowash = [r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 01\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 02\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_4\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_3\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181010 - dppdtt 46 nowash 03 (new geom)\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180911 - dppdtt 4-6_nowash_01 devices\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180824 - dppdtt devices\wire_nowash\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180720 - DPP DTT PS devices\01_noWash\uC']
+paths_46_nowash = [r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 01\avg',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 02\avg',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_4\avg',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_3\avg',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181010 - dppdtt 46 nowash 03 (new geom)\avg',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180911 - dppdtt 4-6_nowash_01 devices\avg',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180824 - dppdtt devices\wire_nowash\avg',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180720 - DPP DTT PS devices\01_noWash\avg']
 
-Wd_Ls = np.array([])
 gm_peaks = np.array([])
 VgVts = np.array([])
 
@@ -41,7 +40,6 @@ fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
 for p in paths_46_nowash:
     print(p)
     _, uC = OECT_loading.uC_scale(p, plot=False)
-    Wd_Ls = np.append(Wd_Ls, uC.Wd_L)
     VgVts = np.append(VgVts, uC.Vg_Vt)
     gm_peaks = np.append(gm_peaks, uC.gms)
     ax.plot(uC.Wd_L * uC.Vg_Vt * 1e2, uC.gms * 1e3, 's', markersize=8)
