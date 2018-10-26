@@ -118,6 +118,7 @@ class OECT:
 
             app = QtWidgets.QApplication([])
             self.folder = QtWidgets.QFileDialog.getExistingDirectory(caption='Select folder of data')
+            print('Loading', self.folder)
             app.closeAllWindows()
             app.exit()
 
@@ -201,11 +202,15 @@ class OECT:
         # Get gm
         gml = gm_deriv(vl_lo, i[0:mx], self.gm_method, {'window': window, 'polyorder': polyorder, 'deg': deg})
 
+        # Assign gms
         gm_fwd = pd.DataFrame(data=gml, index=v[0:mx], columns=['gm'])
         gm_fwd.index.name = 'Voltage (V)'
 
         gm_peaks = np.array([])
+        gm_args = np.array([])
+
         gm_peaks = np.append(gm_peaks, np.max(gm_fwd.values))
+        gm_args = np.append(gm_args, gm_fwd.index[np.argmax(gm_fwd.values)])
 
         # if reverse trace exists
         if mx != len(v) - 1:
@@ -222,10 +227,13 @@ class OECT:
             gm_bwd.index.name = 'Voltage (V)'
 
             gm_peaks = np.append(gm_peaks, np.max(gm_bwd.values))
+            gm_args = np.append(gm_args, gm_bwd.index[np.argmax(gm_bwd.values)])
 
         else:
 
             gm_bwd = pd.DataFrame()  # empty dataframe
+
+        self.gm_peaks = pd.DataFrame(data=gm_peaks, index=gm_args, columns=['peak gm (S)'])
 
         return gm_fwd, gm_bwd
 

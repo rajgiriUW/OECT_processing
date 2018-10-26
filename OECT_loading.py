@@ -56,6 +56,7 @@ def average(path='', thickness=40e-9, plot=True):
 
     if not path:
         path = file_open(caption='Select avg subfolder')
+        print('Loading from', path)
 
     filelist = os.listdir(path)
 
@@ -147,7 +148,7 @@ def average(path='', thickness=40e-9, plot=True):
         fig = OECT_plotting.plot_output_avg(Id_Vd)
         fig.savefig(path + r'\output_avg.tif', format='tiff')
 
-    return pixels, Id_Vg, Id_Vd
+    return pixels, Id_Vg, Id_Vd, temp_dv.WdL
 
 
 def uC_scale(path='', thickness=40e-9, plot=True):
@@ -180,6 +181,7 @@ def uC_scale(path='', thickness=40e-9, plot=True):
 
     if not path:
         path = file_open(caption='Select uC subfolder')
+        print('Loading from', path)
 
     filelist = os.listdir(path)
 
