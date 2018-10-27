@@ -52,6 +52,26 @@ for p, c in zip(paths_46_nowash, columns):
 
     gm_average[c] = Id_Vg
 
+paths_46_nowash_uC = [r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 01\uC',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 02\uC',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181010 - dppdtt 46 nowash 03 (new geom)\uC',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_4\uC',
+                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_3\uC']
+
+
+columns = [str(p) for p in np.arange(len(paths_46_nowash_uC))]
+
+for p, c in zip(paths_46_nowash_uC, columns):
+    print(p)
+    pixels, uC = OECT_loading.uC_scale(p, plot=False)
+
+    for x in pixels:
+        gm_peaks = np.append(gm_peaks, pixels[x].gm_peaks)
+        WdLs = np.append(WdLs, pixels[x].WdL)
+
+        if len(pixels[x].gm_peaks.values) > 1:
+            WdLs = np.append(WdLs, pixels[x].WdL)
+
 fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
 plt.rc('axes', linewidth=4)
 plt.rcParams.update({'font.size': 18, 'font.weight': 'bold',
