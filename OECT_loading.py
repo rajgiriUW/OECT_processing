@@ -196,30 +196,37 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
             print('Ignoring', k)
             f.remove(k)
     filelist = f[:]
-    filelist = [f+'_uC' for f in filelist]
-    del f
-
     paths = [os.path.join(path, name) for name in filelist]
+    pixkeys = [f + '_uC' for f in filelist]
 
     # add the averaging pixels to the calculation
     if add_avg_pixels:
-        print('Adding avg-pixels')
-        os.chdir(path + '\..')
-        os.chdir(os.getcwd()+ '\\avg')
-        avgpath = os.getcwd()
-        avglist = os.listdir(avgpath)
 
-        f = avglist[:]
-        for k in avglist:
-            try:
-                sub_num = int(k)
-            except:
-                print('Ignoring', k)
-                f.remove(k)
-        filelist =  filelist + [f+'_avg' for f in f[:]]
-        del f
+        try:
 
-        paths = paths + [os.path.join(avgpath, name) for name in filelist]
+            os.chdir(path + '\..')
+            os.chdir(os.getcwd() + '\\avg')
+            avgpath = os.getcwd()
+            avglist = os.listdir(avgpath)
+
+            print('Adding avg-pixels')
+
+            f = avglist[:]
+            for k in avglist:
+                try:
+                    sub_num = int(k)
+                except:
+                    print('Ignoring', k)
+                    f.remove(k)
+
+            filelist = f[:]
+            paths = paths + [os.path.join(avgpath, name) for name in filelist]
+            pixkeys = pixkeys + [f + '_avg' for f in filelist]
+            del f
+
+        except:
+
+            print('No avg subfolder found')
 
     # removes random files instead of the sub-folders
     for p in paths:
@@ -229,7 +236,7 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
     pixels = {}
 
     # loads all the folders
-    for p, f in zip(paths, filelist):
+    for p, f in zip(paths, pixkeys):
         dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot)
         pixels[f] = dv
 
@@ -239,7 +246,7 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
     Vt = np.array([])
     gms = np.array([])
 
-    for f, pixel in zip(filelist, pixels):
+    for f, pixel in zip(pixkeys, pixels):
 
         # peak gms
         c = list(pixels[pixel].gm_fwd.keys())[0]
