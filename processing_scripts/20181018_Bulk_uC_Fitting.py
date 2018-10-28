@@ -40,7 +40,7 @@ fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
 
 for p in paths_46_nowash:
     print(p)
-    _, uC = OECT_loading.uC_scale(p, plot=False)
+    _, uC = OECT_loading.uC_scale(p, plot=False, add_avg_pixels=True)
     Wd_Ls = np.append(Wd_Ls, uC.Wd_L)
     VgVts = np.append(VgVts, uC.Vg_Vt)
     gm_peaks = np.append(gm_peaks, uC.gms)
@@ -73,7 +73,7 @@ fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
 
 for p in paths_46_nowash:
     print(p)
-    _, uC = OECT_loading.uC_scale(p, plot=False)
+    _, uC = OECT_loading.uC_scale(p, plot=False, add_avg_pixels=True)
     Wd_Ls = np.append(Wd_Ls, uC.Wd_L)
     VgVts = np.append(VgVts, uC.Vg_Vt)
     gm_peaks = np.append(gm_peaks, uC.gms)
@@ -104,7 +104,7 @@ fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
 
 for p in paths_46_nowash:
     print(p)
-    _, uC = OECT_loading.uC_scale(p, plot=False)
+    _, uC = OECT_loading.uC_scale(p, plot=False, add_avg_pixels=True)
     Wd_Ls = np.append(Wd_Ls, uC.Wd_L)
     VgVts = np.append(VgVts, uC.Vg_Vt)
     gm_peaks = np.append(gm_peaks, uC.gms)

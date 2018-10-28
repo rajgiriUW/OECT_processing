@@ -151,7 +151,7 @@ def average(path='', thickness=40e-9, plot=True):
     return pixels, Id_Vg, Id_Vd, temp_dv.WdL
 
 
-def uC_scale(path='', thickness=40e-9, plot=True):
+def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -159,9 +159,12 @@ def uC_scale(path='', thickness=40e-9, plot=True):
     thickness : float
         approximate film thickness. Standard polymers (for Raj) are ~40 nm
         
-    plot : bool
+    plot : bool, optional
         Whether to plot or not. Not plotting is very fast!    
-    
+
+    add_avg_pixels : bool, optional
+        Whether to add the averaging subfolder (adds more low Wd/L points)
+
     Returns
     -------
     pixels : dict of OECT
@@ -193,9 +196,30 @@ def uC_scale(path='', thickness=40e-9, plot=True):
             print('Ignoring', k)
             f.remove(k)
     filelist = f[:]
+    filelist = [f+'_uC' for f in filelist]
     del f
 
     paths = [os.path.join(path, name) for name in filelist]
+
+    # add the averaging pixels to the calculation
+    if add_avg_pixels:
+        print('Adding avg-pixels')
+        os.chdir(path + '\..')
+        os.chdir(os.getcwd()+ '\\avg')
+        avgpath = os.getcwd()
+        avglist = os.listdir(avgpath)
+
+        f = avglist[:]
+        for k in avglist:
+            try:
+                sub_num = int(k)
+            except:
+                print('Ignoring', k)
+                f.remove(k)
+        filelist =  filelist + [f+'_avg' for f in f[:]]
+        del f
+
+        paths = paths + [os.path.join(avgpath, name) for name in filelist]
 
     # removes random files instead of the sub-folders
     for p in paths:
