@@ -267,8 +267,7 @@ fig.savefig(path + r'\aggregate_wash_Iv_averages.tif', format='tiff')
 # IdVg averages
 paths_46_wash = [r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 wash 03\uC',
                  r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 wash 04\uC',
-                 r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181005 - dppdtt 46 wash 02 (new geom)\uC',
-                 r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181005 - dppdtt 46 wash 01 (orig geom)\uC']
+                 r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181005 - dppdtt 46 wash 02 (new geom)\uC']
 
 gm_peaks = np.array([])
 IdVg_average = pd.DataFrame()
