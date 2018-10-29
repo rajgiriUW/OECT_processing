@@ -55,7 +55,7 @@ ax.set_ylabel('gm (mS)')
 dv = {'Wd_L': Wd_Ls, 'Vg_Vt': VgVts, 'gms': gm_peaks, 'uC': uC, 'uC_0': uC_0,
       'folder': r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\2018_1018,0918 uC aggregate'}
 
-OECT_plotting.plot_uC(dv, label='all')
+OECT_plotting.plot_uC(dv, label='wire_nowash_all')
 
 # %%
 # "Good" subset
@@ -88,7 +88,7 @@ ax.set_ylabel('gm (mS)')
 dv = {'Wd_L': Wd_Ls, 'Vg_Vt': VgVts, 'gms': gm_peaks, 'uC': uC, 'uC_0': uC_0,
       'folder': r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\2018_1018,0918 uC aggregate'}
 
-OECT_plotting.plot_uC(dv, label='good')
+OECT_plotting.plot_uC(dv, label='wire_nowash_good')
 
 # %%
 # "Best" subset
@@ -119,7 +119,7 @@ ax.set_ylabel('gm (mS)')
 dv = {'Wd_L': Wd_Ls, 'Vg_Vt': VgVts, 'gms': gm_peaks, 'uC': uC, 'uC_0': uC_0,
       'folder': r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\2018_1018,0918 uC aggregate'}
 
-OECT_plotting.plot_uC(dv, label='best')
+OECT_plotting.plot_uC(dv, label='wire_nowash_best')
 
 # %%
 # Washed Wire data
@@ -152,7 +152,7 @@ ax.set_ylabel('gm (mS)')
 dv = {'Wd_L': Wd_Ls, 'Vg_Vt': VgVts, 'gms': gm_peaks, 'uC': uC, 'uC_0': uC_0,
       'folder': r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\2018_1018,0918 uC aggregate'}
 
-OECT_plotting.plot_uC(dv, label='best')
+OECT_plotting.plot_uC(dv, label='wire_wash_best')
 
 # %%
 # "Good" data
@@ -161,7 +161,6 @@ paths_46_wash = [r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 
                  r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 wash 04\uC',
                  r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181005 - dppdtt 46 wash 02 (new geom)\uC',
                  r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181005 - dppdtt 46 wash 01 (orig geom)\uC',
-                 r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180824 - dppdtt devices\wire_nowash\uC',
                  r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180720 - DPP DTT PS devices\02_wash\uC']
 
 Wd_Ls = np.array([])
@@ -187,4 +186,4 @@ ax.set_ylabel('gm (mS)')
 dv = {'Wd_L': Wd_Ls, 'Vg_Vt': VgVts, 'gms': gm_peaks, 'uC': uC, 'uC_0': uC_0,
       'folder': r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\2018_1018,0918 uC aggregate'}
 
-OECT_plotting.plot_uC(dv, label='good')
+OECT_plotting.plot_uC(dv, label='wire_wash_good')

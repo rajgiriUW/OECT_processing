@@ -248,10 +248,9 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
 
         else:
 
-            del pixkeys[f]
+            pixkeys.remove(f)
 
-
-    # do uC* graphs, need gm vs W*d/L        
+    # do uC* graphs, need gm vs W*d/L
     Wd_L = np.array([])
     Vg_Vt = np.array([])  # threshold offset
     Vt = np.array([])
