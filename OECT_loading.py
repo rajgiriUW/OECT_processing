@@ -236,9 +236,20 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
     pixels = {}
 
     # loads all the folders
+
+    updated_keys = pixkeys[:]
+
     for p, f in zip(paths, pixkeys):
-        dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot)
-        pixels[f] = dv
+
+        if os.listdir(p):
+
+            dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot)
+            pixels[f] = dv
+
+        else:
+
+            del pixkeys[f]
+
 
     # do uC* graphs, need gm vs W*d/L        
     Wd_L = np.array([])

@@ -44,34 +44,13 @@ for p, c in zip(paths_46_nowash, columns):
 
     for x in pixels:
         VgVts = np.append(VgVts, pixels[x].Vts)
-        gm_peaks = np.append(gm_peaks, pixels[x].gm_peaks)
-        WdLs = np.append(WdLs, Wd_L)
+        gm_peaks = np.append(gm_peaks, pixels[x].gm_peaks / pixels[x].d)
+        WdLs = np.append(WdLs, Wd_L / pixels[x].d)
 
         if len(pixels[x].gm_peaks.values) > 1:
             WdLs = np.append(WdLs, Wd_L)
 
     gm_average[c] = Id_Vg
-
-paths_46_nowash_uC = [r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 01\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 02\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181010 - dppdtt 46 nowash 03 (new geom)\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_4\uC',
-                   r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_3\uC']
-
-
-columns = [str(p) for p in np.arange(len(paths_46_nowash_uC))]
-
-for p, c in zip(paths_46_nowash_uC, columns):
-    print(p)
-    pixels, uC = OECT_loading.uC_scale(p, plot=False)
-
-    for x in pixels:
-        gm_peaks = np.append(gm_peaks, pixels[x].gm_peaks)
-        WdLs = np.append(WdLs, pixels[x].WdL)
-
-        if len(pixels[x].gm_peaks.values) > 1:
-            WdLs = np.append(WdLs, pixels[x].WdL)
-
 fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
 plt.rc('axes', linewidth=4)
 plt.rcParams.update({'font.size': 18, 'font.weight': 'bold',
@@ -81,14 +60,14 @@ ax.tick_params(axis='both', length=10, width=3, which='major', top='on')
 ax.tick_params(axis='both', length=6, width=3, which='minor', top='on')
 ax.tick_params(axis='x', labelsize=18)
 ax.tick_params(axis='y', labelsize=18)
-ax2.tick_params(axis='both', length=10, width=3, which='major')
-ax2.tick_params(axis='both', length=6, width=3, which='minor')
-ax2.tick_params(axis='y', labelsize=18)
 
 ax2 = ax.twinx()
 ax.set_xlabel('Vg (V)', fontweight='bold', fontsize=18, fontname='Arial')
 ax.set_ylabel('Id (mA)', fontweight='bold', fontsize=18, fontname='Arial')
 ax2.set_ylabel('gm (mS)', rotation=-90, fontweight='bold', fontsize=18, fontname='Arial', labelpad=20)
+ax2.tick_params(axis='both', length=10, width=3, which='major')
+ax2.tick_params(axis='both', length=6, width=3, which='minor')
+ax2.tick_params(axis='y', labelsize=18)
 
 for k in gm_average:
     p = ax.plot(gm_average[k]['Id average'] * 1000, linestyle='-', linewidth=3)
@@ -98,8 +77,33 @@ for k in gm_average:
 path = r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\2018_1018,0918 uC aggregate'
 fig.savefig(path + r'\aggregate_Iv_averages.tif', format='tiff')
 
+# %%
+paths_46_nowash_uC = [r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 01\uC',
+                      r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181018 - DPPDTT 46 nowash 02\uC',
+                      r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20181010 - dppdtt 46 nowash 03 (new geom)\uC',
+                      r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_4\uC',
+                      r'C:\Users\Raj\OneDrive\UW Work\Data\DPP-DTT\_devices\20180918 - dppdtt 46nowash_3\uC']
+
+columns = [str(p) for p in np.arange(len(paths_46_nowash_uC))]
+
+gm_peaks = np.array([])
+gm_average = {}
+WdLs = np.array([])
+VgVts = np.array([])
+
+for p, c in zip(paths_46_nowash_uC, columns):
+    print(p)
+    pixels, uC = OECT_loading.uC_scale(p, plot=False)
+
+    for x in pixels:
+        gm_peaks = np.append(gm_peaks, pixels[x].gm_peaks / (pixels[x].d * pixels[x].W * pixels[x].L))
+        WdLs = np.append(WdLs, pixels[x].WdL)
+
+        if len(pixels[x].gm_peaks.values) > 1:
+            WdLs = np.append(WdLs, pixels[x].WdL)
+
 fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
 ax.set_xlabel('Wd/L (nm)', fontweight='bold', fontsize=18, fontname='Arial')
-ax.set_ylabel('gm (mS)', fontweight='bold', fontsize=18, fontname='Arial')
-ax.plot(WdLs * 1e9, gm_peaks * 1e3, 's', markersize=12)
+ax.set_ylabel('gm / V (mS / um^3)', fontweight='bold', fontsize=18, fontname='Arial')
+ax.plot(WdLs * 1e9, gm_peaks * 1e3 / (1e6) ** 3, 's', markersize=12)
 fig.savefig(path + r'\gm_scatter.tif', format='tiff')
