@@ -110,7 +110,9 @@ def average(path='', thickness=40e-9, plot=True):
     temp_dv = OECT.OECT(paths[0], {'d': thickness})
     _gm_fwd, _gm_bwd = temp_dv._calc_gm(Id_Vg)
     Id_Vg['gm_fwd'] = _gm_fwd
-    Id_Vg['gm_bwd'] = _gm_bwd
+    if not _gm_bwd.empty:
+        Id_Vg['gm_bwd'] = _gm_bwd
+
     Id_Vg = Id_Vg.rename(columns={0: 'Id average'})  # fix a naming bug
 
     if temp_dv.reverse:
