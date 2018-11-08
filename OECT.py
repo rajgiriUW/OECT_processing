@@ -98,7 +98,13 @@ class OECT:
     >>> device.thresh()
     """
 
-    def __init__(self, folder='', params={}, gm_method='sg'):
+    def __init__(self, folder=None, params=None, gm_method='sg'):
+
+        if folder is None:
+            folder = ''
+
+        if params is None:
+            params = {}
 
         self.output = {}
         self.output_raw = {}
@@ -148,6 +154,8 @@ class OECT:
         self.W, self.L, self.d = self.get_WdL(params)
         self.WdL = self.W * self.d / self.L
 
+        return
+
     def _calc_gm(self, df):
         """
         Calculates single gm curve in milli-Siemens
@@ -167,30 +175,6 @@ class OECT:
             mx = np.argmin(v)
 
         vl_lo = np.arange(v[0], v[mx], 0.01)
-
-        def gm_deriv(v, i, method, fit_params={'window': 11, 'polyorder': 2, 'deg': 8}):
-
-            if method is 'sg':
-                # Savitsky-Golay method
-                if not fit_params['window'] & 1:  # is odd
-                    fit_params['window'] += 1
-                gml = sps.savgol_filter(i.T, window_length=fit_params['window'],
-                                        polyorder=fit_params['polyorder'], deriv=1,
-                                        delta=v[2] - v[1])[0, :]
-            elif method is 'raw':
-                # raw derivative
-                gml = np.gradient(i.flatten(), v[2] - v[1])
-
-            elif method is 'poly':
-                # polynomial fit
-                funclo = np.polyfit(v, i, fit_params['deg'])
-                gml = np.gradient(np.polyval(funclo, v), (v[2] - v[1]))
-
-            else:
-                warnings.warn('Bad gm_method, aborting')
-                return
-
-            return gml
 
         # sg parameters
         window = np.max([int(0.04 * self.transfers.shape[0]), 3])
@@ -233,9 +217,9 @@ class OECT:
 
             gm_bwd = pd.DataFrame()  # empty dataframe
 
-        self.gm_peaks = pd.DataFrame(data=gm_peaks, index=gm_args, columns=['peak gm (S)'])
+        gm_peaks = pd.DataFrame(data=gm_peaks, index=gm_args, columns=['peak gm (S)'])
 
-        return gm_fwd, gm_bwd
+        return gm_fwd, gm_bwd, gm_peaks
 
     def calc_gms(self):
         """
@@ -246,7 +230,7 @@ class OECT:
         """
 
         for i in self.transfer:
-            self.gm_fwd[i], self.gm_bwd[i] = self._calc_gm(self.transfer[i])
+            self.gm_fwd[i], self.gm_bwd[i], self.gm_peaks = self._calc_gm(self.transfer[i])
 
         self.reverse = False
         # assemble the gms into single dataframes
@@ -373,30 +357,6 @@ class OECT:
         else:
             v_lo = self.transfers.index[:mx]
 
-        # linear curve-fitting
-        def line_f(x, f0, f1):
-
-            return f1 + f0 * x
-
-        # find minimum residual through fitting a line to several found peaks
-        def _min_fit(Id, V):
-
-            _residuals = np.array([])
-            _fits = np.array([0, 0])
-            mx_d2 = self._find_peak(Id, V)
-
-            for m in mx_d2:
-                #                Id = Id - np.min(Id) # 0-offset
-                fit, _ = cf(line_f, V[:m], Id[:m], bounds=([-np.inf, -np.inf], [0, np.inf]))
-                _res = np.sum(np.array((Id[:m] - line_f(V[:m], fit[0], fit[1])) ** 2))
-                _fits = np.vstack((_fits, fit))
-                _residuals = np.append(_residuals, _res)
-
-            _fits = _fits[1:, :]
-            fit = _fits[np.argmin(_residuals), :]
-
-            return fit
-
         # Find and fit at inflection between regimes
         for tf in self.transfers:
 
@@ -404,7 +364,7 @@ class OECT:
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
 
             # minimize residuals by finding right peak
-            fit = _min_fit(Id_lo - np.min(Id_lo), v_lo)
+            fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
 
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
@@ -417,7 +377,7 @@ class OECT:
                 v_hi = np.flip(v_hi)
 
                 try:
-                    fit = _min_fit(Id_hi - np.min(Id_hi), v_hi)
+                    fit = self._min_fit(Id_hi - np.min(Id_hi), v_hi)
                     Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
                 except:
                     warnings.warn('Upper gm did not find correct Vt')
@@ -427,42 +387,6 @@ class OECT:
         self.Vts = Vts
 
         return
-
-    def _find_peak(self, Id, Vg, negative_Vt=True):
-        '''
-        Uses spline to find the transition point then return it for fitting Vt
-          to sqrt(Id) vs Vg
-        
-        Id : array
-            Id vs Vg, currents
-            
-        Vg : array
-            Id vs Vg, voltages
-        
-        negative_Vt : bool
-            Assumes Vt is a negative voltage (typical for many p-type polymer)
-        '''
-
-        # uses second derivative for transition point
-        Id_spl = spi.UnivariateSpline(Vg, Id, k=4, s=1e-7)
-        V_spl = np.arange(Vg[0], Vg[-1], 0.01)
-        d2 = np.gradient(np.gradient(Id_spl(V_spl)))
-
-        peaks = sps.find_peaks_cwt(d2, np.arange(1, 15))
-        peaks = peaks[peaks > 5]  # edge errors
-
-        if negative_Vt:
-
-            peaks = peaks[np.where(V_spl[peaks] < 0)]
-
-        else:
-
-            peaks = peaks[np.where(V_spl[peaks] > 0)]
-
-        # find splined index in original array
-        mx_d2 = [np.searchsorted(Vg, V_spl[p]) for p in peaks]
-
-        return mx_d2
 
     def loaddata(self):
         """Loads transfer and output files from a folder"""
@@ -495,9 +419,9 @@ class OECT:
         return
 
     def get_WdL(self, params):
-        '''
+        """
         Finds the electrode parameters and stores internally
-        '''
+        """
 
         keys = ['W', 'L', 'd']
         vals = {}
@@ -535,7 +459,7 @@ class OECT:
         return vals['W'], vals['L'], vals['d']
 
     def get_metadata(self, fl):
-        ''' Called in load_data to extract parameters '''
+        """ Called in load_data to extract parameters """
 
         metadata = ['Vd', 'Vg', 'Averages']
 
@@ -553,3 +477,94 @@ class OECT:
         h.close()
 
         return
+
+    # find minimum residual through fitting a line to several found peaks
+    def _min_fit(self, Id, V):
+
+        _residuals = np.array([])
+        _fits = np.array([0, 0])
+        mx_d2 = self._find_peak(Id, V)
+
+        for m in mx_d2:
+            #                Id = Id - np.min(Id) # 0-offset
+            fit, _ = cf(self.line_f, V[:m], Id[:m], bounds=([-np.inf, -np.inf], [0, np.inf]))
+            _res = np.sum(np.array((Id[:m] - self.line_f(V[:m], fit[0], fit[1])) ** 2))
+            _fits = np.vstack((_fits, fit))
+            _residuals = np.append(_residuals, _res)
+
+        _fits = _fits[1:, :]
+        fit = _fits[np.argmin(_residuals), :]
+
+        return fit
+
+    # linear curve-fitting
+    @staticmethod
+    def line_f(x, f0, f1):
+
+        return f1 + f0 * x
+
+    @staticmethod
+    def _find_peak(Id, Vg, negative_Vt=True):
+        """
+        Uses spline to find the transition point then return it for fitting Vt
+          to sqrt(Id) vs Vg
+
+        Parameters
+        ----------
+        Id : array
+            Id vs Vg, currents
+        Vg : array
+            Id vs Vg, voltages
+        negative_Vt : bool
+            Assumes Vt is a negative voltage (typical for many p-type polymer)
+
+        Returns
+        -------
+        mxd2 : int
+            index of the maximum transition point for threshold voltage calculation
+        """
+
+        # uses second derivative for transition point
+        Id_spl = spi.UnivariateSpline(Vg, Id, k=4, s=1e-7)
+        V_spl = np.arange(Vg[0], Vg[-1], 0.01)
+        d2 = np.gradient(np.gradient(Id_spl(V_spl)))
+
+        peaks = sps.find_peaks_cwt(d2, np.arange(1, 15))
+        peaks = peaks[peaks > 5]  # edge errors
+
+        if negative_Vt:
+
+            peaks = peaks[np.where(V_spl[peaks] < 0)]
+
+        else:
+
+            peaks = peaks[np.where(V_spl[peaks] > 0)]
+
+        # find splined index in original array
+        mx_d2 = [np.searchsorted(Vg, V_spl[p]) for p in peaks]
+
+        return mx_d2
+
+
+def gm_deriv(v, i, method='raw', fit_params={'window': 11, 'polyorder': 2, 'deg': 8}):
+    if method is 'sg':
+        # Savitsky-Golay method
+        if not fit_params['window'] & 1:  # is odd
+            fit_params['window'] += 1
+        gml = sps.savgol_filter(i.T, window_length=fit_params['window'],
+                                polyorder=fit_params['polyorder'], deriv=1,
+                                delta=v[2] - v[1])[0, :]
+    elif method is 'raw':
+        # raw derivative
+        gml = np.gradient(i.flatten(), v[2] - v[1])
+
+    elif method is 'poly':
+        # polynomial fit
+        funclo = np.polyfit(v, i, fit_params['deg'])
+        gml = np.gradient(np.polyval(funclo, v), (v[2] - v[1]))
+
+    else:
+        warnings.warn('Bad gm_method, aborting')
+        return
+
+    return gml
