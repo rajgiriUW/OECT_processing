@@ -116,6 +116,8 @@ class OECT:
 
         self.Vg_array = []
         self.Vg_labels = []
+        self.Vd_labels = []
+
         self.transfer_avgs = 1
         self.folder = folder
 
@@ -156,6 +158,19 @@ class OECT:
 
         return
 
+    @staticmethod
+    def _reverse(v):
+        """if reverse trace exists, return max-point index and flag"""
+        mx = np.argmax(v)
+
+        if mx == 0:
+            mx = np.argmin(v)
+
+        if mx != len(v) - 1:
+            return mx, True
+
+        return mx, False
+
     def _calc_gm(self, df):
         """
         Calculates single gm curve in milli-Siemens
@@ -169,10 +184,12 @@ class OECT:
         i = np.array(df.values)
 
         # creates resample voltage range for smoothed gm splines
-        mx = np.argmax(v)
+        # mx = np.argmax(v)
+        #
+        # if mx == 0:
+        #     mx = np.argmin(v)
 
-        if mx == 0:
-            mx = np.argmin(v)
+        mx, reverse = self._reverse(v)
 
         vl_lo = np.arange(v[0], v[mx], 0.01)
 
@@ -197,7 +214,7 @@ class OECT:
         gm_args = np.append(gm_args, gm_fwd.index[np.argmax(gm_fwd.values)])
 
         # if reverse trace exists
-        if mx != len(v) - 1:
+        if reverse:
             # vl_hi = np.arange(v[mx], v[-1], -0.01)
 
             self.rev_point = v[mx]
@@ -267,11 +284,21 @@ class OECT:
         op = op.set_index('V_DS')
         op = op.set_index(pd.to_numeric(op.index.values))
 
-        self.output[V] = op
-        self.output_raw[V] = op
-        self.output[V] = self.output[V].drop(['I_DS Error (A)', 'I_G (A)',
-                                              'I_G Error (A)'], 1)
+        mx, reverse = self._reverse(op.index.values)
+        idx = op.index.values[mx]
+
         self.Vg_array.append(V)
+        Vfwd = str(V) + '_fwd'
+        self.output[Vfwd] = op[:idx]
+        self.output_raw[Vfwd] = op[:idx]
+        self.output[Vfwd] = self.output[Vfwd].drop(['I_DS Error (A)', 'I_G (A)',
+                                              'I_G Error (A)'], 1)
+        if reverse:
+            Vbwd = str(V) + '_bwd'
+            self.output[Vbwd] = op[idx:]
+            self.output_raw[Vbwd] = op[idx:]
+            self.output[Vbwd] = self.output[Vbwd].drop(['I_DS Error (A)', 'I_G (A)',
+                                                     'I_G Error (A)'], 1)
 
     def all_outputs(self):
         """
@@ -280,10 +307,16 @@ class OECT:
         """
 
         self.Vg_labels = []  # corrects for labels below
+
         for op in self.output:
-            self.Vg_labels.append(float(op))
-            self.outputs[op] = self.output[op]['I_DS (A)'].values
-            self.outputs = self.outputs.set_index(self.output[op].index)
+            self.Vg_labels.append(op)
+            df = pd.DataFrame(self.output[op])
+            df = df.rename(columns={self.output[op].columns[0]: op})
+
+            if self.outputs.empty:
+                self.outputs = pd.DataFrame(df)
+            else:
+                self.outputs = pd.concat([self.outputs, df], axis=1)
 
         self.num_outputs = len(self.outputs.columns)
 
@@ -323,8 +356,6 @@ class OECT:
         Creates a single dataFrame with all transfer curves (in case more than 1)
         This assumes that all data were taken at the same Vgs range
         """
-
-        self.Vd_labels = []
 
         for tf in self.transfer:
             self.Vd_labels.append(tf)
@@ -520,7 +551,7 @@ class OECT:
 
         Returns
         -------
-        mxd2 : int
+        mxd2 : list
             index of the maximum transition point for threshold voltage calculation
         """
 
