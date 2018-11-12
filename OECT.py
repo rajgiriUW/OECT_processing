@@ -17,6 +17,8 @@ from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
 
+from deriv import gm_deriv
+
 import numpy as np
 
 
@@ -183,12 +185,6 @@ class OECT:
         v = np.array(df.index)
         i = np.array(df.values)
 
-        # creates resample voltage range for smoothed gm splines
-        # mx = np.argmax(v)
-        #
-        # if mx == 0:
-        #     mx = np.argmin(v)
-
         mx, reverse = self._reverse(v)
 
         vl_lo = np.arange(v[0], v[mx], 0.01)
@@ -292,13 +288,13 @@ class OECT:
         self.output[Vfwd] = op[:idx]
         self.output_raw[Vfwd] = op[:idx]
         self.output[Vfwd] = self.output[Vfwd].drop(['I_DS Error (A)', 'I_G (A)',
-                                              'I_G Error (A)'], 1)
+                                                    'I_G Error (A)'], 1)
         if reverse:
             Vbwd = str(V) + '_bwd'
             self.output[Vbwd] = op[idx:]
             self.output_raw[Vbwd] = op[idx:]
             self.output[Vbwd] = self.output[Vbwd].drop(['I_DS Error (A)', 'I_G (A)',
-                                                     'I_G Error (A)'], 1)
+                                                        'I_G Error (A)'], 1)
 
     def all_outputs(self):
         """
@@ -575,27 +571,3 @@ class OECT:
         mx_d2 = [np.searchsorted(Vg, V_spl[p]) for p in peaks]
 
         return mx_d2
-
-
-def gm_deriv(v, i, method='raw', fit_params={'window': 11, 'polyorder': 2, 'deg': 8}):
-    if method is 'sg':
-        # Savitsky-Golay method
-        if not fit_params['window'] & 1:  # is odd
-            fit_params['window'] += 1
-        gml = sps.savgol_filter(i.T, window_length=fit_params['window'],
-                                polyorder=fit_params['polyorder'], deriv=1,
-                                delta=v[2] - v[1])[0, :]
-    elif method is 'raw':
-        # raw derivative
-        gml = np.gradient(i.flatten(), v[2] - v[1])
-
-    elif method is 'poly':
-        # polynomial fit
-        funclo = np.polyfit(v, i, fit_params['deg'])
-        gml = np.gradient(np.polyval(funclo, v), (v[2] - v[1]))
-
-    else:
-        warnings.warn('Bad gm_method, aborting')
-        return
-
-    return gml
