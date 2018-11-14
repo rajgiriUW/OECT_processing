@@ -12,6 +12,7 @@ __email__ = "rgiri@uw.edu"
 import pandas as pd
 import os
 import warnings
+import configparser
 
 from scipy import interpolate as spi
 from scipy import signal as sps
@@ -75,7 +76,7 @@ class OECT:
         Transconductance for reverse sweep (in Siemens) as one DataFrame
     gms_fwd : dict
         dict of Dataframes of all forward sweep gms
-    gms_bwd : dict    
+    gms_bwd : dict
         dict of Dataframes of all backward sweep gms
     gm_peaks : ndarray
         Peak gms calculated by taking simple peak
@@ -153,6 +154,7 @@ class OECT:
         self.rev_point = np.nan
 
         # load data
+        self.filelist()
         self.loaddata()
 
         self.W, self.L, self.d = self.get_WdL(params)
@@ -178,8 +180,8 @@ class OECT:
         Calculates single gm curve in milli-Siemens
         Splits data into "forward" and "backward"
         Assumes curves taken neg to positive Vg
-        
-        df = dataframe 
+
+        df = dataframe
         """
 
         v = np.array(df.index)
@@ -238,7 +240,7 @@ class OECT:
         """
         Calculates all the gms in the set of data.
         Assigns each one to gm_fwd (forward) and gm_bwd (reverse) as a dict
-        
+
         Creates a single dataFrame gms_fwd and another gms_bwd
         """
 
@@ -364,10 +366,10 @@ class OECT:
         """
         Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
             x-offset
-            
+
         negative_Vt : bool
             assumes Threshold is a negative value (typical for p-type polymers)
-            
+
         """
 
         Vts = np.array([])
@@ -415,16 +417,52 @@ class OECT:
 
         return
 
-    def loaddata(self):
-        """Loads transfer and output files from a folder"""
+    def filelist(self):
+        """ Generates list of files to process and config file"""
 
         filelist = os.listdir(self.folder)
         files = [os.path.join(self.folder, name)
                  for name in filelist if name[-3:] == 'txt']
 
-        for t in files:
+        # find config file
+        config = [os.path.join(self.folder, name)
+                 for name in filelist if name[-10:] == 'config.txt']
 
-            self.get_metadata(t)
+        if config:
+
+            for f in files:
+
+                if 'config' in f:
+
+                    files.remove(f)
+
+            self.config = config
+
+        else:
+
+            self.config = None
+
+        self.files = files
+
+        return
+
+    def loaddata(self):
+        """
+        3 Steps to loading a folder of data:
+            1) generate filelist for only txt files
+            2) determine if config exists (newer devices)
+            3) for each file in the filelist, generate a transfer curve or output curve
+
+        """
+
+        # older data sets don't have config files
+        if self.config:
+            self.params = config_file(self.config)
+
+        for t in self.files:
+
+            if not self.config:
+                self.get_metadata(t)
 
             if 'transfer' in t:
                 self.transfer_curve(t)
@@ -433,6 +471,7 @@ class OECT:
                 self.output_curve(t)
 
         self.all_outputs()
+
         try:
             self.all_transfers()
         except:
@@ -441,7 +480,7 @@ class OECT:
         self.num_transfers = len(self.transfers.columns)
         self.num_outputs = len(self.outputs.columns)
 
-        self.files = files
+
 
         return
 
@@ -513,8 +552,9 @@ class OECT:
         mx_d2 = self._find_peak(Id, V)
 
         for m in mx_d2:
-            #                Id = Id - np.min(Id) # 0-offset
-            fit, _ = cf(self.line_f, V[:m], Id[:m], bounds=([-np.inf, -np.inf], [0, np.inf]))
+            # Id = Id - np.min(Id) # 0-offset
+            fit, _ = cf(self.line_f, V[:m], Id[:m],
+                        bounds=([-np.inf, -np.inf], [0, np.inf]))
             _res = np.sum(np.array((Id[:m] - self.line_f(V[:m], fit[0], fit[1])) ** 2))
             _fits = np.vstack((_fits, fit))
             _residuals = np.append(_residuals, _res)
@@ -571,3 +611,46 @@ class OECT:
         mx_d2 = [np.searchsorted(Vg, V_spl[p]) for p in peaks]
 
         return mx_d2
+
+def config_file(cfg):
+    """
+    Generates parameters from supplied config file
+    """
+    config = configparser.ConfigParser()
+    config.read(cfg)
+    params = {}
+
+    dim_keys = ['Width (um)', 'Length (um)', 'Thickness (nm)']
+    vgs_keys = ['Preread (ms)', 'First Bias (ms)', 'Vds (V)']
+    vds_keys = ['Preread (ms)', 'First Bias (ms)', 'Output Vgs']
+
+    for key in dim_keys:
+
+        if config.has_option('Dimensions', key):
+
+            params[key] = config.getint('Dimensions', key)
+
+    for key in vgs_keys:
+
+        if config.has_option('Transfer', key):
+
+            params[key] = int(config.getfloat('Transfer', key))
+
+    for key in vds_keys:
+
+        if config.has_option('Output', key):
+
+            params[key] = int(config.getfloat('Output', key))
+
+    if 'Output Vgs' in params:
+
+        params['Vgs'] = []
+        for i in range(params['Output Vgs']):
+        
+            nm = 'Vgs (V) ' + str(i)
+            
+            val = config.getfloat('Output', nm)
+            params['Vgs'].append(val) 
+
+
+    return params
