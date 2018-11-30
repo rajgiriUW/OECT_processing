@@ -9,18 +9,17 @@ __email__ = "rgiri@uw.edu"
 @author: Raj
 """
 
-import pandas as pd
+import configparser
 import os
 import warnings
-import configparser
 
+import numpy as np
+import pandas as pd
 from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
 
 from deriv import gm_deriv
-
-import numpy as np
 
 
 class OECT:
@@ -107,7 +106,9 @@ class OECT:
             folder = ''
 
         if params is None:
-            params = {}
+            self.params = {}
+        else:
+            self.params = params
 
         self.output = {}
         self.output_raw = {}
@@ -157,7 +158,11 @@ class OECT:
         self.filelist()
         self.loaddata()
 
-        self.W, self.L, self.d = self.get_WdL(params)
+        self.W, self.L = self.params['W'], self.params['L']
+        if 'd' not in self.params:
+            self.params['d'] = 40e-9
+        self.d = self.params['d']
+
         self.WdL = self.W * self.d / self.L
 
         return
@@ -190,6 +195,7 @@ class OECT:
         mx, reverse = self._reverse(v)
 
         vl_lo = np.arange(v[0], v[mx], 0.01)
+        vl_lo = v[:mx]
 
         # sg parameters
         window = np.max([int(0.04 * self.transfers.shape[0]), 3])
@@ -426,20 +432,20 @@ class OECT:
 
         # find config file
         config = [os.path.join(self.folder, name)
-                 for name in filelist if name[-10:] == 'config.txt']
+                  for name in filelist if name[-10:] == 'config.cfg']
 
         if config:
 
             for f in files:
 
                 if 'config' in f:
-
                     files.remove(f)
 
             self.config = config
 
         else:
 
+            print('No config file found!')
             self.config = None
 
         self.files = files
@@ -461,8 +467,7 @@ class OECT:
 
         for t in self.files:
 
-            if not self.config:
-                self.get_metadata(t)
+            self.get_metadata(t)
 
             if 'transfer' in t:
                 self.transfer_curve(t)
@@ -480,52 +485,10 @@ class OECT:
         self.num_transfers = len(self.transfers.columns)
         self.num_outputs = len(self.outputs.columns)
 
-
-
         return
 
-    def get_WdL(self, params):
-        """
-        Finds the electrode parameters and stores internally
-        """
-
-        keys = ['W', 'L', 'd']
-        vals = {}
-
-        for key in keys:
-            if key in params.keys():
-                vals[key] = params[key]
-
-        # any missing keys?
-        check_files = False
-        for key in keys:
-            if key not in vals.keys():
-                check_files = True
-
-        if check_files:
-            # search params in first file in this folder for missing params
-            fl = self.files[0]
-
-            h = open(fl)
-            for line in h:
-
-                if 'Width' in line and 'W' not in vals.keys():
-                    vals['W'] = float(line.split()[-1])
-                if 'Length' in line and 'L' not in vals.keys():
-                    vals['L'] = float(line.split()[-1])
-                if 'Thickness' in line and 'd' not in vals.keys():
-                    vals['d'] = float(line.split()[-1])
-
-            h.close()
-
-        # default thickness= 40 nm
-        if 'd' not in vals.keys():
-            vals['d'] = 40e-9
-
-        return vals['W'], vals['L'], vals['d']
-
     def get_metadata(self, fl):
-        """ Called in load_data to extract parameters """
+        """ Called in load_data to extract file-specific parameters """
 
         metadata = ['Vd', 'Vg', 'Averages']
 
@@ -537,8 +500,6 @@ class OECT:
                 self.Vd = float(line.split()[-1])
             if 'V_G = ' in line:
                 self.Vg = float(line.split()[-1])
-            if 'Averages' in line:
-                self.num_avgs = float(line.split()[-1])
 
         h.close()
 
@@ -551,11 +512,14 @@ class OECT:
         _fits = np.array([0, 0])
         mx_d2 = self._find_peak(Id, V)
 
+        # for each peak found, fits a line. Uses that to determine Vt, then residual up to that found Vt
         for m in mx_d2:
             # Id = Id - np.min(Id) # 0-offset
             fit, _ = cf(self.line_f, V[:m], Id[:m],
                         bounds=([-np.inf, -np.inf], [0, np.inf]))
-            _res = np.sum(np.array((Id[:m] - self.line_f(V[:m], fit[0], fit[1])) ** 2))
+
+            v_x = np.searchsorted(V, -fit[1] / fit[0])  # finds the Vt from this fit to determine residual
+            _res = np.sum(np.array((Id[:v_x] - self.line_f(V[:v_x], fit[0], fit[1])) ** 2))
             _fits = np.vstack((_fits, fit))
             _residuals = np.append(_residuals, _res)
 
@@ -612,6 +576,7 @@ class OECT:
 
         return mx_d2
 
+
 def config_file(cfg):
     """
     Generates parameters from supplied config file
@@ -620,37 +585,37 @@ def config_file(cfg):
     config.read(cfg)
     params = {}
 
-    dim_keys = ['Width (um)', 'Length (um)', 'Thickness (nm)']
+    dim_keys = {'Width (um)': 'W', 'Length (um)': 'L', 'Thickness (nm)': 'd'}
     vgs_keys = ['Preread (ms)', 'First Bias (ms)', 'Vds (V)']
     vds_keys = ['Preread (ms)', 'First Bias (ms)', 'Output Vgs']
 
     for key in dim_keys:
 
         if config.has_option('Dimensions', key):
-
-            params[key] = config.getint('Dimensions', key)
+            params[dim_keys[key]] = config.getint('Dimensions', key)
 
     for key in vgs_keys:
 
         if config.has_option('Transfer', key):
-
             params[key] = int(config.getfloat('Transfer', key))
 
     for key in vds_keys:
 
         if config.has_option('Output', key):
+            val = int(config.getfloat('Output', key))
 
-            params[key] = int(config.getfloat('Output', key))
+            # to avoid duplicate keys
+            if key in params:
+                key = 'output_' + key
+            params[key] = val
 
     if 'Output Vgs' in params:
 
         params['Vgs'] = []
-        for i in range(params['Output Vgs']):
-        
-            nm = 'Vgs (V) ' + str(i)
-            
-            val = config.getfloat('Output', nm)
-            params['Vgs'].append(val) 
+        for i in range(1, params['Output Vgs'] + 1):
+            nm = 'Vgs (V)\t' + str(i)
 
+            val = config.getfloat('Output', nm)
+            params['Vgs'].append(val)
 
     return params
