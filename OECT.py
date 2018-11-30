@@ -21,6 +21,8 @@ from scipy.optimize import curve_fit as cf
 
 from deriv import gm_deriv
 
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 class OECT:
     """
@@ -35,11 +37,18 @@ class OECT:
         path to data folder on the computer. Default prompts a file dialog
     params : dict, optional
         device parameters, typically Width (W), length (L), thickness (d)
-    gm_method : str, optional
-        For calculating gm from the transfer curve Id-Vg
-        'sg' = Savitsky_golay smoothed derivative
-        'raw' = raw derivative
-        'poly' = 8th order polynomial fit
+    options : dict, optional
+        processing optional parameters (for transfer curves only)
+        Reverse : bool
+            Whether to process the reverse trace since there's often hysteresis
+        Average : bool
+            Whether instead to average forward and reverse trace
+            Reverse XOR Average must be true
+        gm_method : str
+            For calculating gm from the transfer curve Id-Vg
+            'sg' = Savitsky_golay smoothed derivative
+            'raw' = raw derivative
+            'poly' = 8th order polynomial fit
 
     Attributes
     ----------
@@ -100,30 +109,38 @@ class OECT:
     >>> device.thresh()
     """
 
-    def __init__(self, folder=None, params=None, gm_method='sg'):
+    def __init__(self, folder=None, params=None, options=None):
 
         if folder is None:
             folder = ''
 
-        if params is None:
-            self.params = {}
-        else:
-            self.params = params
-
+        # Data containers
         self.output = {}
         self.output_raw = {}
         self.outputs = pd.DataFrame()
-
         self.transfer = {}
         self.transfer_raw = {}
         self.transfers = pd.DataFrame()
-
         self.Vg_array = []
         self.Vg_labels = []
         self.Vd_labels = []
+        self.gm_fwd = {}
+        self.gm_bwd = {}
+        self.gms_fwd = pd.DataFrame()
+        self.gms_bwd = pd.DataFrame()
 
+        # Data descriptors
         self.transfer_avgs = 1
         self.folder = folder
+        self.num_outputs = 0
+        self.num_transfers = 0
+
+        # Threshold
+        self.Vt = np.nan
+        self.Vts = np.nan
+
+        self.reverse = False
+        self.rev_point = np.nan
 
         if not folder:
             from PyQt5 import QtWidgets
@@ -134,28 +151,37 @@ class OECT:
             app.closeAllWindows()
             app.exit()
 
-        self.gm_fwd = {}
-        self.gm_bwd = {}
-        self.gms_fwd = pd.DataFrame()
-        self.gms_bwd = pd.DataFrame()
-
-        if gm_method not in ['raw', 'sg', 'poly']:
-            warnings.warn('Bad parameter: defaulting to Savitsky-Golay filtering')
-            self.gm_method = 'sg'
-        else:
-            self.gm_method = gm_method
-
-        self.num_outputs = 0
-        self.num_transfers = 0
-
-        self.Vt = np.nan
-        self.Vts = np.nan
-
-        self.reverse = False
-        self.rev_point = np.nan
-
-        # load data
+        # load data, finds config file
         self.filelist()
+        if self.config:
+            _par, _opt = config_file(self.config)
+        else:
+            _par = []
+            _opt = []
+
+        # processing and device parameters
+        self.params = {}
+        self.options = {}
+
+        if params is not None:
+            for p in params:
+                self.params[p] = params[p]
+        for p in _par:
+            self.params[p] = _par[p]
+
+        if options is not None:
+            for o in options:
+                self.options[o] = options[o]
+        for o in _opt:
+            self.options[o] = _opt[o]
+
+        # defaults
+        if 'gm_method' not in self.options:
+            self.options['gm_method'] = 'sg'
+        if 'Reverse' not in self.options:
+            self.options['Reverse'] = True
+            self.options['Average'] = False
+
         self.loaddata()
 
         self.W, self.L = self.params['W'], self.params['L']
@@ -167,16 +193,16 @@ class OECT:
 
         return
 
-    @staticmethod
-    def _reverse(v):
+    def _reverse(self, v):
         """if reverse trace exists, return max-point index and flag"""
         mx = np.argmax(v)
 
         if mx == 0:
             mx = np.argmin(v)
 
-        if mx != len(v) - 1:
-            return mx, True
+        if self.options['Reverse']:
+            if mx != len(v) - 1:
+                return mx, True
 
         return mx, False
 
@@ -205,7 +231,8 @@ class OECT:
         deg = 8
 
         # Get gm
-        gml = gm_deriv(vl_lo, i[0:mx], self.gm_method, {'window': window, 'polyorder': polyorder, 'deg': deg})
+        gml = gm_deriv(vl_lo, i[0:mx], self.options['gm_method'],
+                       {'window': window, 'polyorder': polyorder, 'deg': deg})
 
         # Assign gms
         gm_fwd = pd.DataFrame(data=gml, index=v[0:mx], columns=['gm'])
@@ -217,7 +244,7 @@ class OECT:
         gm_peaks = np.append(gm_peaks, np.max(gm_fwd.values))
         gm_args = np.append(gm_args, gm_fwd.index[np.argmax(gm_fwd.values)])
 
-        # if reverse trace exists
+        # if reverse trace exists and we want to process it
         if reverse:
             # vl_hi = np.arange(v[mx], v[-1], -0.01)
 
@@ -226,7 +253,8 @@ class OECT:
             vl_hi = np.flip(v[mx:])
             i_hi = np.flip(i[mx:])
 
-            gmh = gm_deriv(vl_hi, i_hi, self.gm_method, {'window': window, 'polyorder': polyorder, 'deg': deg})
+            gmh = gm_deriv(vl_hi, i_hi, self.options['gm_method'],
+                           {'window': window, 'polyorder': polyorder, 'deg': deg})
 
             gm_bwd = pd.DataFrame(data=gmh, index=vl_hi, columns=['gm'])
             gm_bwd.index.name = 'Voltage (V)'
@@ -363,8 +391,18 @@ class OECT:
 
         for tf in self.transfer:
             self.Vd_labels.append(tf)
-            self.transfers[tf] = self.transfer[tf]['I_DS (A)'].values
-            self.transfers = self.transfers.set_index(self.transfer[tf].index)
+
+            transfer = self.transfer[tf]['I_DS (A)'].values
+            idx = self.transfer[tf]['I_DS (A)'].index.values
+            if 'Average' in self.options and self.options['Average']:
+                mx, _ = self._reverse(idx)
+                idx = idx[0:mx]
+                fwd = transfer[:mx]
+                bwd = np.flip(transfer[mx + 1:])
+                transfer = (fwd + bwd) / 2
+
+            self.transfers[tf] = transfer
+            self.transfers = self.transfers.set_index(pd.Index(idx))
 
         return
 
@@ -404,7 +442,7 @@ class OECT:
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
 
-            if self.reverse:
+            if self.options['Reverse']:
                 Id_hi = np.sqrt(np.abs(self.transfers[tf]).values[mx:])
 
                 # so signs on gradient work
@@ -413,10 +451,10 @@ class OECT:
 
                 try:
                     fit = self._min_fit(Id_hi - np.min(Id_hi), v_hi)
+                    print(fit)
                     Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
                 except:
                     warnings.warn('Upper gm did not find correct Vt')
-                    Vts = np.append(Vts, Vts[0])
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts
@@ -461,10 +499,6 @@ class OECT:
 
         """
 
-        # older data sets don't have config files
-        if self.config:
-            self.params = config_file(self.config)
-
         for t in self.files:
 
             self.get_metadata(t)
@@ -477,10 +511,11 @@ class OECT:
 
         self.all_outputs()
 
-        try:
-            self.all_transfers()
-        except:
-            print('Error in transfers: not all using same indices')
+        self.all_transfers()
+        # try:
+        #     self.all_transfers()
+        # except:
+        #     print('Error in transfers: not all using same indices')
 
         self.num_transfers = len(self.transfers.columns)
         self.num_outputs = len(self.outputs.columns)
@@ -584,10 +619,13 @@ def config_file(cfg):
     config = configparser.ConfigParser()
     config.read(cfg)
     params = {}
+    options = {}
 
     dim_keys = {'Width (um)': 'W', 'Length (um)': 'L', 'Thickness (nm)': 'd'}
     vgs_keys = ['Preread (ms)', 'First Bias (ms)', 'Vds (V)']
     vds_keys = ['Preread (ms)', 'First Bias (ms)', 'Output Vgs']
+    opts_bools = ['Reverse', 'Average']
+    opts_str = ['gm_method']
 
     for key in dim_keys:
 
@@ -618,4 +656,16 @@ def config_file(cfg):
             val = config.getfloat('Output', nm)
             params['Vgs'].append(val)
 
-    return params
+    if 'Options' in config.sections():
+
+        for key in opts_bools:
+
+            if config.has_option('Options', key):
+                options[key] = config.getboolean('Options', key)
+
+        for key in opts_str:
+
+            if config.has_option('Options', key):
+                options[key] = config.get('Options', key)
+
+    return params, options

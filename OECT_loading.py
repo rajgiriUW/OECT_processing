@@ -5,15 +5,14 @@ Created on Thu Aug 23 11:04:47 2018
 @author: Raj
 """
 
-import pandas as pd
 import os
 
 import numpy as np
-
-import OECT_plotting
-import OECT
-
+import pandas as pd
 from scipy.optimize import curve_fit as cf
+
+import OECT
+import OECT_plotting
 
 '''
 load_avg : for loading all the subfolders that are the 4 "averaging" pixels
@@ -319,7 +318,7 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
 
         print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
 
-    print ('Vt = ', uC_dv.Vt)
+    print('Vt = ', uC_dv.Vt)
 
     return pixels, uC_dv
 
