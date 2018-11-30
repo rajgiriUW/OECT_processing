@@ -245,6 +245,7 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
 
         if os.listdir(p):
 
+            print(p)
             dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot)
             pixels[f] = dv
 
@@ -305,7 +306,7 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
     uC, _ = cf(line_f, Wd_L * Vg_Vt, gms)
 
     # Create an OECT and add arrays 
-    uC_dv = OECT.OECT(path, {'W': 100e-6, 'L': 20e-6, 'd': thickness})
+    uC_dv = OECT.OECT(path, params={'W': 100e-6, 'L': 20e-6, 'd': thickness})
     uC_dv.Wd_L = Wd_L
     uC_dv.Vg_Vt = Vg_Vt
     uC_dv.Vt = Vt
@@ -317,6 +318,8 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
         fig = OECT_plotting.plot_uC(uC_dv)
 
         print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
+
+    print ('Vt = ', uC_dv.Vt)
 
     return pixels, uC_dv
 

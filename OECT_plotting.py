@@ -11,6 +11,10 @@ import numpy as np
 
 from itertools import cycle
 
+import warnings
+import matplotlib.cbook
+warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
+
 """ PLOTTING FUNCTIONS """
 
 
