@@ -21,6 +21,7 @@ Usage:
     >> steps, specs, potentials = UVVis.read_files(path_to_folder)
     >> data = UVVis.uv_vis(steps,specs,potentials)
     >> data.spec_echem_voltage() # spectra at each voltage in one dataFrame
+    >> data.time_dep_spectra() # generates a dict of spectra vs time at a voltage
     >> data.single_wl_time(0.8, 800) # wavelength vs time at a given bias
 
 '''
@@ -47,7 +48,7 @@ def read_files(path):
     
     filelist = os.listdir(path)
     stepfiles = [os.path.join(path, name)
-                 for name in filelist if (name[-3:] == 'txt' and 'spectra' not in name)]
+                 for name in filelist if (name[-3:] == 'txt' and 'steps(' in name)]
     specfiles = [os.path.join(path, name)
                  for name in filelist if (name[-3:] == 'txt' and 'spectra' in name)]
     
@@ -173,6 +174,21 @@ class uv_vis(object):
         self._single_wl_voltage(wavelength) # absorbance vs voltage @ a wavelength
         
         return 
+    
+    def time_dep_spectra(self, smooth=3):
+        '''
+        Generates all the time-dependent spectra
+        '''
+        
+        self.spectra_vs_time = {}
+        for v in self.potentials:
+            
+            spectra_path = self.specs[self.volt(v)]
+            df = self.single_time_spectra(spectra_path)
+            
+            self.spectra_vs_time[v] = df
+        
+        return
 
     def single_wl_time(self, potential=0, wavelength=800, smooth=3):
         '''
@@ -186,7 +202,7 @@ class uv_vis(object):
             
         '''
         spectra_path = self.specs[self.volt(potential)]
-        df = self._single_time_spectra(spectra_path)
+        df = self.single_time_spectra(spectra_path)
         
         idx = df.index
         wl = idx.searchsorted(wavelength)
@@ -219,7 +235,7 @@ class uv_vis(object):
         
         return 
     
-    def _single_time_spectra(self,spectra_path):
+    def single_time_spectra(self,spectra_path):
         '''
         Plots the time-dependent spectra for a single dataframe
         
