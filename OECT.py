@@ -219,6 +219,7 @@ class OECT:
         i = np.array(df.values)
 
         mx, reverse = self._reverse(v)
+        self.options['Reverse'] = reverse
 
         vl_lo = np.arange(v[0], v[mx], 0.01)
         vl_lo = v[:mx]
@@ -248,6 +249,7 @@ class OECT:
         if reverse:
             # vl_hi = np.arange(v[mx], v[-1], -0.01)
 
+            print('reverse')
             self.rev_point = v[mx]
 
             vl_hi = np.flip(v[mx:])
@@ -293,7 +295,7 @@ class OECT:
 
         for g in self.gm_bwd:
 
-            self.reverse = True
+            #self.reverse = True
             gm_bwd = self.gm_bwd[g]
 
             if not gm_bwd.empty:
@@ -421,6 +423,11 @@ class OECT:
         # is there a forward/reverse sweep
         # lo = -0.7 to 0.3, e.g and hi = 0.3 to -0.7, e.g
         mx = np.argmax(np.array(self.transfers.index))
+        flip = False
+        if mx==0:
+            mx = np.argmin(np.array(self.transfers.index))
+            flip=True
+            
         v_lo = self.transfers.index
         if self.reverse:
 
@@ -435,7 +442,12 @@ class OECT:
 
             # use second derivative to find inflection, then fit line to get Vt
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
-
+            
+            if flip:
+                                # so signs on gradient work
+                Id_lo = np.flip(Id_lo)
+                v_lo = np.flip(v_lo)
+                
             # minimize residuals by finding right peak
             fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
 
@@ -650,8 +662,8 @@ def config_file(cfg):
     if 'Output Vgs' in params:
 
         params['Vgs'] = []
-        for i in range(1, params['Output Vgs'] + 1):
-            nm = 'Vgs (V)\t' + str(i)
+        for i in range(0, params['Output Vgs']):
+            nm = 'Vgs (V) ' + str(i)
 
             val = config.getfloat('Output', nm)
             params['Vgs'].append(val)

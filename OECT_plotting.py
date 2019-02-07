@@ -34,7 +34,7 @@ def plot_uC(dv, label='', savefig=True):
         Whether to save the figures
     """
     try:
-        Wd_L = dv.Wd_L
+        Wd_L = dv.WdL
         Vg_Vt = dv.Vg_Vt
         uC = dv.uC
         uC_0 = dv.uC_0
