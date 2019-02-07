@@ -288,6 +288,10 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
             ax1.plot(dv.transfers[k][dv.rev_point:] * 1000,
                      linewidth=2, marker=next(mk), markersize=7, color='r')
 
+        else:
+            ax1.plot(dv.transfers[k][:] * 1000,
+                     linewidth=2, marker=next(mk), markersize=7, color='b')
+            
         if leakage:
             ax1.plot(dv.transfers.index, dv.transfer_raw[k]['I_G (A)'] * 1000,
                      linewidth=1, linestyle='--')
