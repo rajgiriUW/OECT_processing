@@ -193,6 +193,85 @@ class OECT:
 
         return
 
+    def loaddata(self):
+        """
+        3 Steps to loading a folder of data:
+            1) generate filelist for only txt files
+            2) determine if config exists (newer devices)
+            3) for each file in the filelist, generate a transfer curve or output curve
+
+        """
+
+        for t in self.files:
+
+            self.get_metadata(t)
+
+            if 'transfer' in t:
+                self.transfer_curve(t)
+
+            elif 'output' in t:
+                self.output_curve(t)
+
+        self.all_outputs()
+
+        self.all_transfers()
+        # try:
+        #     self.all_transfers()
+        # except:
+        #     print('Error in transfers: not all using same indices')
+
+        self.num_transfers = len(self.transfers.columns)
+        self.num_outputs = len(self.outputs.columns)
+
+        return
+
+    def filelist(self):
+        """ Generates list of files to process and config file"""
+
+        filelist = os.listdir(self.folder)
+        files = [os.path.join(self.folder, name)
+                 for name in filelist if name[-3:] == 'txt']
+
+        # find config file
+        config = [os.path.join(self.folder, name)
+                  for name in filelist if name[-10:] == 'config.cfg']
+
+        if config:
+
+            for f in files:
+
+                if 'config' in f:
+                    files.remove(f)
+
+            self.config = config
+
+        else:
+
+            print('No config file found!')
+            self.config = None
+
+        self.files = files
+
+        return
+
+    def get_metadata(self, fl):
+        """ Called in load_data to extract file-specific parameters """
+
+        metadata = ['Vd', 'Vg', 'Averages']
+
+        # search params in first file in this folder for missing params
+        h = open(fl)
+        for line in h:
+
+            if 'V_DS = ' in line:
+                self.Vd = float(line.split()[-1])
+            if 'V_G = ' in line:
+                self.Vg = float(line.split()[-1])
+
+        h.close()
+
+        return
+
     def _reverse(self, v):
         """if reverse trace exists, return max-point index and flag"""
         mx = np.argmax(v)
@@ -295,7 +374,7 @@ class OECT:
 
         for g in self.gm_bwd:
 
-            #self.reverse = True
+            # self.reverse = True
             gm_bwd = self.gm_bwd[g]
 
             if not gm_bwd.empty:
@@ -424,10 +503,10 @@ class OECT:
         # lo = -0.7 to 0.3, e.g and hi = 0.3 to -0.7, e.g
         mx = np.argmax(np.array(self.transfers.index))
         flip = False
-        if mx==0:
+        if mx == 0:
             mx = np.argmin(np.array(self.transfers.index))
-            flip=True
-            
+            flip = True
+
         v_lo = self.transfers.index
         if self.reverse:
 
@@ -442,12 +521,12 @@ class OECT:
 
             # use second derivative to find inflection, then fit line to get Vt
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
-            
+
             if flip:
-                                # so signs on gradient work
+                # so signs on gradient work
                 Id_lo = np.flip(Id_lo)
                 v_lo = np.flip(v_lo)
-                
+
             # minimize residuals by finding right peak
             fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
 
@@ -470,85 +549,6 @@ class OECT:
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts
-
-        return
-
-    def filelist(self):
-        """ Generates list of files to process and config file"""
-
-        filelist = os.listdir(self.folder)
-        files = [os.path.join(self.folder, name)
-                 for name in filelist if name[-3:] == 'txt']
-
-        # find config file
-        config = [os.path.join(self.folder, name)
-                  for name in filelist if name[-10:] == 'config.cfg']
-
-        if config:
-
-            for f in files:
-
-                if 'config' in f:
-                    files.remove(f)
-
-            self.config = config
-
-        else:
-
-            print('No config file found!')
-            self.config = None
-
-        self.files = files
-
-        return
-
-    def loaddata(self):
-        """
-        3 Steps to loading a folder of data:
-            1) generate filelist for only txt files
-            2) determine if config exists (newer devices)
-            3) for each file in the filelist, generate a transfer curve or output curve
-
-        """
-
-        for t in self.files:
-
-            self.get_metadata(t)
-
-            if 'transfer' in t:
-                self.transfer_curve(t)
-
-            elif 'output' in t:
-                self.output_curve(t)
-
-        self.all_outputs()
-
-        self.all_transfers()
-        # try:
-        #     self.all_transfers()
-        # except:
-        #     print('Error in transfers: not all using same indices')
-
-        self.num_transfers = len(self.transfers.columns)
-        self.num_outputs = len(self.outputs.columns)
-
-        return
-
-    def get_metadata(self, fl):
-        """ Called in load_data to extract file-specific parameters """
-
-        metadata = ['Vd', 'Vg', 'Averages']
-
-        # search params in first file in this folder for missing params
-        h = open(fl)
-        for line in h:
-
-            if 'V_DS = ' in line:
-                self.Vd = float(line.split()[-1])
-            if 'V_G = ' in line:
-                self.Vg = float(line.split()[-1])
-
-        h.close()
 
         return
 

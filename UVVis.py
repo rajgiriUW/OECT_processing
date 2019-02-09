@@ -237,7 +237,7 @@ class uv_vis(object):
     
     def single_time_spectra(self,spectra_path):
         '''
-        Plots the time-dependent spectra for a single dataframe
+        Generates the time-dependent spectra for a single dataframe
         
         spectra_path : str
             Path to a specific spectra file
