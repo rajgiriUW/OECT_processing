@@ -25,32 +25,199 @@ Usage:
     
 '''
 
-
-def average(path='', thickness=40e-9, plot=True):
+def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True, V_low=False):
     '''
-    averages data in this particular path (for folders 'avg')
-    
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
       
     thickness : float
         approximate film thickness. Standard polymers (for Raj) are ~40 nm
         
-    plot : bool
-        Whether to plot or not. Not plotting is very fast!
+    plot : bool, optional
+        Whether to plot or not. Not plotting is very fast!    
+
+    add_avg_pixels : bool, optional
+        Whether to add the averaging subfolder (adds more low Wd/L points)
         
-   
+    V_low : bool, optional
+        Whether to find erroneous "turnover" points when devices break down
+
     Returns
     -------
     pixels : dict of OECT
         Contains the various OECT class devices
         
+    uC_dv : OECT Class containing
+        Wd_L : ndarray
+            coefficient for plotting on x-axis
+        
+        gms : ndarray
+            average transconductance for plotting on y-axis
+        
+        Vg_Vt : ndarray
+            threshold voltage shifts for correcting uC* fit
+    
+    '''
+
+    if not path:
+        path = file_open(caption='Select uC subfolder')
+        print('Loading from', path)
+
+    filelist = os.listdir(path)
+
+    f = filelist[:]
+    for k in filelist:
+        try:
+            sub_num = int(k)
+        except:
+            print('Ignoring', k)
+            f.remove(k)
+    filelist = f[:]
+    paths = [os.path.join(path, name) for name in filelist]
+    pixkeys = [f + '_uC' for f in filelist]
+
+    # add the averaging pixels to the calculation
+    if add_avg_pixels:
+
+        try:
+
+            os.chdir(path + '\..')
+            os.chdir(os.getcwd() + '\\avg')
+            avgpath = os.getcwd()
+            avglist = os.listdir(avgpath)
+
+            print('Adding avg-pixels')
+
+            f = avglist[:]
+            for k in avglist:
+                try:
+                    sub_num = int(k)
+                except:
+                    print('Ignoring', k)
+                    f.remove(k)
+
+            filelist = f[:]
+            paths = paths + [os.path.join(avgpath, name) for name in filelist]
+            pixkeys = pixkeys + [f + '_avg' for f in filelist]
+            del f
+
+        except:
+
+            print('No avg subfolder found')
+
+    # removes random files instead of the sub-folders
+    for p in paths:
+        if not os.path.isdir(p):
+            paths.remove(p)
+
+    pixels = {}
+
+    # loads all the folders
+
+    updated_keys = pixkeys[:]
+
+    for p, f in zip(paths, pixkeys):
+
+        if os.listdir(p):
+
+            print(p)
+            dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot, 
+                          options={'V_low': V_low})
+            pixels[f] = dv
+
+        else:
+
+            pixkeys.remove(f)
+
+    # do uC* graphs, need gm vs W*d/L
+    Wd_L = np.array([])
+    Vg_Vt = np.array([])  # threshold offset
+    Vt = np.array([])
+    gms = np.array([])
+
+    for f, pixel in zip(pixkeys, pixels):
+
+        # peak gms
+        c = list(pixels[pixel].gm_fwd.keys())[0]
+
+        if not pixels[pixel].gm_fwd[c].empty:
+            gm_fwd = np.max(pixels[pixel].gm_fwd[c].values)
+            
+            Wd_L = np.append(Wd_L, pixels[pixel].WdL)
+            Vt = np.append(Vt, pixels[pixel].Vts[0])
+            Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts[0])
+            gms = np.append(gms, gm_fwd)
+
+        # backwards
+        c = list(pixels[pixel].gm_bwd.keys())[0]
+
+        if not pixels[pixel].gm_bwd[c].empty:
+            gm_bwd = np.max(pixels[pixel].gm_bwd[c].values)
+
+            # add extra x-axis point
+            Wd_L = np.append(Wd_L, pixels[pixel].WdL)
+            Vt = np.append(Vt, pixels[pixel].Vts[1])
+            Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts[1])
+            gms = np.append(gms, gm_bwd)
+
+    # fit functions
+    def line_f(x, a, b):
+
+        return a + b * x
+
+    def line_0(x, b):
+        'no y-offset --> better log-log fits'
+        return b * x
+
+    # * 1e2 to get into right mobility units (cm)
+    uC_0, _ = cf(line_0, Wd_L * Vg_Vt, gms)
+    uC, _ = cf(line_f, Wd_L * Vg_Vt, gms)
+
+    # Create an OECT and add arrays 
+    uC_dv = {'W': 100e-6, 'L': 20e-6, 'd': thickness,
+             'WdL':Wd_L,
+             'Vg_Vt': Vg_Vt,
+             'Vt': Vt,
+             'uC': uC,
+             'uC_0': uC_0,
+             'gms': gms,
+             'folder': path}
+
+    if plot:
+        fig = OECT_plotting.plot_uC(uC_dv)
+
+        print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
+
+    print('Vt = ', uC_dv['Vt'])
+
+    return pixels, uC_dv
+
+
+def average(path='', thickness=40e-9, plot=True):
+    '''
+    averages data in this particular path (for folders 'avg')
+
+    path: str
+        string path to folder '.../avg'. Note Windows path are of form r'Path_name'
+
+    thickness : float
+        approximate film thickness. Standard polymers (for Raj) are ~40 nm
+
+    plot : bool
+        Whether to plot or not. Not plotting is very fast!
+
+
+    Returns
+    -------
+    pixels : dict of OECT
+        Contains the various OECT class devices
+
     Id_Vg : pandas dataframe
         Contains the averaged Id vs Vg (drain current vs gate voltage, transfer)
-        
+
     Id_Vd : pandas dataframe
         Contains the averaged Id vs Vg (drain current vs drain voltages, output)
-        
+
     '''
 
     if not path:
@@ -152,178 +319,7 @@ def average(path='', thickness=40e-9, plot=True):
     return pixels, Id_Vg, Id_Vd, temp_dv.WdL
 
 
-def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True):
-    '''
-    path: str
-        string path to folder '.../avg'. Note Windows path are of form r'Path_name'
-      
-    thickness : float
-        approximate film thickness. Standard polymers (for Raj) are ~40 nm
-        
-    plot : bool, optional
-        Whether to plot or not. Not plotting is very fast!    
-
-    add_avg_pixels : bool, optional
-        Whether to add the averaging subfolder (adds more low Wd/L points)
-
-    Returns
-    -------
-    pixels : dict of OECT
-        Contains the various OECT class devices
-        
-    uC_dv : OECT Class containing
-        Wd_L : ndarray
-            coefficient for plotting on x-axis
-        
-        gms : ndarray
-            average transconductance for plotting on y-axis
-        
-        Vg_Vt : ndarray
-            threshold voltage shifts for correcting uC* fit
-    
-    '''
-
-    if not path:
-        path = file_open(caption='Select uC subfolder')
-        print('Loading from', path)
-
-    filelist = os.listdir(path)
-
-    f = filelist[:]
-    for k in filelist:
-        try:
-            sub_num = int(k)
-        except:
-            print('Ignoring', k)
-            f.remove(k)
-    filelist = f[:]
-    paths = [os.path.join(path, name) for name in filelist]
-    pixkeys = [f + '_uC' for f in filelist]
-
-    # add the averaging pixels to the calculation
-    if add_avg_pixels:
-
-        try:
-
-            os.chdir(path + '\..')
-            os.chdir(os.getcwd() + '\\avg')
-            avgpath = os.getcwd()
-            avglist = os.listdir(avgpath)
-
-            print('Adding avg-pixels')
-
-            f = avglist[:]
-            for k in avglist:
-                try:
-                    sub_num = int(k)
-                except:
-                    print('Ignoring', k)
-                    f.remove(k)
-
-            filelist = f[:]
-            paths = paths + [os.path.join(avgpath, name) for name in filelist]
-            pixkeys = pixkeys + [f + '_avg' for f in filelist]
-            del f
-
-        except:
-
-            print('No avg subfolder found')
-
-    # removes random files instead of the sub-folders
-    for p in paths:
-        if not os.path.isdir(p):
-            paths.remove(p)
-
-    pixels = {}
-
-    # loads all the folders
-
-    updated_keys = pixkeys[:]
-
-    for p, f in zip(paths, pixkeys):
-
-        if os.listdir(p):
-
-            print(p)
-            dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot)
-            pixels[f] = dv
-
-        else:
-
-            pixkeys.remove(f)
-
-    # do uC* graphs, need gm vs W*d/L
-    Wd_L = np.array([])
-    Vg_Vt = np.array([])  # threshold offset
-    Vt = np.array([])
-    gms = np.array([])
-
-    for f, pixel in zip(pixkeys, pixels):
-
-        # peak gms
-        c = list(pixels[pixel].gm_fwd.keys())[0]
-
-        if not pixels[pixel].gm_fwd[c].empty:
-            gm_fwd = np.max(pixels[pixel].gm_fwd[c].values)
-            gm_argmax = np.argmax(pixels[pixel].gm_fwd[c].values)
-
-            Vg_fwd = pixels[pixel].gm_fwd[c].index[gm_argmax]
-            Vg_Vt_fwd = pixels[pixel].Vts[0] - Vg_fwd
-
-            Wd_L = np.append(Wd_L, pixels[pixel].WdL)
-            Vt = np.append(Vt, pixels[pixel].Vts[0])
-            Vg_Vt = np.append(Vg_Vt, Vg_Vt_fwd)
-            gms = np.append(gms, gm_fwd)
-
-        # backwards
-        c = list(pixels[pixel].gm_bwd.keys())[0]
-
-        if not pixels[pixel].gm_bwd[c].empty:
-            gm_bwd = np.max(pixels[pixel].gm_bwd[c].values)
-            gm_argmax = np.argmax(pixels[pixel].gm_bwd[c].values)
-
-            Vg_bwd = pixels[pixel].gm_bwd[c].index[gm_argmax]
-            Vg_Vt_bwd = pixels[pixel].Vts[1] - Vg_bwd
-
-            # add extra x-axis point
-            Wd_L = np.append(Wd_L, pixels[pixel].WdL)
-            Vt = np.append(Vt, pixels[pixel].Vts[1])
-            Vg_Vt = np.append(Vg_Vt, Vg_Vt_bwd)
-            gms = np.append(gms, gm_bwd)
-
-    # fit functions
-    def line_f(x, a, b):
-
-        return a + b * x
-
-    def line_0(x, b):
-        'no y-offset --> better log-log fits'
-        return b * x
-
-    # * 1e2 to get into right mobility units (cm)
-    uC_0, _ = cf(line_0, Wd_L * Vg_Vt, gms)
-    uC, _ = cf(line_f, Wd_L * Vg_Vt, gms)
-
-    # Create an OECT and add arrays 
-    uC_dv = OECT.OECT(path, params={'W': 100e-6, 'L': 20e-6, 'd': thickness})
-    uC_dv.Wd_L = Wd_L
-    uC_dv.Vg_Vt = Vg_Vt
-    uC_dv.Vt = Vt
-    uC_dv.uC = uC
-    uC_dv.uC_0 = uC_0
-    uC_dv.gms = gms
-
-    if plot:
-        fig = OECT_plotting.plot_uC(uC_dv)
-
-        print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
-
-    print('Vt = ', uC_dv.Vt)
-
-    return pixels, uC_dv
-
-
-def loadOECT(path, params, gm_plot=True, plot=True):
+def loadOECT(path, params, gm_plot=True, plot=True, options={}):
     """
     Wrapper function for processing OECT data
 
@@ -331,14 +327,14 @@ def loadOECT(path, params, gm_plot=True, plot=True):
 
     USAGE:
         device1 = loadOECT(folder_name)
-        
+
 
     """
 
     if not path:
         path = file_open(caption='Select device subfolder')
 
-    device = OECT.OECT(path, params)
+    device = OECT.OECT(path, params, options)
     device.calc_gms()
     device.thresh()
 

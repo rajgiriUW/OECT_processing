@@ -41,7 +41,7 @@ def plot_uC(dv, label='', savefig=True):
         gms = dv.gms
         path = dv.folder
     except:
-        Wd_L = dv['Wd_L']
+        Wd_L = dv['WdL']
         Vg_Vt = dv['Vg_Vt']
         uC = dv['uC']
         uC_0 = dv['uC_0']
@@ -293,7 +293,7 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
                      linewidth=2, marker=next(mk), markersize=7, color='b')
             
         if leakage:
-            ax1.plot(dv.transfers.index, dv.transfer_raw[k]['I_G (A)'] * 1000,
+            ax1.plot(dv.transfers.index, dv.transfers * 1000,
                      linewidth=1, linestyle='--')
 
     markers = ['o', 's', '^', 'd', 'x']

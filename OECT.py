@@ -168,19 +168,22 @@ class OECT:
                 self.params[p] = params[p]
         for p in _par:
             self.params[p] = _par[p]
+        for o in _opt:
+            self.options[o] = _opt[o]
 
         if options is not None:
             for o in options:
                 self.options[o] = options[o]
-        for o in _opt:
-            self.options[o] = _opt[o]
 
         # defaults
         if 'gm_method' not in self.options:
             self.options['gm_method'] = 'sg'
         if 'Reverse' not in self.options:
             self.options['Reverse'] = True
+        if 'Average' not in self.options:
             self.options['Average'] = False
+        if 'V_low' not in self.options:
+            self.options['V_low'] = False
 
         self.loaddata()
 
@@ -285,7 +288,7 @@ class OECT:
         if mx != len(v) - 1:
             self.options['Reverse'] = True
             self.reverse = True
-            
+
             return mx, True
 
         self.options['Reverse'] = False
@@ -489,9 +492,39 @@ class OECT:
 
             self.transfers[tf] = transfer
             self.transfers = self.transfers.set_index(pd.Index(idx))
+            self.transfers.sort_index(inplace=True)
 
+        # sets attributes if there's a retrace
         self._reverse(self.transfers.index.values)
 
+        # if there's an "inversion" at the end, finds that point
+        if self.options['V_low'] is True:
+            
+            for e in self.transfers:
+                
+                df = self.transfers[e].copy()
+                df.sort_index(inplace=True)
+                
+                vdx = df.index.values
+                idx = df.values
+                
+                for x in np.arange(len(vdx)-1):
+                    
+                    if (idx[x+1] - idx[x]) > 0:
+                        
+                       break 
+                
+                cut = vdx[x]
+                
+                if self.transfers[e].index.values[2] < self.transfers[e].index.values[1]:
+                    print('a')
+                    self.transfers = self.transfers[:cut]
+                else:
+                    print('b')
+                    self.transfers = self.transfers[cut:]
+                    
+            del df
+            
         return
 
     def thresh(self):
@@ -505,22 +538,15 @@ class OECT:
         """
 
         Vts = np.array([])
+        VgVts = np.array([])
 
         # is there a forward/reverse sweep
         # lo = -0.7 to 0.3, e.g and hi = 0.3 to -0.7, e.g
         mx = self.rev_point
         v_lo = self.transfers.index
-        
-        print(mx)
-        print(v_lo)
-        
-        if self.reverse:
 
-            v_lo = self.transfers.index[:mx]
-            v_hi = self.transfers.index[mx:]
-
-        else:
-            v_lo = self.transfers.index[:mx]
+        v_lo = self.transfers.index[:mx]
+        v_hi = self.transfers.index[mx:]
 
         # Find and fit at inflection between regimes
         for tf in self.transfers:
@@ -534,7 +560,14 @@ class OECT:
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
 
-            if self.options['Reverse']:
+            # Find Vg-Vt for plotting uC*
+            if not self.gms_fwd.empty:
+
+                gm_argmax = np.argmax(self.gms_fwd.values)
+                Vg = self.gms_fwd.index.values[gm_argmax]
+                VgVts = np.append(VgVts , -fit[1] / fit[0] - Vg)
+
+            if self.reverse:
                 Id_hi = np.sqrt(np.abs(self.transfers[tf]).values[mx:])
 
                 # so signs on gradient work
@@ -543,14 +576,22 @@ class OECT:
 
                 try:
                     fit = self._min_fit(Id_hi - np.min(Id_hi), v_hi)
-                    print(fit)
                     Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
+                    
+                    if not self.gms_bwd.empty:
+
+                        gm_argmax = np.argmax(self.gms_bwd.values)
+                        Vg = self.gms_bwd.index.values[gm_argmax]
+                        VgVts = np.append(VgVts , -fit[1] / fit[0] - Vg)
+                        
                 except:
                     warnings.warn('Upper gm did not find correct Vt')
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts
-
+        self.VgVt = np.mean(VgVts)
+        self.VgVts = VgVts
+            
         return
 
     # find minimum residual through fitting a line to several found peaks
@@ -558,11 +599,11 @@ class OECT:
 
         _residuals = np.array([])
         _fits = np.array([0, 0])
-        
+
         if V[2] < V[1]:
             V = np.flip(V)
             Id = np.flip(Id)
-        
+
         mx_d2 = self._find_peak(Id, V)
 
         # for each peak found, fits a line. Uses that to determine Vt, then residual up to that found Vt
@@ -644,6 +685,7 @@ def config_file(cfg):
     vds_keys = ['Preread (ms)', 'First Bias (ms)', 'Output Vgs']
     opts_bools = ['Reverse', 'Average']
     opts_str = ['gm_method']
+    opts_flt = ['V_low']
 
     for key in dim_keys:
 
@@ -685,5 +727,10 @@ def config_file(cfg):
 
             if config.has_option('Options', key):
                 options[key] = config.get('Options', key)
+
+        for key in opts_flt:
+
+            if config.has_option('Options', key):
+                options[key] = config.getfloat('Options', key)
 
     return params, options
