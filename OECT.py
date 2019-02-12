@@ -279,11 +279,50 @@ class OECT:
         if mx == 0:
             mx = np.argmin(v)
 
-        if self.options['Reverse']:
-            if mx != len(v) - 1:
-                return mx, True
+        self.rev_point = mx
+        self.rev_v = v[mx]
+
+        if mx != len(v) - 1:
+            self.options['Reverse'] = True
+            self.reverse = True
+            
+            return mx, True
+
+        self.options['Reverse'] = False
+        self.reverse = False
 
         return mx, False
+
+    def calc_gms(self):
+        """
+        Calculates all the gms in the set of data.
+        Assigns each one to gm_fwd (forward) and gm_bwd (reverse) as a dict
+
+        Creates a single dataFrame gms_fwd and another gms_bwd
+        """
+
+        for i in self.transfer:
+            self.gm_fwd[i], self.gm_bwd[i], self.gm_peaks = self._calc_gm(self.transfer[i])
+
+        # assemble the gms into single dataframes
+        for g in self.gm_fwd:
+
+            gm_fwd = self.gm_fwd[g]
+
+            if not gm_fwd.empty:
+                self.gms_fwd[g] = self.gm_fwd[g]['gm'].values
+                self.gms_fwd = self.gms_fwd.set_index(self.gm_fwd[g].index)
+
+        for g in self.gm_bwd:
+
+            # self.reverse = True
+            gm_bwd = self.gm_bwd[g]
+
+            if not gm_bwd.empty:
+                self.gms_bwd[g] = self.gm_bwd[g]['gm'].values
+                self.gms_bwd = self.gms_bwd.set_index(self.gm_bwd[g].index)
+
+        return
 
     def _calc_gm(self, df):
         """
@@ -297,8 +336,7 @@ class OECT:
         v = np.array(df.index)
         i = np.array(df.values)
 
-        mx, reverse = self._reverse(v)
-        self.options['Reverse'] = reverse
+        mx, reverse = self.rev_point, self.reverse
 
         vl_lo = np.arange(v[0], v[mx], 0.01)
         vl_lo = v[:mx]
@@ -329,7 +367,6 @@ class OECT:
             # vl_hi = np.arange(v[mx], v[-1], -0.01)
 
             print('reverse')
-            self.rev_point = v[mx]
 
             vl_hi = np.flip(v[mx:])
             i_hi = np.flip(i[mx:])
@@ -350,38 +387,6 @@ class OECT:
         gm_peaks = pd.DataFrame(data=gm_peaks, index=gm_args, columns=['peak gm (S)'])
 
         return gm_fwd, gm_bwd, gm_peaks
-
-    def calc_gms(self):
-        """
-        Calculates all the gms in the set of data.
-        Assigns each one to gm_fwd (forward) and gm_bwd (reverse) as a dict
-
-        Creates a single dataFrame gms_fwd and another gms_bwd
-        """
-
-        for i in self.transfer:
-            self.gm_fwd[i], self.gm_bwd[i], self.gm_peaks = self._calc_gm(self.transfer[i])
-
-        self.reverse = False
-        # assemble the gms into single dataframes
-        for g in self.gm_fwd:
-
-            gm_fwd = self.gm_fwd[g]
-
-            if not gm_fwd.empty:
-                self.gms_fwd[g] = self.gm_fwd[g]['gm'].values
-                self.gms_fwd = self.gms_fwd.set_index(self.gm_fwd[g].index)
-
-        for g in self.gm_bwd:
-
-            # self.reverse = True
-            gm_bwd = self.gm_bwd[g]
-
-            if not gm_bwd.empty:
-                self.gms_bwd[g] = self.gm_bwd[g]['gm'].values
-                self.gms_bwd = self.gms_bwd.set_index(self.gm_bwd[g].index)
-
-        return
 
     def output_curve(self, path):
         """Loads Id-Vd output curves from a folder as Series in a list"""
@@ -485,9 +490,11 @@ class OECT:
             self.transfers[tf] = transfer
             self.transfers = self.transfers.set_index(pd.Index(idx))
 
+        self._reverse(self.transfers.index.values)
+
         return
 
-    def thresh(self, negative_Vt=True):
+    def thresh(self):
         """
         Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
             x-offset
@@ -501,13 +508,12 @@ class OECT:
 
         # is there a forward/reverse sweep
         # lo = -0.7 to 0.3, e.g and hi = 0.3 to -0.7, e.g
-        mx = np.argmax(np.array(self.transfers.index))
-        flip = False
-        if mx == 0:
-            mx = np.argmin(np.array(self.transfers.index))
-            flip = True
-
+        mx = self.rev_point
         v_lo = self.transfers.index
+        
+        print(mx)
+        print(v_lo)
+        
         if self.reverse:
 
             v_lo = self.transfers.index[:mx]
@@ -521,11 +527,6 @@ class OECT:
 
             # use second derivative to find inflection, then fit line to get Vt
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
-
-            if flip:
-                # so signs on gradient work
-                Id_lo = np.flip(Id_lo)
-                v_lo = np.flip(v_lo)
 
             # minimize residuals by finding right peak
             fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
@@ -557,6 +558,11 @@ class OECT:
 
         _residuals = np.array([])
         _fits = np.array([0, 0])
+        
+        if V[2] < V[1]:
+            V = np.flip(V)
+            Id = np.flip(Id)
+        
         mx_d2 = self._find_peak(Id, V)
 
         # for each peak found, fits a line. Uses that to determine Vt, then residual up to that found Vt
