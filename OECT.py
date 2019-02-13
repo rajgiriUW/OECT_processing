@@ -367,9 +367,6 @@ class OECT:
 
         # if reverse trace exists and we want to process it
         if reverse:
-            # vl_hi = np.arange(v[mx], v[-1], -0.01)
-
-            print('reverse')
 
             vl_hi = np.flip(v[mx:])
             i_hi = np.flip(i[mx:])
@@ -483,20 +480,24 @@ class OECT:
 
             transfer = self.transfer[tf]['I_DS (A)'].values
             idx = self.transfer[tf]['I_DS (A)'].index.values
-            if 'Average' in self.options and self.options['Average']:
-                mx, _ = self._reverse(idx)
-                idx = idx[0:mx]
-                fwd = transfer[:mx]
-                bwd = np.flip(transfer[mx + 1:])
-                transfer = (fwd + bwd) / 2
+            
+            mx, reverse = self._reverse(idx)
+            nm = tf + '_01'
+            df = pd.Series(data=transfer[:mx], index=idx[:mx])
+            df.sort_index(inplace=True)
+            self.transfers[nm] = df
+            
+            if reverse:
+                
+                nm = tf + '_02'
+                df = pd.Series(data=transfer[mx:], index=idx[mx:])
+                df.sort_index(inplace=True)
+                self.transfers[nm] = df    
+                
+        if 'Average' in self.options and self.options['Average']:
 
-            self.transfers[tf] = transfer
-            self.transfers = self.transfers.set_index(pd.Index(idx))
-            self.transfers.sort_index(inplace=True)
-
-        # sets attributes if there's a retrace
-        self._reverse(self.transfers.index.values)
-
+            self.transfers = self.transfers.mean(1)
+            
         # if there's an "inversion" at the end, finds that point
         if self.options['V_low'] is True:
             
@@ -516,12 +517,7 @@ class OECT:
                 
                 cut = vdx[x]
                 
-                if self.transfers[e].index.values[2] < self.transfers[e].index.values[1]:
-                    print('a')
-                    self.transfers = self.transfers[:cut]
-                else:
-                    print('b')
-                    self.transfers = self.transfers[cut:]
+                self.transfers = self.transfers[cut:]
                     
             del df
             
@@ -605,6 +601,10 @@ class OECT:
             Id = np.flip(Id)
 
         mx_d2 = self._find_peak(Id, V)
+        
+        # sometimes for very small currents run into numerical issues
+        if not mx_d2:
+            mx_d2 = self._find_peak(Id*1000, V, width=15)
 
         # for each peak found, fits a line. Uses that to determine Vt, then residual up to that found Vt
         for m in mx_d2:
@@ -629,7 +629,7 @@ class OECT:
         return f1 + f0 * x
 
     @staticmethod
-    def _find_peak(Id, Vg, negative_Vt=True):
+    def _find_peak(Id, Vg, negative_Vt=True, width=15):
         """
         Uses spline to find the transition point then return it for fitting Vt
           to sqrt(Id) vs Vg
@@ -642,6 +642,9 @@ class OECT:
             Id vs Vg, voltages
         negative_Vt : bool
             Assumes Vt is a negative voltage (typical for many p-type polymer)
+        width : int
+            Width to use in CWT peak-finder. 
+
 
         Returns
         -------
@@ -654,7 +657,7 @@ class OECT:
         V_spl = np.arange(Vg[0], Vg[-1], 0.01)
         d2 = np.gradient(np.gradient(Id_spl(V_spl)))
 
-        peaks = sps.find_peaks_cwt(d2, np.arange(1, 15))
+        peaks = sps.find_peaks_cwt(d2, np.arange(1, width))
         peaks = peaks[peaks > 5]  # edge errors
 
         if negative_Vt:
