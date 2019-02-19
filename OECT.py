@@ -78,10 +78,8 @@ class OECT:
         list of gate voltages (Vg) used during Id-Vd sweeps for plot labels
     transfer_avgs : int
         averages taken per point in transfer curve
-    gm_fwd : DataFrame
-        Transconductance for forward sweep (in Siemens) as one DataFrame
-    gm_bwd : DataFrame
-        Transconductance for reverse sweep (in Siemens) as one DataFrame
+    gms_fwd : DataFrame
+        Transconductance for all sweeps (in Siemens) as one DataFrame
     gms_fwd : dict
         dict of Dataframes of all forward sweep gms
     gms_bwd : dict
@@ -126,8 +124,7 @@ class OECT:
         self.Vd_labels = []
         self.gm_fwd = {}
         self.gm_bwd = {}
-        self.gms_fwd = pd.DataFrame()
-        self.gms_bwd = pd.DataFrame()
+        self.gms = pd.DataFrame()
 
         # Data descriptors
         self.transfer_avgs = 1
@@ -307,23 +304,45 @@ class OECT:
         for i in self.transfer:
             self.gm_fwd[i], self.gm_bwd[i], self.gm_peaks = self._calc_gm(self.transfer[i])
 
-        # assemble the gms into single dataframes
+        # combine all the gm_fwd and gm_bwd into a single dataframe
+        labels = 0
+        
         for g in self.gm_fwd:
-
-            gm_fwd = self.gm_fwd[g]
-
-            if not gm_fwd.empty:
-                self.gms_fwd[g] = self.gm_fwd[g]['gm'].values
-                self.gms_fwd = self.gms_fwd.set_index(self.gm_fwd[g].index)
-
+            
+            if not self.gm_fwd[g].empty:
+                
+                gm = self.gm_fwd[g].values.flatten()
+                idx = self.gm_fwd[g].index.values
+                
+                mx, reverse = self._reverse(idx)
+                nm = 'gm_' + g + '_' + str(labels)
+                
+                while nm in self.gms:
+                    
+                    labels += 1
+                    nm = 'gm_' + g + '_' + str(labels)
+                
+                df = pd.Series(data=gm[:mx], index=idx[:mx])
+                df.sort_index(inplace=True)
+                self.gms[nm] = df
+        
         for g in self.gm_bwd:
-
-            # self.reverse = True
-            gm_bwd = self.gm_bwd[g]
-
-            if not gm_bwd.empty:
-                self.gms_bwd[g] = self.gm_bwd[g]['gm'].values
-                self.gms_bwd = self.gms_bwd.set_index(self.gm_bwd[g].index)
+            
+            if not self.gm_bwd[g].empty:
+                
+                gm = self.gm_bwd[g].values.flatten()
+                idx = self.gm_bwd[g].index.values
+                
+                mx, reverse = self._reverse(idx)
+                nm = 'gm_' + g + '_' + str(labels)
+                
+                while nm in self.gms:
+                    labels += 1
+                    nm = 'gm_' + g + '_' + str(labels)
+                    
+                df = pd.Series(data=gm[:mx], index=idx[:mx])
+                df.sort_index(inplace=True)
+                self.gms[nm] = df
 
         return
 
@@ -344,38 +363,34 @@ class OECT:
         vl_lo = np.arange(v[0], v[mx], 0.01)
         vl_lo = v[:mx]
 
-        # sg parameters
-        window = np.max([int(0.04 * self.transfers.shape[0]), 3])
-        polyorder = 2
-
-        # polynomial fit parameter
-        deg = 8
-
-        # Get gm
-        gml = gm_deriv(vl_lo, i[0:mx], self.options['gm_method'],
-                       {'window': window, 'polyorder': polyorder, 'deg': deg})
-
-        # Assign gms
-        gm_fwd = pd.DataFrame(data=gml, index=v[0:mx], columns=['gm'])
-        gm_fwd.index.name = 'Voltage (V)'
-
         gm_peaks = np.array([])
         gm_args = np.array([])
 
+        # sg parameters
+        window = np.max([int(0.04 * self.transfers.shape[0]), 3])
+        polyorder = 2
+        deg = 8
+        fitparams = {'window': window, 'polyorder': polyorder, 'deg': deg}
+
+        def get_gm(v, i, fit, options):
+            
+            gml = gm_deriv(v, i, fit, options)
+            gm = pd.DataFrame(data=gml, index=v,columns=['gm'])
+            gm.index.name = 'Voltage (V)'
+            
+            return gm
+
+#        # Get gm
+        gm_fwd = get_gm(vl_lo, i[0:mx], self.options['gm_method'], fitparams)
         gm_peaks = np.append(gm_peaks, np.max(gm_fwd.values))
         gm_args = np.append(gm_args, gm_fwd.index[np.argmax(gm_fwd.values)])
 
         # if reverse trace exists and we want to process it
         if reverse:
-
             vl_hi = np.flip(v[mx:])
             i_hi = np.flip(i[mx:])
-
-            gmh = gm_deriv(vl_hi, i_hi, self.options['gm_method'],
-                           {'window': window, 'polyorder': polyorder, 'deg': deg})
-
-            gm_bwd = pd.DataFrame(data=gmh, index=vl_hi, columns=['gm'])
-            gm_bwd.index.name = 'Voltage (V)'
+            
+            gm_bwd = get_gm(vl_hi, i_hi, self.options['gm_method'], fitparams)
 
             gm_peaks = np.append(gm_peaks, np.max(gm_bwd.values))
             gm_args = np.append(gm_args, gm_bwd.index[np.argmax(gm_bwd.values)])
