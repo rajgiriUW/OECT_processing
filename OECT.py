@@ -306,40 +306,39 @@ class OECT:
 
         # combine all the gm_fwd and gm_bwd into a single dataframe
         labels = 0
-        
+
         for g in self.gm_fwd:
-            
+
             if not self.gm_fwd[g].empty:
-                
+
                 gm = self.gm_fwd[g].values.flatten()
                 idx = self.gm_fwd[g].index.values
-                
+
                 mx, reverse = self._reverse(idx)
                 nm = 'gm_' + g + '_' + str(labels)
-                
+
                 while nm in self.gms:
-                    
                     labels += 1
                     nm = 'gm_' + g + '_' + str(labels)
-                
+
                 df = pd.Series(data=gm[:mx], index=idx[:mx])
                 df.sort_index(inplace=True)
                 self.gms[nm] = df
-        
+
         for g in self.gm_bwd:
-            
+
             if not self.gm_bwd[g].empty:
-                
+
                 gm = self.gm_bwd[g].values.flatten()
                 idx = self.gm_bwd[g].index.values
-                
+
                 mx, reverse = self._reverse(idx)
                 nm = 'gm_' + g + '_' + str(labels)
-                
+
                 while nm in self.gms:
                     labels += 1
                     nm = 'gm_' + g + '_' + str(labels)
-                    
+
                 df = pd.Series(data=gm[:mx], index=idx[:mx])
                 df.sort_index(inplace=True)
                 self.gms[nm] = df
@@ -373,14 +372,14 @@ class OECT:
         fitparams = {'window': window, 'polyorder': polyorder, 'deg': deg}
 
         def get_gm(v, i, fit, options):
-            
+
             gml = gm_deriv(v, i, fit, options)
-            gm = pd.DataFrame(data=gml, index=v,columns=['gm'])
+            gm = pd.DataFrame(data=gml, index=v, columns=['gm'])
             gm.index.name = 'Voltage (V)'
-            
+
             return gm
 
-#        # Get gm
+        #        # Get gm
         gm_fwd = get_gm(vl_lo, i[0:mx], self.options['gm_method'], fitparams)
         gm_peaks = np.append(gm_peaks, np.max(gm_fwd.values))
         gm_args = np.append(gm_args, gm_fwd.index[np.argmax(gm_fwd.values)])
@@ -389,7 +388,7 @@ class OECT:
         if reverse:
             vl_hi = np.flip(v[mx:])
             i_hi = np.flip(i[mx:])
-            
+
             gm_bwd = get_gm(vl_hi, i_hi, self.options['gm_method'], fitparams)
 
             gm_peaks = np.append(gm_peaks, np.max(gm_bwd.values))
@@ -495,47 +494,44 @@ class OECT:
 
             transfer = self.transfer[tf]['I_DS (A)'].values
             idx = self.transfer[tf]['I_DS (A)'].index.values
-            
+
             mx, reverse = self._reverse(idx)
             nm = tf + '_01'
             df = pd.Series(data=transfer[:mx], index=idx[:mx])
             df.sort_index(inplace=True)
             self.transfers[nm] = df
-            
+
             if reverse:
-                
                 nm = tf + '_02'
                 df = pd.Series(data=transfer[mx:], index=idx[mx:])
                 df.sort_index(inplace=True)
-                self.transfers[nm] = df    
-                
-        if 'Average' in self.options and self.options['Average']:
+                self.transfers[nm] = df
 
+        if 'Average' in self.options and self.options['Average']:
             self.transfers = self.transfers.mean(1)
-            
+
         # if there's an "inversion" at the end, finds that point
         if self.options['V_low'] is True:
-            
+
             for e in self.transfers:
-                
+
                 df = self.transfers[e].copy()
                 df.sort_index(inplace=True)
-                
+
                 vdx = df.index.values
                 idx = df.values
-                
-                for x in np.arange(len(vdx)-1):
-                    
-                    if (idx[x+1] - idx[x]) > 0:
-                        
-                       break 
-                
+
+                for x in np.arange(len(vdx) - 1):
+
+                    if (idx[x + 1] - idx[x]) > 0:
+                        break
+
                 cut = vdx[x]
-                
+
                 self.transfers = self.transfers[cut:]
-                    
+
             del df
-            
+
         return
 
     def thresh(self):
@@ -563,14 +559,13 @@ class OECT:
 
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
-            VgVts = np.append(VgVts, fit[1] / fit[0] -pk)
-            
+            VgVts = np.append(VgVts, fit[1] / fit[0] - pk)
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts
         self.VgVt = np.mean(VgVts)
         self.VgVts = VgVts
-            
+
         return
 
     # find minimum residual through fitting a line to several found peaks
@@ -584,10 +579,10 @@ class OECT:
             Id = np.flip(Id)
 
         mx_d2 = self._find_peak(Id, V)
-        
+
         # sometimes for very small currents run into numerical issues
         if not mx_d2:
-            mx_d2 = self._find_peak(Id*1000, V, width=15)
+            mx_d2 = self._find_peak(Id * 1000, V, width=15)
 
         # for each peak found, fits a line. Uses that to determine Vt, then residual up to that found Vt
         for m in mx_d2:
