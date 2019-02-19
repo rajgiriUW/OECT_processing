@@ -536,52 +536,20 @@ class OECT:
         Vts = np.array([])
         VgVts = np.array([])
 
-        # is there a forward/reverse sweep
-        # lo = -0.7 to 0.3, e.g and hi = 0.3 to -0.7, e.g
-        mx = self.rev_point
         v_lo = self.transfers.index
 
-        v_lo = self.transfers.index[:mx]
-        v_hi = self.transfers.index[mx:]
-
         # Find and fit at inflection between regimes
-        for tf in self.transfers:
-
+        for tf, pk in zip(self.transfers, self.gm_peaks.index):
             # use second derivative to find inflection, then fit line to get Vt
-            Id_lo = np.sqrt(np.abs(self.transfers[tf]).values[:mx])
+            Id_lo = np.sqrt(np.abs(self.transfers[tf]).values)
 
             # minimize residuals by finding right peak
             fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
 
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
-
-            # Find Vg-Vt for plotting uC*
-            if not self.gms_fwd.empty:
-
-                gm_argmax = np.argmax(self.gms_fwd.values)
-                Vg = self.gms_fwd.index.values[gm_argmax]
-                VgVts = np.append(VgVts , -fit[1] / fit[0] - Vg)
-
-            if self.reverse:
-                Id_hi = np.sqrt(np.abs(self.transfers[tf]).values[mx:])
-
-                # so signs on gradient work
-                Id_hi = np.flip(Id_hi)
-                v_hi = np.flip(v_hi)
-
-                try:
-                    fit = self._min_fit(Id_hi - np.min(Id_hi), v_hi)
-                    Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
-                    
-                    if not self.gms_bwd.empty:
-
-                        gm_argmax = np.argmax(self.gms_bwd.values)
-                        Vg = self.gms_bwd.index.values[gm_argmax]
-                        VgVts = np.append(VgVts , -fit[1] / fit[0] - Vg)
-                        
-                except:
-                    warnings.warn('Upper gm did not find correct Vt')
+            VgVts = np.append(VgVts, -fit[1] / fit[0] - self.gm_peaks['peak gm (S)'][pk])
+            
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts

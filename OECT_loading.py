@@ -25,7 +25,7 @@ Usage:
     
 '''
 
-def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True, V_low=False):
+def uC_scale(path='', thickness=40e-9, plot=[True,False], add_avg_pixels=True, V_low=False):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -33,7 +33,9 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True, V_low=Fal
     thickness : float
         approximate film thickness. Standard polymers (for Raj) are ~40 nm
         
-    plot : bool, optional
+    plot : list of bools, optional
+        [0]: Plot the uC* data
+        [1]: plot the individual plots
         Whether to plot or not. Not plotting is very fast!    
 
     add_avg_pixels : bool, optional
@@ -113,15 +115,12 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True, V_low=Fal
     pixels = {}
 
     # loads all the folders
-
-    updated_keys = pixkeys[:]
-
     for p, f in zip(paths, pixkeys):
 
         if os.listdir(p):
 
             print(p)
-            dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot, 
+            dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot[1], 
                           options={'V_low': V_low})
             pixels[f] = dv
 
@@ -142,7 +141,6 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True, V_low=Fal
 
         if not pixels[pixel].gm_fwd[c].empty:
             gm_fwd = np.max(pixels[pixel].gm_fwd[c].values)
-            
             Wd_L = np.append(Wd_L, pixels[pixel].WdL)
             Vt = np.append(Vt, pixels[pixel].Vts[0])
             Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts[0])
@@ -153,8 +151,6 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True, V_low=Fal
 
         if not pixels[pixel].gm_bwd[c].empty:
             gm_bwd = np.max(pixels[pixel].gm_bwd[c].values)
-
-            # add extra x-axis point
             Wd_L = np.append(Wd_L, pixels[pixel].WdL)
             Vt = np.append(Vt, pixels[pixel].Vts[1])
             Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts[1])
@@ -183,7 +179,7 @@ def uC_scale(path='', thickness=40e-9, plot=True, add_avg_pixels=True, V_low=Fal
              'gms': gms,
              'folder': path}
 
-    if plot:
+    if plot[0]:
         fig = OECT_plotting.plot_uC(uC_dv)
 
         print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
