@@ -563,7 +563,7 @@ class OECT:
 
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
-            VgVts = np.append(VgVts, -fit[1] / fit[0] - self.gm_peaks['peak gm (S)'][pk])
+            VgVts = np.append(VgVts, fit[1] / fit[0] -pk)
             
 
         self.Vt = np.mean(Vts)
