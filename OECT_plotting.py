@@ -5,22 +5,17 @@ Created on Sun Nov 19 18:17:40 2017
 @author: Raj
 """
 
-from matplotlib import pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
-import numpy as np
-
+import warnings
 from itertools import cycle
 
-import warnings
 import matplotlib.cbook
-warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
+import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
+
+warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
 """ PLOTTING FUNCTIONS """
-
-
-def plot_transfer(dv):
-    plt.figure()
-    plt.plot(dv.transfer.index, dv.transfer)
 
 
 def plot_uC(dv, label='', savefig=True):
@@ -291,7 +286,7 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
         else:
             ax1.plot(dv.transfers[k][:] * 1000,
                      linewidth=2, marker=next(mk), markersize=7, color='b')
-            
+
         if leakage:
             ax1.plot(dv.transfers.index, dv.transfers * 1000,
                      linewidth=1, linestyle='--')
@@ -300,10 +295,8 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     mk = cycle(markers)
 
     if gm_plot:
-        for k in dv.gms_fwd:
-            ax2.plot(dv.gms_fwd[k].index, dv.gms_fwd[k] * 1000, 'b--', linewidth=2)
-        for k in dv.gms_bwd:
-            ax2.plot(dv.gms_bwd[k].index, dv.gms_bwd[k] * 1000, 'r--', linewidth=2)
+        for k in dv.gms:
+            ax2.plot(dv.gms[k].index, dv.gms[k] * 1000, 'b--', linewidth=2)
 
     ax1.set_ylabel('Ids Current (mA)', fontweight='bold',
                    fontsize=18, fontname='Arial')

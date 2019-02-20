@@ -530,8 +530,6 @@ class OECT:
 
                 self.transfers = self.transfers[cut:]
 
-            del df
-
         return
 
     def thresh(self):
@@ -559,7 +557,7 @@ class OECT:
 
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
-            VgVts = np.append(VgVts, fit[1] / fit[0] - pk)
+            VgVts = np.append(VgVts, np.abs(pk + fit[1] / fit[0]))  # Vg - Vt, + sign from -fit[1]/fit[0]
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts

@@ -25,7 +25,8 @@ Usage:
     
 '''
 
-def uC_scale(path='', thickness=40e-9, plot=[True,False], add_avg_pixels=True, V_low=False):
+
+def uC_scale(path='', thickness=40e-9, plot=[True, False], add_avg_pixels=True, V_low=False):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -120,7 +121,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True,False], add_avg_pixels=True, V
         if os.listdir(p):
 
             print(p)
-            dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot[1], 
+            dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot[1],
                           options={'V_low': V_low})
             pixels[f] = dv
 
@@ -171,7 +172,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True,False], add_avg_pixels=True, V
 
     # Create an OECT and add arrays 
     uC_dv = {'W': 100e-6, 'L': 20e-6, 'd': thickness,
-             'WdL':Wd_L,
+             'WdL': Wd_L,
              'Vg_Vt': Vg_Vt,
              'Vt': Vt,
              'uC': uC,
@@ -336,9 +337,9 @@ def loadOECT(path, params, gm_plot=True, plot=True, options={}):
 
     scaling = device.WdL  # W *d / L
 
-    for key in device.gms_fwd:
-        print(key, ':', np.max(device.gms_fwd[key].values) / scaling, 'S/m scaled')
-        print(key, ':', np.max(device.gms_fwd[key].values), 'S max')
+    for key in device.gms:
+        print(key, ':', np.max(device.gms[key].values) / scaling, 'S/m scaled')
+        print(key, ':', np.max(device.gms[key].values), 'S max')
 
     if plot:
         fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
