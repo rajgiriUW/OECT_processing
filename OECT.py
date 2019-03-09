@@ -25,11 +25,37 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 class OECT:
-    """
+    '''
     OECT class for processing transistor data from a folder of text files.
+    The transfer curves must include 'transfer' somewhere in the filename.
+    The output curves similarly should have 'output' somewhere
 
-    Extracts the Id-Vg (transfer), Id-Vd (output), and gm (transconductance)
-    Calculates Vt
+    This will extract the transfer curves, output curves, transconductance, and
+    threshold voltage from a folder of data. 
+    
+    It splits all traces into a forward and reverse trace and auto-calculates
+    threshold. By default it uses a smoothed derivative to get gm.
+    
+    The important returns are:
+        outputs : DataFrame of all output curves
+        transfers : DataFrame of all transfer curves
+        gms : DataFrame of all transconductances
+        Vts : Array of all calculated threshold voltages
+        
+    Usage
+    --------
+    >>> import OECT
+    >>>
+    >>> path = '../device_data/pixel_01'
+    >>>
+    >>> device = OECT.OECT(path)
+    >>> device.calc_gms()
+    >>> device.thresh()
+    >>> 
+    >>> from matplotlib import pyplot as plt
+    >>> plt.plot(device.transfers)
+    >>> plt.figure(), plt.plot(device.outputs)
+    >>> plt.figure(), plt.plot(device.gms)    
 
     Parameters
     ----------
@@ -50,7 +76,6 @@ class OECT:
 
     Attributes
     ----------
-    
     Important attributes:
         
         outputs : DataFrame
@@ -63,6 +88,8 @@ class OECT:
         Vts : ndarray
             Threshold voltage for forward and reverse trace
             Element 0: forward, 1: reverse
+        WdL : float
+            The value of W*d/L, d=thickness, W=width, L=length of the device
             
     Other attributes:
         
@@ -92,7 +119,7 @@ class OECT:
     
         gm_fwd : dict
             dict of Dataframes of all forward sweep gms
-        gms_bwd : dict
+        gm_bwd : dict
             dict of Dataframes of all backward sweep gms
         gm_peaks : ndarray
             Peak gms calculated by taking simple peak
@@ -103,18 +130,7 @@ class OECT:
             If a reverse trace exists
         rev_point : float
             Voltage where the Id trace starts reverse sweep
-
-
-    Usage
-    --------
-    >>> import OECT
-    >>>
-    >>> path = '../device_data/pixel_01'
-    >>>
-    >>> device = OECT.OECT(path)
-    >>> device.calc_gms()
-    >>> device.thresh()
-    """
+    '''
 
     def __init__(self, folder=None, params=None, options=None):
 
@@ -321,11 +337,11 @@ class OECT:
                 idx = self.gm_fwd[g].index.values
 
                 mx, reverse = self._reverse(idx)
-                nm = 'gm_' + g + '_' + str(labels)
+                nm = 'gm_' + g
 
                 while nm in self.gms:
                     labels += 1
-                    nm = 'gm_' + g + '_' + str(labels)
+                    nm = 'gm_' + g[:-1] + str(labels)
 
                 df = pd.Series(data=gm[:mx], index=idx[:mx])
                 df.sort_index(inplace=True)
@@ -339,11 +355,11 @@ class OECT:
                 idx = self.gm_bwd[g].index.values
 
                 mx, reverse = self._reverse(idx)
-                nm = 'gm_' + g + '_' + str(labels)
+                nm = 'gm_' + g
 
                 while nm in self.gms:
                     labels += 1
-                    nm = 'gm_' + g + '_' + str(labels)
+                    nm = 'gm_' + g[:-1] + str(labels)
 
                 df = pd.Series(data=gm[:mx], index=idx[:mx])
                 df.sort_index(inplace=True)
@@ -385,7 +401,7 @@ class OECT:
 
             return gm
 
-        #        # Get gm
+        # Get gm
         gm_fwd = get_gm(vl_lo, i[0:mx], self.options['gm_method'], fitparams)
         gm_peaks = np.append(gm_peaks, np.max(gm_fwd.values))
         gm_args = np.append(gm_args, gm_fwd.index[np.argmax(gm_fwd.values)])
@@ -429,13 +445,15 @@ class OECT:
         Vfwd = str(V) + '_fwd'
         self.output[Vfwd] = op[:idx]
         self.output_raw[Vfwd] = op[:idx]
-        self.output[Vfwd] = self.output[Vfwd].drop(['I_DS Error (A)', 'I_G (A)',
+        self.output[Vfwd] = self.output[Vfwd].drop(['I_DS Error (A)', 
+                                                    'I_G (A)',
                                                     'I_G Error (A)'], 1)
         if reverse:
             Vbwd = str(V) + '_bwd'
             self.output[Vbwd] = op[idx:]
             self.output_raw[Vbwd] = op[idx:]
-            self.output[Vbwd] = self.output[Vbwd].drop(['I_DS Error (A)', 'I_G (A)',
+            self.output[Vbwd] = self.output[Vbwd].drop(['I_DS Error (A)', 
+                                                        'I_G (A)',
                                                         'I_G Error (A)'], 1)
 
     def all_outputs(self):

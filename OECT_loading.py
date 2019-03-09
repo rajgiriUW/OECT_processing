@@ -27,7 +27,7 @@ Usage:
 
 
 def uC_scale(path='', thickness=40e-9, plot=[True, False], 
-             add_avg_pixels=True, V_low=False):
+             add_avg_pixels=False, V_low=False):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -136,28 +136,15 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
     Vt = np.array([])
     gms = np.array([])
 
-    for f, pixel in zip(pixkeys, pixels):
-
-        # peak gms
-        c = list(pixels[pixel].gm_fwd.keys())[0]
-
-        if not pixels[pixel].gm_fwd[c].empty:
-            gm_fwd = np.max(pixels[pixel].gm_fwd[c].values)
+    for pixel in pixels:
+        
+        if not pixels[pixel].gms.empty:
+            
             Wd_L = np.append(Wd_L, pixels[pixel].WdL)
             Vt = np.append(Vt, pixels[pixel].Vts[0])
             Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts[0])
-            gms = np.append(gms, gm_fwd)
-
-        # backwards
-        c = list(pixels[pixel].gm_bwd.keys())[0]
-
-        if not pixels[pixel].gm_bwd[c].empty:
-            gm_bwd = np.max(pixels[pixel].gm_bwd[c].values)
-            Wd_L = np.append(Wd_L, pixels[pixel].WdL)
-            Vt = np.append(Vt, pixels[pixel].Vts[1])
-            Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts[1])
-            gms = np.append(gms, gm_bwd)
-
+            gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
+    
     # fit functions
     def line_f(x, a, b):
 
@@ -189,6 +176,64 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
     print('Vt = ', uC_dv['Vt'])
 
     return pixels, uC_dv
+
+def loadOECT(path, params, gm_plot=True, plot=True, options={}):
+    """
+    Wrapper function for processing OECT data
+
+    params = {W: , L: , d: } for W, L, d of device
+
+    USAGE:
+        device1 = loadOECT(folder_name)
+
+
+    """
+
+    if not path:
+        path = file_open(caption='Select device subfolder')
+
+    device = OECT.OECT(path, params, options)
+    device.calc_gms()
+    device.thresh()
+
+    scaling = device.WdL  # W *d / L
+
+    for key in device.gms:
+        print(key, ': {:.2f}'.format(np.max(device.gms[key].values * 1e-2) / scaling), 'S/cm scaled')
+        print(key, ': {:.2f}'.format(np.max(device.gms[key].values*1000)), 'mS max')
+
+    if plot:
+        fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
+        fig.savefig(path + r'\transfer_leakage.tif', format='tiff')
+        fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=False)
+        fig.savefig(path + r'\transfer.tif', format='tiff')
+
+        fig = OECT_plotting.plot_outputs(device, leakage=True)
+        fig.savefig(path + r'\output_leakage.tif', format='tiff')
+        fig = OECT_plotting.plot_outputs(device, leakage=False)
+        fig.savefig(path + r'\output.tif', format='tiff')
+
+    return device
+
+
+def file_open(caption='Select folder'):
+    '''
+    File dialog if path not given in load commands
+    :param
+        caption : str
+
+    :return:
+        path : str
+    '''
+
+    from PyQt5 import QtWidgets
+
+    app = QtWidgets.QApplication([])
+    path = QtWidgets.QFileDialog.getExistingDirectory(caption=caption)
+    app.closeAllWindows()
+    app.exit()
+
+    return str(path)
 
 
 def average(path='', thickness=40e-9, plot=True):
@@ -315,62 +360,3 @@ def average(path='', thickness=40e-9, plot=True):
         fig.savefig(path + r'\output_avg.tif', format='tiff')
 
     return pixels, Id_Vg, Id_Vd, temp_dv.WdL
-
-
-def loadOECT(path, params, gm_plot=True, plot=True, options={}):
-    """
-    Wrapper function for processing OECT data
-
-    params = {W: , L: , d: } for W, L, d of device
-
-    USAGE:
-        device1 = loadOECT(folder_name)
-
-
-    """
-
-    if not path:
-        path = file_open(caption='Select device subfolder')
-
-    device = OECT.OECT(path, params, options)
-    device.calc_gms()
-    device.thresh()
-
-    scaling = device.WdL  # W *d / L
-
-    for key in device.gms:
-        print(key, ':', np.max(device.gms[key].values) / scaling, 'S/m scaled')
-        print(key, ':', np.max(device.gms[key].values), 'S max')
-
-    if plot:
-        fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
-        fig.savefig(path + r'\transfer_leakage.tif', format='tiff')
-        fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=False)
-        fig.savefig(path + r'\transfer.tif', format='tiff')
-
-        fig = OECT_plotting.plot_outputs(device, leakage=True)
-        fig.savefig(path + r'\output_leakage.tif', format='tiff')
-        fig = OECT_plotting.plot_outputs(device, leakage=False)
-        fig.savefig(path + r'\output.tif', format='tiff')
-
-    return device
-
-
-def file_open(caption='Select folder'):
-    '''
-    File dialog if path not given in load commands
-    :param
-        caption : str
-
-    :return:
-        path : str
-    '''
-
-    from PyQt5 import QtWidgets
-
-    app = QtWidgets.QApplication([])
-    path = QtWidgets.QFileDialog.getExistingDirectory(caption=caption)
-    app.closeAllWindows()
-    app.exit()
-
-    return str(path)
