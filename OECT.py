@@ -52,51 +52,62 @@ class OECT:
 
     Attributes
     ----------
-    output : dict
-        dict of DataFrames
-        Each DataFrame is Id-Vd, with index of DataFrame set to Vd.
-        All other columns removed (Id-error, Ig, Ig-error)
-    output_raw : dict
-        dict of DataFrames
-        same as output except columns maintained
-    outputs : DataFrame
-        Single DataFrame of all outputs in one file.
-        Assumes all data taken on same Vd range (as during an experiment)
-    transfer : dict
-        dict of DataFrames
-        DataFrame of Id-Vg, with index of DataFrame set to Vg
-        All other columns removed (Ig-error)
-    transfer_raw : dict
-        dict of DataFrames
-        DataFrame of Id-Vg, with index of DataFrame set to Vg
-        same as transfer except all columns maintained
-    transfers : DataFrame
-        single dataFrame with all transfer curves
-    Vg_array : list of str
-        list of gate voltages (Vg) used during Id-Vd sweeps
-    Vg_labels: list of floats
-        list of gate voltages (Vg) used during Id-Vd sweeps for plot labels
-    transfer_avgs : int
-        averages taken per point in transfer curve
-    gms_fwd : DataFrame
-        Transconductance for all sweeps (in Siemens) as one DataFrame
-    gms_fwd : dict
-        dict of Dataframes of all forward sweep gms
-    gms_bwd : dict
-        dict of Dataframes of all backward sweep gms
-    gm_peaks : ndarray
-        Peak gms calculated by taking simple peak
-    Vt : float
-        Threshold voltage calculated from sqrt(Id) fit
-    Vts : ndarray
-        Threshold voltage for forward and reverse trace, 0: forward, 1: reverse
-    reverse : bool
-        If a reverse trace exists
-    rev_point : float
-        Voltage where the Id trace starts reverse sweep
+    
+    Important attributes:
+        
+        outputs : DataFrame
+            Single DataFrame of all outputs in one file.
+            Assumes all data taken on same Vd range (as during an experiment)
+        transfers : DataFrame
+            single dataFrame with all transfer curves
+        gms : DataFrame
+            Transconductance for all sweeps (in Siemens) as one DataFrame
+        Vts : ndarray
+            Threshold voltage for forward and reverse trace
+            Element 0: forward, 1: reverse
+            
+    Other attributes:
+        
+        output : dict
+            dict of DataFrames
+            Each DataFrame is Id-Vd, with index of DataFrame set to Vd.
+            All other columns removed (Id-error, Ig, Ig-error)
+        output_raw : dict
+            dict of DataFrames
+            same as output except columns maintained
+    
+        transfer : dict
+            dict of DataFrames
+            DataFrame of Id-Vg, with index of DataFrame set to Vg
+            All other columns removed (Ig-error)
+        transfer_raw : dict
+            dict of DataFrames
+            DataFrame of Id-Vg, with index of DataFrame set to Vg
+            same as transfer except all columns maintained
+    
+        Vg_array : list of str
+            list of gate voltages (Vg) used during Id-Vd sweeps
+        Vg_labels: list of floats
+            list of gate voltages (Vg) used during Id-Vd sweeps for plot labels
+        transfer_avgs : int
+            averages taken per point in transfer curve
+    
+        gm_fwd : dict
+            dict of Dataframes of all forward sweep gms
+        gms_bwd : dict
+            dict of Dataframes of all backward sweep gms
+        gm_peaks : ndarray
+            Peak gms calculated by taking simple peak
+        Vt : float
+            Threshold voltage calculated from sqrt(Id) fit
+    
+        reverse : bool
+            If a reverse trace exists
+        rev_point : float
+            Voltage where the Id trace starts reverse sweep
 
 
-    Examples
+    Usage
     --------
     >>> import OECT
     >>>
@@ -234,7 +245,7 @@ class OECT:
 
         # find config file
         config = [os.path.join(self.folder, name)
-                  for name in filelist if name[-10:] == 'config.cfg']
+                  for name in filelist if name[-4:] == '.cfg']
 
         if config:
 
@@ -248,7 +259,8 @@ class OECT:
         else:
 
             print('No config file found!')
-            self.config = None
+            path = '\\'.join(files[0].split('\\')[:-1])
+            self.config = make_config(path) 
 
         self.files = files
 
@@ -256,8 +268,6 @@ class OECT:
 
     def get_metadata(self, fl):
         """ Called in load_data to extract file-specific parameters """
-
-        metadata = ['Vd', 'Vg', 'Averages']
 
         # search params in first file in this folder for missing params
         h = open(fl)
@@ -713,3 +723,29 @@ def config_file(cfg):
                 options[key] = config.getfloat('Options', key)
 
     return params, options
+
+
+def make_config(path):
+    '''
+    If a config file does not exist, this will generate one automatically.
+    
+    '''
+    config = configparser.ConfigParser()
+    
+    config['Dimensions'] = {'Width (um)': 2000, 'Length (um)': 20}
+    config['Transfer'] = {'Preread (ms)': 30000.0, 
+                          'First Bias (ms)': 120000.0,
+                          'Vds (V)': -0.60}
+    
+    config['Output'] = {'Preread (ms)': 500.0, 
+                          'First Bias (ms)': 200.0,
+                          'Output Vgs': 4,
+                          'Vgs (V) 0': -0.1,
+                          'Vgs (V) 1': -0.3,
+                          'Vgs (V) 2': -0.5,
+                          'Vgs (V) 3': -0.9}
+    
+    with open(path + r'\config.cfg', 'w') as configfile:
+        config.write(configfile)
+    
+    return path + r'\config.cfg'

@@ -151,11 +151,9 @@ class uv_vis(object):
         
         # Set up dataFrame
         df = pd.DataFrame(index=wl)
-        vt = []
         
         # Set up a "smoothed" dataFrame
         dfs = pd.DataFrame(index=wl)
-        vt = []
     
         for fl,v in zip(self.specs, self.potentials):
             
@@ -167,7 +165,7 @@ class uv_vis(object):
     
         idx = df[v].index
         wl = idx.searchsorted(wavelength)
-        vt = df.loc[idx[wl]]
+        self.vt = df.loc[idx[wl]]
         
         self.spectra = df
         self.spectra_sm = dfs
@@ -201,8 +199,7 @@ class uv_vis(object):
             Wavelength to extract. This will search for nearest wavelength row
             
         '''
-        spectra_path = self.specs[self.volt(potential)]
-        df = self.single_time_spectra(spectra_path)
+        df = self.spectra_vs_time[potential]
         
         idx = df.index
         wl = idx.searchsorted(wavelength)

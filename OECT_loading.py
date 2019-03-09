@@ -26,7 +26,8 @@ Usage:
 '''
 
 
-def uC_scale(path='', thickness=40e-9, plot=[True, False], add_avg_pixels=True, V_low=False):
+def uC_scale(path='', thickness=40e-9, plot=[True, False], 
+             add_avg_pixels=True, V_low=False):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
