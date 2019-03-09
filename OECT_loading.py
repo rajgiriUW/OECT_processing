@@ -15,12 +15,12 @@ import OECT
 import OECT_plotting
 
 '''
-load_avg : for loading all the subfolders that are the 4 "averaging" pixels
 load_uC : for loading the four pixels to generate a uC* plot
+load_avg : for loading all the subfolders that are the 4 "averaging" pixels
+    this is somewhat uncommon
 
 Usage:
     
-    >> pixels, Id_Vg, Id_Vd = OECT_loading.average(r'path_to_avg', new_geom=False)
     >> pixels, uC_dv = OECT_loading.uC_scale(r'path_to_uC_scale', new_geom=False)
     
 '''
@@ -62,7 +62,6 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
             threshold voltage shifts for correcting uC* fit
     
     '''
-
     if not path:
         path = file_open(caption='Select uC subfolder')
         print('Loading from', path)
@@ -117,6 +116,9 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
     pixels = {}
 
     # loads all the folders
+    if type(plot)==bool or len(plot) == 1:
+        plot = [plot, plot]
+        
     for p, f in zip(paths, pixkeys):
 
         if os.listdir(p):
@@ -159,8 +161,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
     uC, _ = cf(line_f, Wd_L * Vg_Vt, gms)
 
     # Create an OECT and add arrays 
-    uC_dv = {'W': 100e-6, 'L': 20e-6, 'd': thickness,
-             'WdL': Wd_L,
+    uC_dv = {'WdL': Wd_L,
              'Vg_Vt': Vg_Vt,
              'Vt': Vt,
              'uC': uC,
