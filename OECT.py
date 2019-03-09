@@ -39,8 +39,6 @@ class OECT:
         device parameters, typically Width (W), length (L), thickness (d)
     options : dict, optional
         processing optional parameters (for transfer curves only)
-        Reverse : bool
-            Whether to process the reverse trace since there's often hysteresis
         Average : bool
             Whether instead to average forward and reverse trace
             Reverse XOR Average must be true
@@ -161,24 +159,22 @@ class OECT:
 
         # load data, finds config file
         self.filelist()
-        if self.config:
-            _par, _opt = config_file(self.config)
-        else:
-            _par = []
-            _opt = []
+        _par, _opt = config_file(self.config)
 
         # processing and device parameters
         self.params = {}
         self.options = {}
 
-        if params is not None:
-            for p in params:
-                self.params[p] = params[p]
+        # From the config flie
         for p in _par:
             self.params[p] = _par[p]
         for o in _opt:
             self.options[o] = _opt[o]
 
+        # Overwrite with passed parameters
+        if params is not None:
+            for p in params:
+                self.params[p] = params[p]
         if options is not None:
             for o in options:
                 self.options[o] = options[o]
