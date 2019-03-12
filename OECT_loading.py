@@ -142,10 +142,13 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
         
         if not pixels[pixel].gms.empty:
             
-            Wd_L = np.append(Wd_L, pixels[pixel].WdL)
-            Vt = np.append(Vt, pixels[pixel].Vts[0])
-            Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts[0])
+            Vt = np.append(Vt, pixels[pixel].Vts)
+            Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts)
             gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
+            
+            # appens WdL as many times as there are transfer curves
+            for i in range(len(pixels[pixel].VgVts)):
+                Wd_L = np.append(Wd_L, pixels[pixel].WdL)
     
     # fit functions
     def line_f(x, a, b):
