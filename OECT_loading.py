@@ -51,7 +51,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
     pixels : dict of OECT
         Contains the various OECT class devices
         
-    uC_dv : OECT Class containing
+    uC_dv : dict containing
         Wd_L : ndarray
             coefficient for plotting on x-axis
         
@@ -93,6 +93,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
 
             f = avglist[:]
             for k in avglist:
+                # if subfolder/file is not a valid number, skip it
                 try:
                     sub_num = int(k)
                 except:

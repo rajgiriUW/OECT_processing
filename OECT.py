@@ -156,13 +156,12 @@ class OECT:
         self.folder = folder
         self.num_outputs = 0
         self.num_transfers = 0
-
+        self.reverse = False
+        self.rev_point = np.nan
+        
         # Threshold
         self.Vt = np.nan
         self.Vts = np.nan
-
-        self.reverse = False
-        self.rev_point = np.nan
 
         if not folder:
             from PyQt5 import QtWidgets
@@ -177,15 +176,36 @@ class OECT:
         self.filelist()
         _par, _opt = config_file(self.config)
 
-        # processing and device parameters
+        self.set_params(_par, _opt, params, options)
+        self.loaddata()
+        self.W, self.L = self.params['W'], self.params['L']
+
+        if 'd' not in self.params:
+            self.params['d'] = 40e-9
+        elif self.params['d'] > 1: #wrong units
+            self.params['d'] *= 1e-9
+        self.d = self.params['d']
+
+        self.WdL = self.W * self.d / self.L
+
+        return
+
+    def set_params(self, par, opt, params, options):
+        '''
+        Sets the default parameters and reads in passed parameters/options
+        
+        par and opt from the config file
+        params is passed from the function call
+        '''
+                # processing and device parameters
         self.params = {}
         self.options = {}
 
         # From the config flie
-        for p in _par:
-            self.params[p] = _par[p]
-        for o in _opt:
-            self.options[o] = _opt[o]
+        for p in par:
+            self.params[p] = par[p]
+        for o in opt:
+            self.options[o] = opt[o]
 
         # Overwrite with passed parameters
         if params is not None:
@@ -204,16 +224,7 @@ class OECT:
             self.options['Average'] = False
         if 'V_low' not in self.options:
             self.options['V_low'] = False
-
-        self.loaddata()
-
-        self.W, self.L = self.params['W'], self.params['L']
-        if 'd' not in self.params:
-            self.params['d'] = 40e-9
-        self.d = self.params['d']
-
-        self.WdL = self.W * self.d / self.L
-
+        
         return
 
     def loaddata(self):
@@ -238,10 +249,6 @@ class OECT:
         self.all_outputs()
 
         self.all_transfers()
-        # try:
-        #     self.all_transfers()
-        # except:
-        #     print('Error in transfers: not all using same indices')
 
         self.num_transfers = len(self.transfers.columns)
         self.num_outputs = len(self.outputs.columns)
@@ -556,13 +563,13 @@ class OECT:
 
         return
 
-    def thresh(self):
+    def thresh(self, plot=False):
         """
         Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
             x-offset
 
-        negative_Vt : bool
-            assumes Threshold is a negative value (typical for p-type polymers)
+        plot : bool, Optional
+            To show the threshold fit and line
 
         """
 
@@ -570,6 +577,14 @@ class OECT:
         VgVts = np.array([])
 
         v_lo = self.transfers.index
+
+        if plot:
+            from matplotlib import pyplot as plt
+            plt.figure()
+            plt.xlabel('$V_{GS}$ $Voltage (V)$')
+            plt.ylabel('|$I_{DS}$$^{0.5}$| ($A^{0.5}$)')
+            labels = []
+
 
         # Find and fit at inflection between regimes
         for tf, pk in zip(self.transfers, self.gm_peaks.index):
@@ -579,9 +594,20 @@ class OECT:
             # minimize residuals by finding right peak
             fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
 
+            if plot:
+                plt.plot(np.sqrt(np.abs(self.transfers[tf])), 'bo-')
+                v = self.transfers[tf].index.values
+                tx = np.arange(np.min(v), -fit[1] / fit[0] + 0.1, 0.01 )
+                plt.plot(tx, self.line_f(tx, *fit), 'r--')
+                labels.append('{:.4f}'.format(-fit[1] / fit[0]))
+
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
             VgVts = np.append(VgVts, np.abs(pk + fit[1] / fit[0]))  # Vg - Vt, + sign from -fit[1]/fit[0]
+            
+        if plot:
+            plt.legend(labels=labels)
+            plt.axhline(0, color='k', linestyle='--')
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts
