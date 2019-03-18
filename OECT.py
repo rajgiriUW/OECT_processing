@@ -608,6 +608,8 @@ class OECT:
         if plot:
             plt.legend(labels=labels)
             plt.axhline(0, color='k', linestyle='--')
+            for v in Vts:
+                plt.axvline(v, color='k', linestyle='--')
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts

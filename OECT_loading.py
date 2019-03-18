@@ -182,7 +182,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
 
     return pixels, uC_dv
 
-def loadOECT(path, params, gm_plot=True, plot=True, options={}):
+def loadOECT(path, params=None, gm_plot=True, plot=True, options={}):
     """
     Wrapper function for processing OECT data
 

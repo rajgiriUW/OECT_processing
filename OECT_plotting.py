@@ -164,8 +164,9 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
             ax1.plot(dv.transfers[k][:] * 1000,
                      linewidth=2, marker=next(mk), markersize=7, color='b')
 
-        if leakage:
-            ax1.plot(dv.transfers.index, dv.transfers * 1000,
+    if leakage:
+        for k in dv.transfer_raw:
+           ax1.plot(dv.transfer_raw[k].index, dv.transfer_raw[k]['I_G (A)'] * 1000,
                      linewidth=1, linestyle='--')
 
     markers = ['o', 's', '^', 'd', 'x']
