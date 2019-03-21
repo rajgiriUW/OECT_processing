@@ -26,8 +26,7 @@ Usage:
 '''
 
 
-def uC_scale(path='', thickness=40e-9, plot=[True, False], 
-             add_avg_pixels=False, V_low=False):
+def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, retrace_only=False):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -40,8 +39,8 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
         [1]: plot the individual plots
         Whether to plot or not. Not plotting is very fast!    
 
-    add_avg_pixels : bool, optional
-        Whether to add the averaging subfolder (adds more low Wd/L points)
+    retrace_only : bool, optional
+        Whether to only do the retrace in case trace isn't saturating
         
     V_low : bool, optional
         Whether to find erroneous "turnover" points when devices break down
@@ -79,36 +78,6 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
     paths = [os.path.join(path, name) for name in filelist]
     pixkeys = [f + '_uC' for f in filelist]
 
-    # add the averaging pixels to the calculation
-    if add_avg_pixels:
-
-        try:
-
-            os.chdir(path + '\..')
-            os.chdir(os.getcwd() + '\\avg')
-            avgpath = os.getcwd()
-            avglist = os.listdir(avgpath)
-
-            print('Adding avg-pixels')
-
-            f = avglist[:]
-            for k in avglist:
-                # if subfolder/file is not a valid number, skip it
-                try:
-                    sub_num = int(k)
-                except:
-                    print('Ignoring', k)
-                    f.remove(k)
-
-            filelist = f[:]
-            paths = paths + [os.path.join(avgpath, name) for name in filelist]
-            pixkeys = pixkeys + [f + '_avg' for f in filelist]
-            del f
-
-        except:
-
-            print('No avg subfolder found')
-
     # removes random files instead of the sub-folders
     for p in paths:
         if not os.path.isdir(p):
@@ -143,6 +112,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
         
         if not pixels[pixel].gms.empty:
             
+            ix = len(pixels[pixel].VgVts)
             Vt = np.append(Vt, pixels[pixel].Vts)
             Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts)
             gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
@@ -150,6 +120,12 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False],
             # appens WdL as many times as there are transfer curves
             for i in range(len(pixels[pixel].VgVts)):
                 Wd_L = np.append(Wd_L, pixels[pixel].WdL)
+            # remove the trace ()
+            if retrace_only:
+                Vt = np.delete(Vt, -ix)
+                Vg_Vt = np.delete(Vg_Vt, -ix)
+                gms = np.delete(gms, -ix)
+                Wd_L = np.delete(Wd_L, -ix)
     
     # fit functions
     def line_f(x, a, b):
