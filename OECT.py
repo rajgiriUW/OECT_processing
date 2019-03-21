@@ -145,6 +145,7 @@ class OECT:
         self.transfer_raw = {}
         self.transfers = pd.DataFrame()
         self.Vg_array = []
+        self.Vd_array = []
         self.Vg_labels = []
         self.Vd_labels = []
         self.gm_fwd = {}
@@ -152,6 +153,7 @@ class OECT:
         self.gms = pd.DataFrame()
 
         # Data descriptors
+        self.make_config = False # if config doesn't exist, for backwards-compatibility
         self.transfer_avgs = 1
         self.folder = folder
         self.num_outputs = 0
@@ -224,6 +226,8 @@ class OECT:
             self.options['Average'] = False
         if 'V_low' not in self.options:
             self.options['V_low'] = False
+        if 'overwrite' not in self.options:
+            self.options['overwrite'] = False
         
         return
 
@@ -253,6 +257,13 @@ class OECT:
         self.num_transfers = len(self.transfers.columns)
         self.num_outputs = len(self.outputs.columns)
 
+        if self.make_config:    # no proper config file found
+            self.update_config()
+        
+        # can manually use options to overwrite the config file
+        if 'overwrite' in self.options:
+            if self.options['overwrite']:
+                self.update_config()
         return
 
     def filelist(self):
@@ -279,7 +290,8 @@ class OECT:
 
             print('No config file found!')
             path = '\\'.join(files[0].split('\\')[:-1])
-            self.config = make_config(path) 
+            self.config = make_config(path)
+            self.make_config = True
 
         self.files = files
 
@@ -296,6 +308,12 @@ class OECT:
                 self.Vd = float(line.split()[-1])
             if 'V_G = ' in line:
                 self.Vg = float(line.split()[-1])
+                
+            # if no config file found, populate based on the raw data
+            if 'Width/um' in line and (self.make_config or self.options['overwrite']):
+                self.W = float(line.split()[-1])
+            if 'Length/um' in line and (self.make_config or self.options['overwrite']):
+                self.L = float(line.split()[-1])
 
         h.close()
 
@@ -701,6 +719,34 @@ class OECT:
 
         return mx_d2
 
+    def update_config(self):
+    
+        config = configparser.ConfigParser()
+        config.read(self.config)
+
+        # Update with parameters read in earlier in loaddata()
+        config['Dimensions']['Width (um)'] = str(self.W)
+        config['Dimensions']['Length (um)'] = str(self.L)
+        config['Transfer']['Vds (V)'] = str(self.Vd)
+
+        config['Output'] = {'Preread (ms)': 500.0, 
+                            'First Bias (ms)': 200.0}
+        config['Output']['Output Vgs'] = str(len(self.Vg_array))
+        for v in range(len(self.Vg_array)):
+            config['Output']['Vgs (V) ' + str(v)] = str(self.Vg_array[v])
+        
+        # overwrite the file
+        try:
+            with open(self.config, 'w') as configfile:
+    
+                config.write(configfile)
+        except:
+        
+            with open(self.config[0], 'w') as configfile:
+    
+                config.write(configfile)
+            
+        return
 
 def config_file(cfg):
     """
@@ -721,7 +767,7 @@ def config_file(cfg):
     for key in dim_keys:
 
         if config.has_option('Dimensions', key):
-            params[dim_keys[key]] = config.getint('Dimensions', key)
+            params[dim_keys[key]] = config.getfloat('Dimensions', key)
 
     for key in vgs_keys:
 
@@ -773,6 +819,7 @@ def make_config(path):
     
     '''
     config = configparser.ConfigParser()
+    config.optionxform=str
     
     config['Dimensions'] = {'Width (um)': 2000, 'Length (um)': 20}
     config['Transfer'] = {'Preread (ms)': 30000.0, 
@@ -791,3 +838,4 @@ def make_config(path):
         config.write(configfile)
     
     return path + r'\config.cfg'
+

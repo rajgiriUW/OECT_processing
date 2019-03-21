@@ -27,7 +27,7 @@ Usage:
 
 
 def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, 
-             retrace_only=False, verbose=True):
+             retrace_only=False, verbose=True, options=None):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -89,6 +89,10 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
             paths.remove(p)
 
     pixels = {}
+    opts = {'V_low': V_low}
+    for o in options:
+        opts[o] = options[o]
+    
 
     # loads all the folders
     if type(plot)==bool or len(plot) == 1:
@@ -101,7 +105,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
             if verbose:
                 print(p)
             dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot[1],
-                          options={'V_low': V_low}, verbose=verbose)
+                          options=opts, verbose=verbose)
             pixels[f] = dv
 
         else:
