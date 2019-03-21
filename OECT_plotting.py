@@ -34,7 +34,8 @@ The other plotting functions are mostly used in OECT_loading or in OECT itself
 
 '''
 
-def plot_uC(dv, label='', savefig=True):
+def plot_uC(dv, label='', savefig=True, ax=None, fit=True,
+            **kwargs):
     """
     dv : dict of parameters needed for plotting
 
@@ -57,6 +58,17 @@ def plot_uC(dv, label='', savefig=True):
 
     savefig : bool, optional
         Whether to save the figures
+        
+    ax : matplotlib axes object, optional
+        Plot on an existing axis
+        
+       
+    fit : bool, optional
+        Plot the best fit line or not
+        
+    kwargs : dict, optional
+        Standard plotting params, e.g. {'color': 'b'}
+        Default is size 10 blue squares 
     """
     WdL = dv['WdL']
     Vg_Vt = dv['Vg_Vt']
@@ -70,63 +82,73 @@ def plot_uC(dv, label='', savefig=True):
         else:
             import os
             path = os.getcwd()
+    
+    if not np.any(ax):
+        fig, ax = plt.subplots(nrows=2, facecolor='white', figsize=(9, 12))
 
-    fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
-
+    params = {'color': 'b', 'markersize': 10, 'marker': 's', 'linestyle': ''}
+    
+    for k in kwargs:
+        params[k] = kwargs[k]
+    
     plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
     plt.rc('axes', linewidth=4)
-    ax.tick_params(labeltop=False, labelright=False)
-    ax.tick_params(axis='both', length=14, width=3, which='major',
+    ax[0].tick_params(labeltop=False, labelright=False)
+    ax[0].tick_params(axis='both', length=14, width=3, which='major',
                    bottom='on', left='on', right='on', top='on')
-    ax.tick_params(axis='both', length=10, width=3, which='minor',
+    ax[0].tick_params(axis='both', length=10, width=3, which='minor',
                    bottom='on', left='on', right='on', top='on')
 
-    ax.plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, 's', markersize=10, color='b')
-    ax.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
-    ax.set_ylabel('gm (mS)')
-    ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
-    ax.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
+    ax[0].plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, **params)
+    ax[0].set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
+    ax[0].set_ylabel('gm (mS)')
+    ax[0].xaxis.get_major_formatter().set_powerlimits((0, 1))
+    ax[0].set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
     plt.tight_layout()
 
     if savefig:
+        fig = plt.gcf()
         fig.savefig(path + r'\scaling_uC' + label + '.tif', format='tiff')
 
-    # create x-axis for fits
-    _xl = np.argmin(WdL * Vg_Vt)
-    _xh = np.argmax(WdL * Vg_Vt)
-    Wd_L_fitx = np.arange(WdL[_xl] * Vg_Vt[_xl], WdL[_xh] * Vg_Vt[_xh], 1e-9)
-    ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]) * 1000, 'k--')
-    ax.plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx) * 1000, 'r--')
-    ax.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
-    ax.tick_params(axis='both', length=17, width=3, which='major',
-                   bottom='on', left='on', right='on', top='on')
-    ax.tick_params(axis='both', length=10, width=3, which='minor',
-                   bottom='on', left='on', right='on', top='on')
-    plt.tight_layout()
+    if fit:
+        # create x-axis for fits
+        _xl = np.argmin(WdL * Vg_Vt)
+        _xh = np.argmax(WdL * Vg_Vt)
+        Wd_L_fitx = np.arange(WdL[_xl] * Vg_Vt[_xl], WdL[_xh] * Vg_Vt[_xh], 1e-9)
+        #ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]) * 1000, 'k--')
+        ax[0].plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx) * 1000, 'r--')
+        ax[0].set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
+        ax[0].tick_params(axis='both', length=17, width=3, which='major',
+                       bottom='on', left='on', right='on', top='on')
+        ax[0].tick_params(axis='both', length=10, width=3, which='minor',
+                       bottom='on', left='on', right='on', top='on')
+        plt.tight_layout()
+    
+        if savefig:
+            fig.savefig(path + r'\scaling_uC_+fit' + label + '.tif', format='tiff')
 
-    if savefig:
-        fig.savefig(path + r'\scaling_uC_+fit' + label + '.tif', format='tiff')
-
-    fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.plot(np.abs(WdL * Vg_Vt) * 1e2, gms, 's', markersize=10, color='b')
-    ax.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
-    ax.set_ylabel('gm (S)')
-    ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]), 'k--')
-    ax.plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx), 'r--')
-    ax.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
-    ax.tick_params(axis='both', length=17, width=3, which='major',
+    #fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
+    ax[1].set_xscale('log')
+    ax[1].set_yscale('log')
+    ax[1].plot(np.abs(WdL * Vg_Vt) * 1e2, gms, **params)
+    ax[1].set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
+    ax[1].set_ylabel('gm (S)')
+    #ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]), 'k--')
+    if fit:
+        ax[1].plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx), 'r--')
+        
+    ax[1].set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
+    ax[1].tick_params(axis='both', length=17, width=3, which='major',
                    bottom='on', left='on', right='on', top='on')
-    ax.tick_params(axis='both', length=10, width=3, which='minor',
+    ax[1].tick_params(axis='both', length=10, width=3, which='minor',
                    bottom='on', left='on', right='on', top='on')
     plt.tight_layout()
 
     if savefig:
         fig.savefig(path + r'\scaling_uC_loglog' + label + '.tif', format='tiff')
 
-    return fig
+    return ax
 
 def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     ''' 

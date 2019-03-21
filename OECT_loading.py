@@ -26,7 +26,8 @@ Usage:
 '''
 
 
-def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, retrace_only=False):
+def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, 
+             retrace_only=False, verbose=True):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -44,6 +45,9 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, retrace_
         
     V_low : bool, optional
         Whether to find erroneous "turnover" points when devices break down
+
+    verbose: bool, optional
+        Print to display
 
     Returns
     -------
@@ -72,7 +76,8 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, retrace_
         try:
             sub_num = int(k)
         except:
-            print('Ignoring', k)
+            if verbose:
+                print('Ignoring', k)
             f.remove(k)
     filelist = f[:]
     paths = [os.path.join(path, name) for name in filelist]
@@ -93,9 +98,10 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, retrace_
 
         if os.listdir(p):
 
-            print(p)
+            if verbose:
+                print(p)
             dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot[1],
-                          options={'V_low': V_low})
+                          options={'V_low': V_low}, verbose=verbose)
             pixels[f] = dv
 
         else:
@@ -121,7 +127,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, retrace_
             for i in range(len(pixels[pixel].VgVts)):
                 Wd_L = np.append(Wd_L, pixels[pixel].WdL)
             # remove the trace ()
-            if retrace_only:
+            if retrace_only and len(pixels[pixel].VgVts) > 1:
                 Vt = np.delete(Vt, -ix)
                 Vg_Vt = np.delete(Vg_Vt, -ix)
                 gms = np.delete(gms, -ix)
@@ -152,13 +158,15 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, retrace_
     if plot[0]:
         fig = OECT_plotting.plot_uC(uC_dv)
 
-        print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
+        if verbose:
+            print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
 
-    print('Vt = ', uC_dv['Vt'])
+    if verbose: 
+        print('Vt = ', uC_dv['Vt'])
 
     return pixels, uC_dv
 
-def loadOECT(path, params=None, gm_plot=True, plot=True, options={}):
+def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=True):
     """
     Wrapper function for processing OECT data
 
@@ -179,9 +187,10 @@ def loadOECT(path, params=None, gm_plot=True, plot=True, options={}):
 
     scaling = device.WdL  # W *d / L
 
-    for key in device.gms:
-        print(key, ': {:.2f}'.format(np.max(device.gms[key].values * 1e-2) / scaling), 'S/cm scaled')
-        print(key, ': {:.2f}'.format(np.max(device.gms[key].values*1000)), 'mS max')
+    if verbose:
+        for key in device.gms:
+            print(key, ': {:.2f}'.format(np.max(device.gms[key].values * 1e-2) / scaling), 'S/cm scaled')
+            print(key, ': {:.2f}'.format(np.max(device.gms[key].values*1000)), 'mS max')
 
     if plot:
         fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
