@@ -27,7 +27,7 @@ Usage:
 
 
 def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, 
-             retrace_only=False, verbose=True, options=None):
+             retrace_only=False, verbose=True, options={}):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -90,8 +90,9 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
 
     pixels = {}
     opts = {'V_low': V_low}
-    for o in options:
-        opts[o] = options[o]
+    if any(options):
+        for o in options:
+            opts[o] = options[o]
     
 
     # loads all the folders
@@ -114,9 +115,13 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
 
     # do uC* graphs, need gm vs W*d/L
     Wd_L = np.array([])
+    W = np.array([])
     Vg_Vt = np.array([])  # threshold offset
     Vt = np.array([])
     gms = np.array([])
+
+    # assumes Length and thickness are fixed
+    uC_dv = {}
 
     for pixel in pixels:
         
@@ -126,8 +131,9 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
             Vt = np.append(Vt, pixels[pixel].Vts)
             Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts)
             gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
+            W = np.append(W, pixels[pixel].W)
             
-            # appens WdL as many times as there are transfer curves
+            # appends WdL as many times as there are transfer curves
             for i in range(len(pixels[pixel].VgVts)):
                 Wd_L = np.append(Wd_L, pixels[pixel].WdL)
             # remove the trace ()
@@ -136,6 +142,10 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
                 Vg_Vt = np.delete(Vg_Vt, -ix)
                 gms = np.delete(gms, -ix)
                 Wd_L = np.delete(Wd_L, -ix)
+    
+            uC_dv['L'] = pixels[pixel].L
+            uC_dv['d'] = pixels[pixel].d
+            
     
     # fit functions
     def line_f(x, a, b):
@@ -151,13 +161,14 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
     uC, _ = cf(line_f, Wd_L * Vg_Vt, gms)
 
     # Create an OECT and add arrays 
-    uC_dv = {'WdL': Wd_L,
-             'Vg_Vt': Vg_Vt,
-             'Vt': Vt,
-             'uC': uC,
-             'uC_0': uC_0,
-             'gms': gms,
-             'folder': path}
+    uC_dv['WdL'] = Wd_L
+    uC_dv['W'] = W
+    uC_dv['Vg_Vt'] = Vg_Vt
+    uC_dv['Vt'] = Vt
+    uC_dv['uC'] = uC
+    uC_dv['uC_0'] = uC_0
+    uC_dv['gms'] = gms
+    uC_dv['folder'] = path
 
     if plot[0]:
         fig = OECT_plotting.plot_uC(uC_dv)

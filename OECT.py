@@ -132,7 +132,7 @@ class OECT:
             Voltage where the Id trace starts reverse sweep
     '''
 
-    def __init__(self, folder=None, params=None, options=None):
+    def __init__(self, folder=None, params={}, options={}):
 
         if folder is None:
             folder = ''
@@ -210,10 +210,10 @@ class OECT:
             self.options[o] = opt[o]
 
         # Overwrite with passed parameters
-        if params is not None:
+        if any(params):
             for p in params:
                 self.params[p] = params[p]
-        if options is not None:
+        if any(options):
             for o in options:
                 self.options[o] = options[o]
 
@@ -320,25 +320,32 @@ class OECT:
         return
 
     def _reverse(self, v):
-        """if reverse trace exists, return max-point index and flag"""
+        """if reverse trace exists, return inflection-point index and flag"""
         mx = np.argmax(v)
 
-        if mx == 0:
-            mx = np.argmin(v)
-
-        self.rev_point = mx
-        self.rev_v = v[mx]
-
-        if mx != len(v) - 1:
-            self.options['Reverse'] = True
-            self.reverse = True
-
+        # find inflection point where trace reverses
+        vs = np.abs(v)
+        for k in vs:
+            if len(np.argwhere(vs == k)) > 1:
+                self.reverse = True
+                self.options['Reverse'] = True
+                break
+        
+        if self.reverse:
+            mx = np.searchsorted(np.gradient(vs), 0)
+            self.rev_point = mx # find inflection
+            self.rev_v = v[mx]
+            
             return mx, True
-
-        self.options['Reverse'] = False
-        self.reverse = False
-
-        return mx, False
+        
+        else:
+            
+            mx = len(v) - 1
+            self.options['Reverse'] = True
+            self.rev_point = mx
+            self.rev_v = v[mx]
+            
+            return mx, False
 
     def calc_gms(self):
         """
@@ -361,14 +368,13 @@ class OECT:
                 gm = self.gm_fwd[g].values.flatten()
                 idx = self.gm_fwd[g].index.values
 
-                mx, reverse = self._reverse(idx)
                 nm = 'gm_' + g
 
                 while nm in self.gms:
                     labels += 1
                     nm = 'gm_' + g[:-1] + str(labels)
 
-                df = pd.Series(data=gm[:mx], index=idx[:mx])
+                df = pd.Series(data=gm, index=idx)
                 df.sort_index(inplace=True)
                 self.gms[nm] = df
 
@@ -379,14 +385,13 @@ class OECT:
                 gm = self.gm_bwd[g].values.flatten()
                 idx = self.gm_bwd[g].index.values
 
-                mx, reverse = self._reverse(idx)
                 nm = 'gm_' + g
 
                 while nm in self.gms:
                     labels += 1
                     nm = 'gm_' + g[:-1] + str(labels)
 
-                df = pd.Series(data=gm[:mx], index=idx[:mx])
+                df = pd.Series(data=gm, index=idx)
                 df.sort_index(inplace=True)
                 self.gms[nm] = df
 
@@ -581,6 +586,19 @@ class OECT:
 
         return
 
+    def quadrant(self):
+        
+        if np.any(self.gm_peaks.index < 0):
+            
+            self.quad = 'III' # positive voltage, positive current
+        
+        elif np.any(self.gm_peaks.index > 0):
+            
+            self.quad = 'I' # negative voltage, negative curret=nt
+        
+        return
+
+
     def thresh(self, plot=False):
         """
         Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
@@ -594,7 +612,7 @@ class OECT:
         Vts = np.array([])
         VgVts = np.array([])
 
-        v_lo = self.transfers.index
+        v_lo = self.transfers.index.values
 
         if plot:
             from matplotlib import pyplot as plt
@@ -616,6 +634,10 @@ class OECT:
                 plt.plot(np.sqrt(np.abs(self.transfers[tf])), 'bo-')
                 v = self.transfers[tf].index.values
                 tx = np.arange(np.min(v), -fit[1] / fit[0] + 0.1, 0.01 )
+                
+                if self.quad == 'I': 
+                    tx = np.arange(-fit[1] / fit[0] - 0.1, np.max(v),  0.01 )
+                
                 plt.plot(tx, self.line_f(tx, *fit), 'r--')
                 labels.append('{:.4f}'.format(-fit[1] / fit[0]))
 
@@ -642,11 +664,19 @@ class OECT:
         _residuals = np.array([])
         _fits = np.array([0, 0])
 
+        #splines needs to be ascending
         if V[2] < V[1]:
             V = np.flip(V)
             Id = np.flip(Id)
 
-        mx_d2 = self._find_peak(Id, V)
+        self.quadrant()
+
+        if self.quad == 'I': #top right
+
+            Id = np.flip(Id)
+            V = np.flip(-V)
+
+        mx_d2 = self._find_peak(Id*1000, V) #*1000 improves numerical spline accuracy
 
         # sometimes for very small currents run into numerical issues
         if not mx_d2:
@@ -655,6 +685,7 @@ class OECT:
         # for each peak found, fits a line. Uses that to determine Vt, then residual up to that found Vt
         for m in mx_d2:
             # Id = Id - np.min(Id) # 0-offset
+            
             fit, _ = cf(self.line_f, V[:m], Id[:m],
                         bounds=([-np.inf, -np.inf], [0, np.inf]))
 
@@ -666,6 +697,9 @@ class OECT:
         _fits = _fits[1:, :]
         fit = _fits[np.argmin(_residuals), :]
 
+        if self.quad == 'I': 
+            fit[0] *= -1 
+
         return fit
 
     # linear curve-fitting
@@ -675,16 +709,16 @@ class OECT:
         return f1 + f0 * x
 
     @staticmethod
-    def _find_peak(Id, Vg, negative_Vt=True, width=15):
+    def _find_peak(I, V, negative_Vt = True, width=15):
         """
         Uses spline to find the transition point then return it for fitting Vt
           to sqrt(Id) vs Vg
 
         Parameters
         ----------
-        Id : array
+        I : array
             Id vs Vg, currents
-        Vg : array
+        V : array
             Id vs Vg, voltages
         negative_Vt : bool
             Assumes Vt is a negative voltage (typical for many p-type polymer)
@@ -699,23 +733,15 @@ class OECT:
         """
 
         # uses second derivative for transition point
-        Id_spl = spi.UnivariateSpline(Vg, Id, k=4, s=1e-7)
-        V_spl = np.arange(Vg[0], Vg[-1], 0.01)
+        Id_spl = spi.UnivariateSpline(V, I, k=5, s=1e-7)
+        V_spl = np.arange(V[0], V[-1], 0.005)
         d2 = np.gradient(np.gradient(Id_spl(V_spl)))
 
         peaks = sps.find_peaks_cwt(d2, np.arange(1, width))
         peaks = peaks[peaks > 5]  # edge errors
 
-        if negative_Vt:
-
-            peaks = peaks[np.where(V_spl[peaks] < 0)]
-
-        else:
-
-            peaks = peaks[np.where(V_spl[peaks] > 0)]
-
         # find splined index in original array
-        mx_d2 = [np.searchsorted(Vg, V_spl[p]) for p in peaks]
+        mx_d2 = [np.searchsorted(V, V_spl[p]) for p in peaks]
 
         return mx_d2
 
