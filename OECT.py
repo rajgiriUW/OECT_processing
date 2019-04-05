@@ -348,6 +348,7 @@ class OECT:
                 self.rev_point = mx # find inflection
                 self.rev_v = v[mx]
                 self.options['Reverse'] = True
+                self.reverse = True
             
             return mx, True
         
@@ -359,6 +360,7 @@ class OECT:
                 self.rev_point = mx
                 self.rev_v = v[mx]
                 self.options['Reverse'] = False
+                self.reverse = False
             
             return mx, False
 
