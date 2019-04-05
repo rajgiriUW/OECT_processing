@@ -569,7 +569,6 @@ class OECT:
             self.transfers[nm] = df
 
             if reverse:
-                print(mx)
                 nm = tf + '_02'
                 df = pd.Series(data=transfer[mx:], index=idx[mx:])
                 df.sort_index(inplace=True)
