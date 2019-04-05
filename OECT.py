@@ -342,7 +342,7 @@ class OECT:
         # Then, find where the voltage range reverses (gradient = 0)
         if reverse:
             
-            mx = np.searchsorted(np.gradient(vs), 0)
+            mx = np.argwhere(np.gradient(v)== 0)[0][0]
             
             if transfer:
                 self.rev_point = mx # find inflection
@@ -506,7 +506,6 @@ class OECT:
         Creates a single dataFrame with all output curves
         This assumes that all data were taken at the same Vds range
         """
-
         self.Vg_labels = []  # corrects for labels below
 
         for op in self.output:
@@ -557,7 +556,6 @@ class OECT:
         Creates a single dataFrame with all transfer curves (in case more than 1)
         This assumes that all data were taken at the same Vgs range
         """
-
         for tf in self.transfer:
             self.Vd_labels.append(tf)
 
@@ -571,6 +569,7 @@ class OECT:
             self.transfers[nm] = df
 
             if reverse:
+                print(mx)
                 nm = tf + '_02'
                 df = pd.Series(data=transfer[mx:], index=idx[mx:])
                 df.sort_index(inplace=True)
