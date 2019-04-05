@@ -319,31 +319,46 @@ class OECT:
 
         return
 
-    def _reverse(self, v):
-        """if reverse trace exists, return inflection-point index and flag"""
-        mx = np.argmax(v)
+    def _reverse(self, v, transfer=False):
+        """if reverse trace exists, return inflection-point index and flag
+        
+        transfer : bool, optional
+            We only want to save rev_point and rev_v for the transfer curve
+            
+        Returns:
+            mx : index where the voltage reverses
+        """
 
         # find inflection point where trace reverses
+        
+        # First, check if any voltages repeated (indicates both a fwd/rev sweep)
         vs = np.abs(v)
+        reverse = False
         for k in vs:
             if len(np.argwhere(vs == k)) > 1:
-                self.reverse = True
-                self.options['Reverse'] = True
+                reverse = True
                 break
-        
-        if self.reverse:
+            
+        # Then, find where the voltage range reverses (gradient = 0)
+        if reverse:
+            
             mx = np.searchsorted(np.gradient(vs), 0)
-            self.rev_point = mx # find inflection
-            self.rev_v = v[mx]
+            
+            if transfer:
+                self.rev_point = mx # find inflection
+                self.rev_v = v[mx]
+                self.options['Reverse'] = True
             
             return mx, True
         
         else:
             
             mx = len(v) - 1
-            self.options['Reverse'] = True
-            self.rev_point = mx
-            self.rev_v = v[mx]
+            
+            if transfer:
+                self.rev_point = mx
+                self.rev_v = v[mx]
+                self.options['Reverse'] = False
             
             return mx, False
 
@@ -468,7 +483,7 @@ class OECT:
         op = op.set_index('V_DS')
         op = op.set_index(pd.to_numeric(op.index.values))
 
-        mx, reverse = self._reverse(op.index.values)
+        mx, reverse = self._reverse(op.index.values, transfer=False)
         idx = op.index.values[mx]
 
         self.Vg_array.append(V)
@@ -549,7 +564,7 @@ class OECT:
             transfer = self.transfer[tf]['I_DS (A)'].values
             idx = self.transfer[tf]['I_DS (A)'].index.values
 
-            mx, reverse = self._reverse(idx)
+            mx, reverse = self._reverse(idx, transfer=True)
             nm = tf + '_01'
             df = pd.Series(data=transfer[:mx], index=idx[:mx])
             df.sort_index(inplace=True)
