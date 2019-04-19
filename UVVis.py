@@ -8,6 +8,7 @@ Created on Tue Jul  3 13:36:20 2018
 import numpy as np
 import pandas as pd
 from scipy import signal as sg
+from scipy.optimize import curve_fit
 import os
 import re
 
@@ -267,7 +268,52 @@ class uv_vis(object):
         out = np.searchsorted(self.potentials, bias)
         
         return out
+
+    def banded_plot(self, wl_start=700, wl_stop = 900, voltage=1, fittype='exp'):
+        '''
+        Returns the fits from a range of spectra_vs_time data
+        '''
+        
+        wl_x = self.spectra_vs_time[voltage][wl_start:wl_stop]
+        tx = self.time_spectra_norm_sm.index.values
+        
+        if fittype not in ['exp', 'biexp', 'stretched']:
+            raise ValueError('Fit must be exp, biexp, or stretched')
+         
+        fits = [] #single exponential
+        
+        for wl in wl_x.index.values[1:]:
+            
+            if fittype == 'exp':
+                popt, _ = curve_fit(fit_exp, tx, self.spectra_vs_time[voltage].loc[wl])
+                fits.append(popt[2])
+            elif fittype == 'biexp':
+                popt, _ = curve_fit(fit_biexp, tx, self.spectra_vs_time[voltage].loc[wl])
+                fits.append((popt[2], popt[4]))
+            elif fittype == 'stretched':
+                popt, _ = curve_fit(fit_strexp, tx, self.spectra_vs_time[voltage].loc[wl])
+                fits.append((popt[2], popt[3]))
+
+
+
+def fit_exp(t, y0, A, tau):
     
+    return y0 + A * np.exp(-t/tau)
+
+def fit_biexp(t, y0, A1, tau1, A2, tau2):
+    
+    return y0 + A1 * np.exp(-t/tau1) + A2 * np.exp(-t/tau2)
+
+def fit_strexp(t, y0, A, tau, beta):
+    
+    return y0 + A * (np.exp(-t/tau))**beta
+
+
+        
+    
+    return fits
+
+   
 def plot_time(uv, ax=None, norm=True, smooth=False, **kwargs):
     
     if ax == None:
