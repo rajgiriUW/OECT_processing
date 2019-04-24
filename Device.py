@@ -11,6 +11,8 @@ from scipy.optimize import curve_fit as cf
 import OECT_plotting
 import OECT_loading
 
+import pickle
+
 class OECTDevice:
     '''
     Class containing the processed pixels for a single device
@@ -150,3 +152,12 @@ class OECTDevice:
         fig = OECT_plotting.plot_uC(self.params, savefig=save)
         
         return
+    
+def save(dv, append=''):
+    
+    with open(dv.path+ r'\uC_data_'+append+'.pkl', 'wb') as output:
+        
+        pickle.dump(dv, output, pickle.HIGHEST_PROTOCOL)
+    
+    return    
+        
