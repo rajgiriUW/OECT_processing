@@ -189,8 +189,6 @@ def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=Tru
 
     USAGE:
         device1 = loadOECT(folder_name)
-
-
     """
 
     if not path:

@@ -132,10 +132,7 @@ class OECT:
             Voltage where the Id trace starts reverse sweep
     '''
 
-    def __init__(self, folder=None, params={}, options={}):
-
-        if folder is None:
-            folder = ''
+    def __init__(self, folder='', params={}, options={}):
 
         # Data containers
         self.output = {}
