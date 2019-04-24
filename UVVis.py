@@ -91,19 +91,27 @@ class uv_vis(object):
             
         Class contains:
         --------------
-        self.steps
-        self.specs
-        self.potentials
-        self.spectra : pandas Dataframe
+        file paths:
+            steps : current vs time
+            specs : spectra vs time
+            potentials : list of voltages used
+        
+        spectra : pandas Dataframe
             The spectra at each voltage in a large dataframe
-        self.spectra_sm : pandas DataFrame
+        spectra_sm : pandas DataFrame
             The smoothed spectra at each voltage in a large dataFrame
-        self.vt : pandas Series
-            The voltage spectra at a particular wavelength (for threshold measurement)
-        self.time_spectra_norm : pandas Series
-            Normalized Time spectra at a given wavelength and potential over time
-        self.time_spectra : pandas Series
+        spectra_vs_time : dict
+            Dict of spectra vs time correspondign to each voltage.
+            i.e. uv_viss.spectra_vs_time[1] is all the time-dependent spectra at 1 V
+        current : pandas DataFrame
+            The time-resolved current at each voltage step in a single dataFrame
+        time_spectra : pandas Series
             Time spectra at a given wavelength and potential over time
+        time_spectra_norm : pandas Series
+            Normalized Time spectra at a given wavelength and potential over time
+            
+        vt : pandas Series
+            The voltage spectra at a particular wavelength (for threshold measurement)
         '''
         self.steps = steps
         self.specs = specs
@@ -166,13 +174,30 @@ class uv_vis(object):
     
         idx = df[v].index
         wl = idx.searchsorted(wavelength)
-        self.vt = df.loc[idx[wl]]
         
         self.spectra = df
         self.spectra_sm = dfs
-        self._single_wl_voltage(wavelength) # absorbance vs voltage @ a wavelength
+        self.abs_vs_voltage(wavelength) # absorbance vs voltage @ a wavelength
         
         return 
+    
+    def current_vs_time(self):
+        '''
+        Processes "step" files to generate the current vs time at each voltage
+        '''
+        pp = pd.read_csv(self.steps[0], sep='\t')
+        
+        tx = pp['Corrected time (s)'].values
+        df = pd.DataFrame(index=tx)
+        
+        for fl,v in zip(self.steps, self.potentials):
+            pp = pd.read_csv(fl, sep='\t')
+            data = pp['WE(1).Current (A)']
+            df[v] = pd.Series(data.values, index=df.index)
+            
+        self.current = df
+        
+        return
     
     def time_dep_spectra(self, smooth=3):
         '''
@@ -189,7 +214,7 @@ class uv_vis(object):
         
         return
 
-    def single_wl_time(self, potential=0, wavelength=800, smooth=3):
+    def single_wl_time(self, potential=0.9, wavelength=800, smooth=3):
         '''
         Extracts the time-dependent data from a single wavelength
         
@@ -223,7 +248,7 @@ class uv_vis(object):
         
         return 
     
-    def _single_wl_voltage(self, wavelength=800):
+    def abs_vs_voltage(self, wavelength=800):
         '''
         Extracts the absorbance vs voltage at a particular wavelength (threshold visualizing)
         '''
@@ -294,6 +319,9 @@ class uv_vis(object):
                 popt, _ = curve_fit(fit_strexp, tx, self.spectra_vs_time[voltage].loc[wl])
                 fits.append((popt[2], popt[3]))
 
+        self.fits = fits
+
+        return
 
 
 def fit_exp(t, y0, A, tau):
