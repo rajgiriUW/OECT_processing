@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit as cf
 
-import OECT
-import OECT_plotting
+import oect
+import oect_plot
 
 '''
 load_uC : for loading the four pixels to generate a uC* plot
@@ -21,7 +21,7 @@ load_avg : for loading all the subfolders that are the 4 "averaging" pixels
 
 Usage:
     
-    >> pixels, uC_dv = OECT_loading.uC_scale(r'path_to_uC_scale', new_geom=False)
+    >> pixels, uC_dv = oect_load.uC_scale(r'path_to_uC_scale', new_geom=False)
     
 '''
 
@@ -171,7 +171,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
     uC_dv['folder'] = path
 
     if plot[0]:
-        fig = OECT_plotting.plot_uC(uC_dv)
+        fig = oect_plot.plot_uC(uC_dv)
 
         if verbose:
             print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
@@ -194,7 +194,7 @@ def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=Tru
     if not path:
         path = file_open(caption='Select device subfolder')
 
-    device = OECT.OECT(path, params, options)
+    device = oect.OECT(path, params, options)
     device.calc_gms()
     device.thresh()
 
@@ -206,14 +206,14 @@ def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=Tru
             print(key, ': {:.2f}'.format(np.max(device.gms[key].values*1000)), 'mS max')
 
     if plot:
-        fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
+        fig = oect_plot.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)
         fig.savefig(path + r'\transfer_leakage.tif', format='tiff')
-        fig = OECT_plotting.plot_transfers_gm(device, gm_plot=gm_plot, leakage=False)
+        fig = oect_plot.plot_transfers_gm(device, gm_plot=gm_plot, leakage=False)
         fig.savefig(path + r'\transfer.tif', format='tiff')
 
-        fig = OECT_plotting.plot_outputs(device, leakage=True)
+        fig = oect_plot.plot_outputs(device, leakage=True)
         fig.savefig(path + r'\output_leakage.tif', format='tiff')
-        fig = OECT_plotting.plot_outputs(device, leakage=False)
+        fig = oect_plot.plot_outputs(device, leakage=False)
         fig.savefig(path + r'\output.tif', format='tiff')
 
     return device
@@ -319,7 +319,7 @@ def average(path='', thickness=40e-9, plot=True):
         Id_Vg = Id_Vg.set_index(pixels[list(pixels.keys())[-1]])
 
     # find gm of the average
-    temp_dv = OECT.OECT(paths[0], {'d': thickness})
+    temp_dv = oect.OECT(paths[0], {'d': thickness})
     _gm_fwd, _gm_bwd = temp_dv._calc_gm(Id_Vg)
     Id_Vg['gm_fwd'] = _gm_fwd
     if not _gm_bwd.empty:
@@ -357,9 +357,9 @@ def average(path='', thickness=40e-9, plot=True):
         Id_Vd = Id_Vd.set_index(pixels[list(pixels.keys())[-1]].outputs[volt].index)
 
     if plot:
-        fig = OECT_plotting.plot_transfer_avg(Id_Vg, temp_dv.WdL)
+        fig = oect_plot.plot_transfer_avg(Id_Vg, temp_dv.WdL)
         fig.savefig(path + r'\transfer_avg.tif', format='tiff')
-        fig = OECT_plotting.plot_output_avg(Id_Vd)
+        fig = oect_plot.plot_output_avg(Id_Vd)
         fig.savefig(path + r'\output_avg.tif', format='tiff')
 
     return pixels, Id_Vg, Id_Vd, temp_dv.WdL

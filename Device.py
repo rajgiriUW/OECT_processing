@@ -8,8 +8,8 @@ Created on Wed Apr 24 10:16:43 2019
 import numpy as np
 from scipy.optimize import curve_fit as cf
 
-import OECT_plotting
-import OECT_loading
+import oect_plot
+import oect_load
 
 import pickle
 
@@ -149,7 +149,7 @@ class OECTDevice:
     
     def plot_uc(self, save=False):
         
-        fig = OECT_plotting.plot_uC(self.params, savefig=save)
+        fig = oect_plot.plot_uC(self.params, savefig=save)
         
         return
     
