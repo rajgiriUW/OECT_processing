@@ -335,12 +335,6 @@ def fit_biexp(t, y0, A1, tau1, A2, tau2):
 def fit_strexp(t, y0, A, tau, beta):
     
     return y0 + A * (np.exp(-t/tau))**beta
-
-
-        
-    
-    return fits
-
    
 def plot_time(uv, ax=None, norm=True, smooth=False, **kwargs):
     
