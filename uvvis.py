@@ -12,6 +12,8 @@ from scipy.optimize import curve_fit
 import os
 import re
 
+import seaborn as sns
+
 from matplotlib import pyplot as plt
 
 '''
@@ -121,7 +123,8 @@ class uv_vis(object):
         
         return
     
-    def spec_echem_voltage(self, wavelength=800, which_run=-1, smooth=3):
+    def spec_echem_voltage(self, wavelength=800, which_run=-1, 
+                           smooth=3, digits=None):
         '''
         Takes the list of spectra files specfiles, then extracts the final spectra
         from each file and returns as a single dataframe
@@ -143,6 +146,9 @@ class uv_vis(object):
         smooth : int
             simple boxcar smooth of data for plotting/analysis purposes, controls
             size of filter 
+         
+        digits : int
+            rounds the wavelengths to this number of decimal points
             
         Saves:
         ------
@@ -157,6 +163,9 @@ class uv_vis(object):
         per_run = int(len(pp)/runs[-1])
     #    last_run = runs[-1]
         wl = pp['Wavelength (nm)'][0:per_run]
+        
+        if digits:
+            wl = np.round(wl, digits)
         
         # Set up dataFrame
         df = pd.DataFrame(index=wl)
@@ -389,5 +398,22 @@ def plot_voltage(uv, ax=None, norm=None, **kwargs):
         ax.plot(uv.potentials*-1, numerator/numerator.max(), **kwargs)
     ax.set_xlabel('Gate Bias (V)')
     ax.set_ylabel('Absorbance (a.u.)')
+    
+    return ax
+
+def spectrogram(uv, potential=0.8, **kwargs):
+    
+    fig, ax = plt.subplots(nrows=2, figsize=(12, 18))
+    
+    if 'cmap' not in kwargs:
+        kwargs['cmap'] = 'BrBG_r'
+    
+    sns.heatmap(uv.spectra_vs_time[potential],ax=ax[0], **kwargs)
+    ax[0].set_xlabel('Time (s)')
+    ax[0].set_ylabel('Wavelength (nm)')
+    
+    sns.heatmap(uv.spectra_sm, ax=ax[1], **kwargs)
+    ax[1].set_xlabel('Voltage (V)')
+    ax[1].set_ylabel('Wavelength (nm)') 
     
     return ax

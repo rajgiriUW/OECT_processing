@@ -125,6 +125,8 @@ def plot_uC(dv, label='', savefig=True, ax=None, fit=True,
                        bottom='on', left='on', right='on', top='on')
         plt.tight_layout()
     
+        print('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
+    
         if savefig:
             fig.savefig(path + r'\scaling_uC_+fit' + label + '.tif', format='tiff')
 

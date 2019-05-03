@@ -46,10 +46,10 @@ class OECTDevice:
         # if device has not been processed
         if not any(pixels): 
     
-            pixels, pm = OECT_loading.uC_scale(self.path, 
-                                                   V_low=options['V_low'],
-                                                   retrace_only=options['retrace_only'],
-                                                   verbose=options['verbose'])
+            pixels, pm = oect_load.uC_scale(self.path, 
+                                            V_low=options['V_low'],
+                                            retrace_only=options['retrace_only'],
+                                            verbose=options['verbose'])
 
             for m in pm:
                 self.params[m] = pm[m]
