@@ -164,9 +164,6 @@ class uv_vis(object):
     #    last_run = runs[-1]
         wl = pp['Wavelength (nm)'][0:per_run]
         
-        if digits:
-            wl = np.round(wl, digits)
-        
         # Set up dataFrame
         df = pd.DataFrame(index=wl)
         
@@ -181,8 +178,13 @@ class uv_vis(object):
             data = sg.fftconvolve(data, np.ones(smooth)/smooth, mode='same')
             dfs[v] = pd.Series(data, index=df.index)
     
+            if digits:
+                dfs[v] = dfs[v].set_index(np.round(dfs[v].index.values,digits))
+       
+    
         idx = df[v].index
         wl = idx.searchsorted(wavelength)
+        
         
         self.spectra = df
         self.spectra_sm = dfs
