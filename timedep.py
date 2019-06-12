@@ -43,6 +43,23 @@ def read_time_dep(path, croptime=30000):
     
     return df, device
 
+def plot_ccurrent(df, v_comp = -0.9):
+    '''
+    Only plots the current where voltage doesn't saturate
+    
+    v_comp : float
+        The voltage compliance limit during constant_current traces
+    '''
+    
+    fig, ax = plt.subplots(figsize=(5,5))
+    
+    for i in df.currents:
+        d = df.loc[df['Setpoint'] == i]
+        yy = d.loc[np.abs(d['Voltage (V)']) <= np.abs(v_comp)]
+        xx = d.loc[np.abs(d['Voltage (V)']) <= np.abs(v_comp)].index.values
+        ax.plot(xx, yy['Ids (A)'])
+    return
+
 def plot_current(df, norm=False):
     
     fig, ax = plt.subplots(figsize=(5,5))
