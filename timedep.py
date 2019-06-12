@@ -10,22 +10,38 @@ from scipy.optimize import curve_fit
 import pandas as pd
 from matplotlib import pyplot as plt
 
-def read_time_dep(path):
+def read_time_dep(path, croptime=30000):
     '''
     Reads in the time-dependent data using Raj's automated version
     Saves all the different current 
+    
+    croptime : int
+        Time index (ms) to set as t=0 for the data
     
     '''
     df = pd.read_csv(path, sep='\t')
     df = df.set_index('Time (s)')
     try:
-        currents = pd.unique(df['Ig (A) '])
+        currents = pd.unique(df['Setpoint'])
     except:
-        currents = pd.unique(df['Ig (A)'])
-        
+        currents = pd.unique(df['Ig (A) '])
+        df = df.rename(columns={'Ig (A) ': 'Current (A)'})
+    
+    # crop the pre-trigger stuff
+    for i in currents:
+        f = df.loc[df['Setpoint'] == i].index.searchsorted(croptime)
+        df = df.drop(df.loc[df['Setpoint'] == i].index[:f])
+
+    # create a dict to separate the currents
+    device = {}
+    
+    for i in currents:
+        d = df.loc[df['Setpoint'] == i]
+        device[i] = d
+
     df.currents = currents
     
-    return df
+    return df, device
 
 def plot_current(df, norm=False):
     
@@ -33,18 +49,20 @@ def plot_current(df, norm=False):
     
     for i in df.currents:
         if norm:
-            xx = df.loc[df['Ig (A) '] == i]['Ids (A)'].index.values
-            yy = df.loc[df['Ig (A) '] == i]['Ids (A)'].values
+            xx = df.loc[df['Setpoint'] == i]['Ids (A)'].index.values
+            yy = df.loc[df['Setpoint'] == i]['Ids (A)'].values
             yy = (yy-np.min(yy))/(np.max(yy) - np.min(yy))
             ax.plot(xx, yy)
         else:
-            ax.plot(df.loc[df['Ig (A) '] == i]['Ids (A)'])
+            ax.plot(df.loc[df['Setpoint'] == i]['Ids (A)'])
+
+    ax.legend(labels = df.currents)
 
     return ax
 
 def find_turnon(df, current= -1e-7):
     
-    npts = len(df.loc[df['Ig (A) '] == current])
+    npts = len(df.loc[df['Setpoint'] == current])
 
     tx = df.index.values[:npts]
     
@@ -77,11 +95,11 @@ def crop_prepulse(df):
         d = pd.DataFrame()
         mx, npts = find_turnon(df, i)
         print(i)
-        f = int(np.floor(df.loc[df['Ig (A) '] == i].index.values[mx]/10000))*10000
+        f = int(np.floor(df.loc[df['Setpoint'] == i].index.values[mx]/10000))*10000
         if f == 0:
             f = 10000
-        xx = df.loc[df['Ig (A) '] == i].loc[f:].index.values
-        yy = df.loc[df['Ig (A) '] == i]['Ids (A)'].loc[f:].values
+        xx = df.loc[df['Setpoint'] == i].loc[f:].index.values
+        yy = df.loc[df['Setpoint'] == i]['Ids (A)'].loc[f:].values
         d[i] = yy
         d = d.set_index(xx-xx[0])
         device[i] = d
@@ -110,11 +128,10 @@ def crop_fixed(df, timeon=10000):
     for i in df.currents:
         d = pd.DataFrame()
         print(i)
-        f = df.index.searchsorted(timeon)
-        f = df.loc[df['Ig (A) '] == i].index.searchsorted(timeon)
+        f = df.loc[df['Setpoint'] == i].index.searchsorted(timeon)
 
-        xx = df.loc[df['Ig (A) '] == i].iloc[f:].index.values
-        yy = df.loc[df['Ig (A) '] == i]['Ids (A)'].iloc[f:].values
+        xx = df.loc[df['Setpoint'] == i].iloc[f:].index.values
+        yy = df.loc[df['Setpoint'] == i]['Ids (A)'].iloc[f:].values
         d[i] = yy
         d = d.set_index(xx-xx[0])
         device[i] = d
