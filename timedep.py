@@ -10,17 +10,34 @@ from scipy.optimize import curve_fit
 import pandas as pd
 from matplotlib import pyplot as plt
 
-def read_time_dep(path, croptime=30000):
+import lmfit
+
+def read_time_dep(path, croptime=30, v_limit= None):
     '''
     Reads in the time-dependent data using Raj's automated version
     Saves all the different current 
     
     croptime : int
-        Time index (ms) to set as t=0 for the data
+        Time index (s) to set as t=0 for the data
+    v_limit : float
+        Limits constant current data to when the voltage_compliance limit is reached
+        Do not use this for Constant Voltage data
+        e.g. -0.9 V is typical
+        
+    Returns:
+        
+    df : DataFrame
+        Single DataFrame with all the indices corrected
+    device : Dict
+        Dict of the individual current DataFrames
     
+    Both have equivalent data, it just can be easier to deal with dicts sometimes
+    but a single DataFrame is convenient for SeaBorn plotting
     '''
     df = pd.read_csv(path, sep='\t')
-    df = df.set_index('Time (s)')
+    df = df.set_index('Time (s)')  # convert to seconds
+    df = df.set_index( df.index.values / 1000.0)
+    
     try:
         currents = pd.unique(df['Setpoint'])
     except:
@@ -29,17 +46,52 @@ def read_time_dep(path, croptime=30000):
     
     # crop the pre-trigger stuff
     for i in currents:
-        f = df.loc[df['Setpoint'] == i].index.searchsorted(croptime)
-        df = df.drop(df.loc[df['Setpoint'] == i].index[:f])
-
+        d = df.loc[df['Setpoint'] == i]
+        f = d.index.searchsorted(croptime)
+        df = df.drop(d.index[:f])
+        if v_limit:
+            df = df.loc[np.abs(df['Voltage (V)']) <= np.abs(v_limit)]
+    
     # create a dict to separate the currents
     device = {}
-    
     for i in currents:
         d = df.loc[df['Setpoint'] == i]
+        d = d.set_index(d.index.values - d.index.values[0])
         device[i] = d
-
-    df.currents = currents
+    
+    # concatenate the corrected index dataframes into a single DataFrame
+    _dv = [device[dv] for dv in device]
+    df = pd.DataFrame()
+    df = pd.concat(_dv)
+    
+    # correct units to something useful
+    df['Ids (A)'] = df['Ids (A)'] * 1000
+    df['Error (A)'] = df['Error (A)'] * 1000
+    df['Current (A)'] = df['Current (A)'] * 1000
+    setpointscale = False
+    if np.where(np.abs(df['Setpoint'].values) < 1e-6)[0].any(): # quick way to see if voltages or current
+        setpointscale = True
+        df['Setpoint'] = df['Setpoint'] * 1e9 # nA
+        
+    df.index.rename('Time (ms)', inplace=True)
+    df.rename(columns = {'Ids (A)': 'Ids (mA)', 'Error (A)': 'Error (mA)', 
+                         'Current (A)': 'Current (mA)'}, inplace = True)
+    if setpointscale:
+        df.rename(columns = {'Setpoint': 'Setpoint Current (nA)'}, inplace=True)
+    else:
+        df.rename(columns = {'Setpoint': 'Setpoint Voltage (V)'}, inplace=True)
+    
+    # Add the setpoints as attributes for easy reference
+    try:
+        df.setpoints = pd.unique(df['Setpoint Current (nA)'])
+        df.is_cc = True #constant current
+        df.is_cv = False
+    except:
+        df.setpoints = pd.unique(df['Setpoint Voltage (V)'])
+        df.is_cc = False #constant current
+        df.is_cv = True
+    
+    df.name = path.split(r'/')[-1][:-4]
     
     return df, device
 
@@ -47,116 +99,61 @@ def plot_ccurrent(df, v_comp = -0.9):
     '''
     Only plots the current where voltage doesn't saturate
     
+    This only matters if you don't crop the voltage upon reading it in
+    
     v_comp : float
         The voltage compliance limit during constant_current traces
     '''
     
-    fig, ax = plt.subplots(figsize=(5,5))
+    fig, ax = plt.subplots(figsize=(9,6))
     
-    for i in df.currents:
-        d = df.loc[df['Setpoint'] == i]
+    s = 'Setpoint Current (nA)' if df.is_cc == True else 'Setpoint Voltage (V)'
+    
+    for i in df.setpoints:
+        d = df.loc[df[s] == i]
         yy = d.loc[np.abs(d['Voltage (V)']) <= np.abs(v_comp)]
         xx = d.loc[np.abs(d['Voltage (V)']) <= np.abs(v_comp)].index.values
-        ax.plot(xx, yy['Ids (A)'])
+        ax.plot(xx, yy['Ids (mA)'])
+    
+    ax.legend(labels = df.setpoints)
+    ax.set_xlabel('Time (ms)')
+    ax.set_ylabel('Current (mA)')
+    ax.set_title(df.name)
+    plt.tight_layout()
+    
     return
 
-def plot_current(df, norm=False):
+def plot_current(df, norm=False, log=False):
     
-    fig, ax = plt.subplots(figsize=(5,5))
+    fig, ax = plt.subplots(figsize=(9,6))
     
-    for i in df.currents:
+    s = 'Setpoint Current (nA)' if df.is_cc == True else 'Setpoint Voltage (V)'
+    
+    for i in df.setpoints:
         if norm:
-            xx = df.loc[df['Setpoint'] == i]['Ids (A)'].index.values
-            yy = df.loc[df['Setpoint'] == i]['Ids (A)'].values
+            xx = df.loc[df[s] == i]['Ids (mA)'].index.values
+            yy = df.loc[df[s] == i]['Ids (mA)'].values
             yy = (yy-np.min(yy))/(np.max(yy) - np.min(yy))
+            
             ax.plot(xx, yy)
         else:
-            ax.plot(df.loc[df['Setpoint'] == i]['Ids (A)'])
-
-    ax.legend(labels = df.currents)
-
+            if log:
+                ax.plot(np.abs(df.loc[df[s] == i]['Ids (mA)']))
+                ax.set_yscale('log')
+            else:
+                ax.plot(df.loc[df[s] == i]['Ids (mA)'])
+    if df.is_cc:
+        ax.legend(labels = [str(x)+ ' nA' for x in df.setpoints])
+    else:
+        ax.legend(labels = [str(x)+ ' V' for x in df.setpoints])
+    ax.set_xlabel('Time (ms)')
+    ax.set_ylabel('Current (mA)')
+    ax.set_title(df.name)
+    plt.tight_layout()
+    
     return ax
 
-def find_turnon(df, current= -1e-7):
-    
-    npts = len(df.loc[df['Setpoint'] == current])
-
-    tx = df.index.values[:npts]
-    
-    # gradient
-    diffy = np.gradient(df.iloc[:npts]['Ids (A)'])
-    diffx = np.gradient(tx[:npts])
-    diffy = diffy / diffx
-    
-    mx = np.argmax(diffy)
-    
-    return mx, npts
-
-def crop_prepulse(df):
-    '''
-    df_total, device = timedep.crop_prepulse(df)
-    
-    df = dataframe from read_time_dep
-    
-    Crops all the data before the initial turn-on event. Manually shifts to 
-    nearest 10000 ms point (assumes I set at an even second mark)
-    
-    df_total = big dataframe with all the data (doesn't standardize times)
-    device = dictionary of currents
-    '''
-    
-    df_total = pd.DataFrame()
-    device = {}
-    
-    for i in df.currents:
-        d = pd.DataFrame()
-        mx, npts = find_turnon(df, i)
-        print(i)
-        f = int(np.floor(df.loc[df['Setpoint'] == i].index.values[mx]/10000))*10000
-        if f == 0:
-            f = 10000
-        xx = df.loc[df['Setpoint'] == i].loc[f:].index.values
-        yy = df.loc[df['Setpoint'] == i]['Ids (A)'].loc[f:].values
-        d[i] = yy
-        d = d.set_index(xx-xx[0])
-        device[i] = d
-    
-    df_total = pd.concat([device[a] for a in device])
-    df_total.currents = df.currents
-    
-    return df_total, device
-
-def crop_fixed(df, timeon=10000):
-    '''
-    df_total, device = timedep.crop_prepulse(df)
-    
-    df = dataframe from read_time_dep
-    
-    Crops all the data before the initial turn-on event. Manually shifts to 
-    nearest 10000 ms point (assumes I set at an even second mark)
-    
-    df_total = big dataframe with all the data (doesn't standardize times)
-    device = dictionary of currents
-    '''
-    
-    df_total = pd.DataFrame()
-    device = {}
-    
-    for i in df.currents:
-        d = pd.DataFrame()
-        print(i)
-        f = df.loc[df['Setpoint'] == i].index.searchsorted(timeon)
-
-        xx = df.loc[df['Setpoint'] == i].iloc[f:].index.values
-        yy = df.loc[df['Setpoint'] == i]['Ids (A)'].iloc[f:].values
-        d[i] = yy
-        d = d.set_index(xx-xx[0])
-        device[i] = d
-    
-    df_total = pd.concat([device[a] for a in device])
-    df_total.currents = df.currents
-    
-    return df_total, device
+# Fitting functions
 
 def line_f(x, a, b):
 
@@ -181,6 +178,8 @@ def friedlein(t, mu, Cg, L, Vg, Rg, Vt, Vd):
     Adv. Mater. 28, pp. 8398–8404 (2016)
     
     Assumes constant voltage step, not current
+    
+    In linear regime for Ids
     '''
     
     return (mu*Cg/L**2) * (Vt - Vg * -np.expm1(-t/(Rg*Cg) ) - Vd/2) * Vd
@@ -191,6 +190,8 @@ def friedlein_sat(t, mu, Cg, L, Vg, Rg, Vt, Ierr):
     Adv. Mater. 28, pp. 8398–8404 (2016)
     
     Assumes constant voltage step, not current
+    
+    In saturation regime for Ids
     '''
     
     return (mu*Cg/L**2) * (Vg * -np.expm1(-t/(Rg*Cg)) - Vt)**2 + Ierr
@@ -255,3 +256,87 @@ def fit_time(df, func='bernards', plot=True):
         
     
     return popt
+
+
+# older data manipulation analysis
+
+def find_turnon(df, current= -1e-7):
+    
+    npts = len(df.loc[df['Setpoint'] == current])
+    tx = df.index.values[:npts]
+    
+    # gradient
+    diffy = np.gradient(df.iloc[:npts]['Ids (A)'])
+    diffx = np.gradient(tx[:npts])
+    diffy = diffy / diffx
+    
+    mx = np.argmax(diffy)
+    
+    return mx, npts
+
+def crop_prepulse(df):
+    '''
+    df_total, device = timedep.crop_prepulse(df)
+    
+    df = dataframe from read_time_dep
+    
+    Crops all the data before the initial turn-on event. Manually shifts to 
+    nearest 10000 ms point (assumes I set at an even second mark)
+    
+    df_total = big dataframe with all the data (doesn't standardize times)
+    device = dictionary of currents
+    '''
+    
+    df_total = pd.DataFrame()
+    device = {}
+    
+    for i in df.currents:
+        d = pd.DataFrame()
+        mx, npts = find_turnon(df, i)
+        print(i)
+        f = int(np.floor(df.loc[df['Setpoint'] == i].index.values[mx]/10000))*10000
+        if f == 0:
+            f = 10000
+        xx = df.loc[df['Setpoint'] == i].loc[f:].index.values
+        yy = df.loc[df['Setpoint'] == i]['Ids (A)'].loc[f:].values
+        d[i] = yy
+        d = d.set_index(xx-xx[0])
+        device[i] = d
+    
+    df_total = pd.concat([device[a] for a in device])
+    df_total.currents = df.currents
+    
+    return df_total, device
+
+
+def crop_fixed(df, timeon=10000):
+    '''
+    df_total, device = timedep.crop_prepulse(df)
+    
+    df = dataframe from read_time_dep
+    
+    Crops all the data before the initial turn-on event. Manually shifts to 
+    nearest 10000 ms point (assumes I set at an even second mark)
+    
+    df_total = big dataframe with all the data (doesn't standardize times)
+    device = dictionary of currents
+    '''
+    
+    df_total = pd.DataFrame()
+    device = {}
+    
+    for i in df.currents:
+        d = pd.DataFrame()
+        print(i)
+        f = df.loc[df['Setpoint'] == i].index.searchsorted(timeon)
+
+        xx = df.loc[df['Setpoint'] == i].iloc[f:].index.values
+        yy = df.loc[df['Setpoint'] == i]['Ids (A)'].iloc[f:].values
+        d[i] = yy
+        d = d.set_index(xx-xx[0])
+        device[i] = d
+    
+    df_total = pd.concat([device[a] for a in device])
+    df_total.currents = df.currents
+    
+    return df_total, device
