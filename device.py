@@ -21,7 +21,8 @@ class OECTDevice:
     
     '''
     def __init__(self, path='', pixels={}, params={}, 
-                 options={'V_low': False, 'retrace_only': False, 'verbose': False}):
+                 options={'V_low': False, 'retrace_only': False, 
+                          'verbose': False, 'plot': [True, False]}):
     
         self.path = path
         
@@ -49,7 +50,8 @@ class OECTDevice:
             pixels, pm = oect_load.uC_scale(self.path, 
                                             V_low=options['V_low'],
                                             retrace_only=options['retrace_only'],
-                                            verbose=options['verbose'])
+                                            verbose=options['verbose'],
+                                            plot=options['plot'])
 
             for m in pm:
                 self.params[m] = pm[m]

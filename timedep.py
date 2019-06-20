@@ -153,6 +153,36 @@ def plot_current(df, norm=False, log=False):
     
     return ax
 
+def fit_faria(device, key=-0.8):
+    
+    famodel = lmfit.Model(faria)
+    params = famodel.make_params(I0 = 0, V0 = -0.85, gm=1e-3, Rd=1000, Rs=100,
+                                 Cd = 1, f = 0.5)
+    
+    # set up key params
+    params['V0'].vary = False
+    params['gm'].set(min=1e-6, max=100)
+    params['Rd'].set(min=0.01)
+    params['Rs'].set(min=0.01)
+    params['Cd'].set(min=1e-15, max=1)
+    params['f'].set(min=0, max=1)
+    
+    '''
+    fit, return result. 
+    params = result.params for fit parameters
+    
+    To visualize:
+        print(result.fit_report())
+        result.plot()
+    '''
+    result = famodel.fit(params=params, t=device[-0.7].index, 
+                         data=device[key]['Ids (A)'])
+    print(result.fit_report())
+    result.plot()
+    
+    return famodel, result
+
+
 # Fitting functions
 
 def line_f(x, a, b):
