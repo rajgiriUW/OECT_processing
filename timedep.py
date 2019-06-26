@@ -7,6 +7,7 @@ Created on Thu May  9 14:15:37 2019
 
 import numpy as np
 from scipy.optimize import curve_fit
+from scipy.optimize import fsolve
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -226,6 +227,208 @@ def friedlein_sat(t, mu, Cg, L, Vg, Rg, Vt, Ierr):
     
     return (mu*Cg/L**2) * (Vg * -np.expm1(-t/(Rg*Cg)) - Vt)**2 + Ierr
 
+def friedlein_decay(t, mu, Cd, Cs, L, Vg, Rs, Vt, Vd, Ierr):
+    '''
+    Modified version of the Friedlein model taking into account an exponential
+    plateau for mobility to account for slow ion uptake (carrier-dependent mobility)
+    
+    Uses two separate capacitances to fit the Ids response
+        Cd = gate-drain capacitance
+        Cd = gate-source capacitance
+        Rs = electrolyte resistance
+        Vg = gate voltage (should be constant)
+        Vt = threshold voltage (should be constant)
+        Vd = drain voltage (should be constant)
+        L = channel length (should be constant, in cm)
+        mu = mobility (1e-8 to 10 cm^2/V*s is reasonable)
+        Ierr = current error (y-offset)
+        f = percentage scaling for current into Drain vs Source
+    
+    '''
+    f=0.5
+    C = (f*Cd + (1-f)*Cs)/f
+    
+#    C = Cd + Cs
+    tau = Rs * C
+    Vch = Vg * (1 - np.exp(-t/tau))
+    
+    p = (1 - np.exp(-t/tau))*(0.1/0.025 - 1) # from 0 to ~3, 0.1=disorder width, 0.025 = kT/q
+    K = (C/L**2) *  mu  # represents increase in density, here over ~3 o.o.m.
+
+    #Vt0, _ = getVt(Vt, K, Vch, Vd)
+
+    Ids = K * (1 - np.exp(-t/tau))**2 * (Vch - Vt - Vd/2) * Vd + Ierr
+
+    return Ids
+
+def vtdiff(Vt, K, Vch, Vd):
+    return (0.5 * K * (Vch - Vt) ** 2) - (K * (Vch - Vt - Vd/2) * Vd)
+
+def getVt(Vt, K, Vch, Vd):
+    '''
+    Uses root solver to find minimum of difference between saturation line
+     and linear regime line (when they intersect)
+    Does this for all values of Vch given the slow ionic charging
+    The optimal threshold voltage defining the overlap is then extracted
+    By default the plateau of Vch should be the right Vt, which is roots[-1]
+    
+    Parameters:
+        Vt : float
+            Initial Vt guess
+        K : float
+            K = mu * (Cd + Cs)/L**2
+        Vch : list or array
+            A list of channel-gate voltages (after electrolyte)
+        Vd : float
+            drain voltage, should be fixed
+    
+    Returns:
+        roots : list
+            All the roots at each time step 
+        roots[-1] : float
+            The final Vt 
+    '''
+    roots = []
+    for v in Vch:
+        root = fsolve(vtdiff, Vt, args=(K, v, Vd))
+        roots.append(root[0])
+    
+    return roots[-1], roots
+
+def preVt(params, t):
+    
+    p = params.valuesdict()
+    
+    C = p['Cd']+p['Cs']
+    K = p['mu']*C/p['L']**2
+    tau = p['Rs'] * C
+    Vch = p['Vg'] * (1 - np.exp(-t/tau))
+    
+    return K, Vch
+
+def fmParams(model):
+    
+    params = model.make_params(mu=1e-5, Cd=1e-2, Cs=1e-2, L=20e-4, Vg=0.85, 
+                               Vt = 0.25, Vd = 0.6, Ierr=0, Rs=1000)
+    
+    params['mu'].set(min=1e-8, max=100)
+    params['Cd'].set(min=0)
+    params['Cs'].set(min=0)
+    params['L'].set(vary=False)
+    params['Vg'].set(vary=False)
+    params['Vd'].set(vary=False)
+    params['Vt'].set(min=0.0, max=0.9)
+    params['Rs'].set(min=500)
+#    params['f'].set(min=0, max=1)    
+    
+    return params
+
+def model_friedlein(device, index=-0.8, multi=True):
+    '''
+    Wrapper for generating a friedlein_multi fit
+    '''
+    if multi:
+        fmodel = lmfit.Model(friedlein_multi)
+    else:
+        fmodel = lmfit.Model(friedlein_decay)
+    params = fmParams(fmodel)
+    
+    t = device[index].index
+    Ids = np.abs(device[index]['Ids (A)']) # easier to track everything as positive numbers
+
+    # pre-condition the Vt range
+    value=getVt(params['Vt'], *preVt(params, t), params['Vd'])[0]
+    params['Vt'].set(min = value * 0.3, max = value * 1.7, value=value)
+    print(params['Vt'])
+    
+    result = fmodel.fit(params=params, t=t, data=Ids, method='powell')
+    
+#    params['Vt'].set(value=getVt(result.params['Vt'], *preVt(params, t), params['Vd'])[0])
+#    print(params['Vt'])
+#    
+#    result = fmodel.fit(params=params, t=t, data=Ids, method='tnc')
+    print(result.fit_report())
+    p = result.params.valuesdict()
+    
+    C = p['Cd']+p['Cs']
+    tau = p['Rs'] * C
+    
+    print('tau= ',tau,' s')
+    result.plot()
+    
+    return fmodel, result
+
+def friedlein_multi(t, mu, Cd, Cs, L, Vg, Rs, Vt, Vd, Ierr):
+    '''
+    Modified version of the Friedlein model taking into account that we move
+    from saturation to linear regime during the gate voltage pulse
+    
+    Uses two separate capacitances to fit the Ids response
+        Cd = gate-drain capacitance
+        Cs = gate-source capacitance
+        Rs = electrolyte resistance
+        Vg = gate voltage (should be constant)
+        Vt = threshold voltage (should be constant)
+        Vd = drain voltage (should be constant)
+        L = channel length (should be constant, in cm)
+        mu = mobility (1e-8 to 10 cm^2/V*s is reasonable)
+        Ierr = current error (y-offset)
+    
+    '''
+#    C = Cd + Cs
+    C = Cd + Cs
+    K = mu*C/L**2
+    tau = Rs * C
+    
+    Vch = Vg * (1 - np.exp(-t/tau))
+    Ids = np.zeros(len(t))
+    regime = []
+    
+    sat = 0
+    lin = 0
+    
+    # For a given device, need Vt such that regimes meet.
+#    Vt0, _ = getVt(Vt, K, Vch, Vd)
+#    print('Vt', Vt0)    
+    Vt0 = Vt
+    
+    for tm, x in zip(t, range(len(Ids))):
+    
+        Vch = Vg * (1 - np.exp(-tm/tau))
+        # scale mobility with empirical carrier-dependent factor
+        p = (1 - np.exp(-tm/tau))*(0.05/0.025 - 1) # from 0 to ~3, 0.1=disorder width, 0.025 = kT/q
+        
+#        K = (C/L**2) * (1 - np.exp(-tm/tau))* mu   # represents increase in density
+        K = (C/L**2) *  mu*p
+        # saturation
+        if Vch > Vt0 and Vd >= Vch:
+    
+            #print('a')
+            regime.append('sat')
+            sat += 1
+            
+            Ids[x] = 0.5 * K  * (Vch - Vt0)**2 + Ierr
+        
+        # linear
+        elif Vch > Vt0 and Vd < Vch:
+            
+            #print('b')
+            regime.append('lin')
+            lin += 1
+        
+            Ids[x] = K *  (Vch - Vt0 - Vd/2) * Vd + Ierr 
+
+        # subthreshold
+        else:
+            
+            regime.append('sub')
+            Ids[x] = 0
+            Ids[x] = 0.5 * K  * (Vch - Vt0)**2 + Ierr
+
+#    print('sat', sat,'; lin', lin)
+#    print(regime)
+    return Ids
+    
 def faria(t, I0, V0, gm, Rd, Rs, Cd, f):
     '''
     Faria Org Elec model
