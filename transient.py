@@ -184,7 +184,7 @@ def friedlein_decay(t, mu, Cd, Cs, L, Vg, Rs, Vt, Vd, Ierr):
 
     #Vt0, _ = getVt(Vt, K, Vch, Vd)
 
-    Ids = K * (1 - np.exp(-t/tau))**2 * (Vch - Vt - Vd/2) * Vd + Ierr
+    Ids = K * (Vch - Vt - Vd/2) * Vd + Ierr
 
     return Ids
 
