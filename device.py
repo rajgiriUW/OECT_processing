@@ -19,14 +19,29 @@ class OECTDevice:
     
     This simplifies comparing and plotting various uC* datasets together
     
+    Parameters
+    -------
+    
+    Path : string
+        Path to folder containing pixels in folders '01', '02', etc.
+        A config file will be auto-generated if not in that folder
+    
+    Pixels : dict, optional
+        If passing an existing set of data from a previous run
+        
+    Params : dict, optional
+        Necessary if passing in 
+    
+    
     '''
     def __init__(self, path='', pixels={}, params={}, 
                  options={'V_low': False, 'retrace_only': False, 
                           'verbose': False, 'plot': [True, False]}):
     
         self.path = path
+        self.pixels = pixels       
         
-        if not path:
+        if not path and not any(pixels):
             
             from PyQt5 import QtWidgets
     
@@ -41,22 +56,34 @@ class OECTDevice:
             self.params[m] = params[m]
         
         self.options = {}
-        for o in options:
-            self.options[o] = options[o]
+        
+        defaults={'V_low': False, 'retrace_only': False, 
+                  'verbose': False, 'plot': [True, False]}
+        for d in defaults:
+            if d in options:
+                self.options[d] = options[d]
+            else:
+                self.options[d] = defaults[d]
 
         # if device has not been processed
         if not any(pixels): 
     
             pixels, pm = oect_load.uC_scale(self.path, 
-                                            V_low=options['V_low'],
-                                            retrace_only=options['retrace_only'],
-                                            verbose=options['verbose'],
-                                            plot=options['plot'])
+                                            V_low=self.options['V_low'],
+                                            retrace_only=self.options['retrace_only'],
+                                            verbose=self.options['verbose'],
+                                            plot=self.options['plot'])
 
             for m in pm:
                 self.params[m] = pm[m]
+        
+            self.pixels = pixels
+        
+        elif not any(params):
     
-        self.pixels = pixels
+            self.get_params()
+            
+
 
         # extract a subset as direct attributes
         self.L = self.params['L']
