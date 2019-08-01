@@ -50,6 +50,15 @@ def read_files(path):
     
     
     filelist = os.listdir(path)
+    
+    # Rename 2 of the files
+    if 'steps.txt' in filelist:
+        os.rename(path+'\steps.txt', path+'\steps(0).txt')
+    if 'spectra.txt' in filelist:
+        os.rename(path+'\spectra.txt', path+'\spectra(0).txt')
+        
+    filelist = os.listdir(path)
+    
     stepfiles = [os.path.join(path, name)
                  for name in filelist if (name[-3:] == 'txt' and 'steps(' in name)]
     specfiles = [os.path.join(path, name)
@@ -410,11 +419,17 @@ def spectrogram(uv, potential=0.8, **kwargs):
     if 'cmap' not in kwargs:
         kwargs['cmap'] = 'BrBG_r'
     
-    sns.heatmap(uv.spectra_vs_time[potential],ax=ax[0], **kwargs)
+    wl = np.round(uv.spectra_vs_time[potential].index.values, 2)
+    df = pd.DataFrame.copy(uv.spectra_vs_time[potential])
+    df = df.set_index(wl)
+    
+    sns.heatmap(df,ax=ax[0], **kwargs)
     ax[0].set_xlabel('Time (s)')
     ax[0].set_ylabel('Wavelength (nm)')
     
-    sns.heatmap(uv.spectra_sm, ax=ax[1], **kwargs)
+    df = pd.DataFrame.copy(uv.spectra_sm)
+    df = df.set_index(wl)
+    sns.heatmap(df, ax=ax[1], **kwargs)
     ax[1].set_xlabel('Voltage (V)')
     ax[1].set_ylabel('Wavelength (nm)') 
     
