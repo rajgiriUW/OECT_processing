@@ -51,18 +51,30 @@ def read_files(path):
     
     filelist = os.listdir(path)
     
-    # Rename 2 of the files
+    # Rename the first files
     if 'steps.txt' in filelist:
         os.rename(path+'\steps.txt', path+'\steps(0).txt')
     if 'spectra.txt' in filelist:
         os.rename(path+'\spectra.txt', path+'\spectra(0).txt')
+    if 'stepsspectra.txt' in filelist:
+        os.rename(path+'\stepsspectra.txt', path+'\stepsspectra(0).txt')
+    if 'dedoping.txt' in filelist:
+        os.rename(path+'\dedoping.txt', path+'\dedoping(0).txt')
+    if 'dedopingspectra.txt' in filelist:
+        os.rename(path+'\dedopingspectra.txt', path+'\dedopingspectra(0).txt')
+
         
     filelist = os.listdir(path)
     
     stepfiles = [os.path.join(path, name)
                  for name in filelist if (name[-3:] == 'txt' and 'steps(' in name)]
     specfiles = [os.path.join(path, name)
-                 for name in filelist if (name[-3:] == 'txt' and 'spectra' in name)]
+                 for name in filelist if (name[-3:] == 'txt' and 'spectra(' in name 
+                                          and 'dedoping' not in name)]
+    dedopestepfiles = [os.path.join(path, name)
+                       for name in filelist if (name[-3:] == 'txt' and 'dedoping(' in name)]
+    dedopespecfiles = [os.path.join(path, name)
+                       for name in filelist if (name[-3:] == 'txt' and 'dedopingspectra(' in name)]
     
     ''' Need to "human sort" the filenames '''
     # https://stackoverflow.com/questions/4836710/does-python-have-a-built-in-function-for-string-natural-sort
@@ -73,6 +85,8 @@ def read_files(path):
 
     specfiles = natural_sort(specfiles)
     stepfiles = natural_sort(stepfiles)
+    dedopespecfiles = natural_sort(dedopespecfiles)
+    dedopestepfiles = natural_sort(dedopestepfiles)
     
     potentials = np.zeros([len(stepfiles)])
 
@@ -84,7 +98,7 @@ def read_files(path):
         pp = pd.read_csv(fl, header=0, sep='\t')
         potentials[x] = np.round(pp[pot][0],2)
         
-    return stepfiles, specfiles, potentials
+    return stepfiles, specfiles, potentials, dedopespecfiles, dedopestepfiles
 
 
 class uv_vis(object):
@@ -168,7 +182,11 @@ class uv_vis(object):
         '''  
         pp = pd.read_csv(self.specs[0], sep='\t')
         
-        runs = np.unique(pp['Spectrum number'])
+        try:
+            runs = np.unique(pp['Spectrum number'])
+        except:
+            wl = pp['Wavelength (nm)'][0]
+            runs = np.arange(1,len(np.where(pp['Wavelength (nm)'] == wl)[0])+1)
         per_run = int(len(pp)/runs[-1])
     #    last_run = runs[-1]
         wl = pp['Wavelength (nm)'][0:per_run]
@@ -182,7 +200,11 @@ class uv_vis(object):
         for fl,v in zip(self.specs, self.potentials):
             
             pp = pd.read_csv(fl, sep='\t')
-            data = pp[pp['Spectrum number']==runs[which_run]]['Absorbance'].values
+            try:
+                data = pp[pp['Spectrum number']==runs[which_run]]['Absorbance'].values
+            except:
+                idx = per_run * (runs[which_run]-1)
+                data = pp['Absorbance'].iloc[idx:idx+per_run].values
             df[v] = pd.Series(data, index=df.index)
             data = sg.fftconvolve(data, np.ones(smooth)/smooth, mode='same')
             dfs[v] = pd.Series(data, index=df.index)
@@ -225,9 +247,9 @@ class uv_vis(object):
         '''
         
         self.spectra_vs_time = {}
-        for v in self.potentials:
+        for v, r in zip(self.potentials, range(len(self.potentials))):
             
-            spectra_path = self.specs[self.volt(v)]
+            spectra_path = self.specs[r]
             df = self.single_time_spectra(spectra_path)
             
             self.spectra_vs_time[v] = df
@@ -288,7 +310,12 @@ class uv_vis(object):
         
         pp = pd.read_csv(spectra_path, sep='\t')
         
-        runs = np.unique(pp['Spectrum number'])
+        try:
+            runs = np.unique(pp['Spectrum number'])
+        except:
+            wl = pp['Wavelength (nm)'][0]
+            runs = np.arange(1,len(np.where(pp['Wavelength (nm)'] == wl)[0])+1)
+            
         times = np.unique(pp['Time (s)'])
         times = times - times[0]
         per_run = int(len(pp)/runs[-1])
@@ -299,7 +326,12 @@ class uv_vis(object):
         
         for k, t in zip(runs, times):
             
-            data = pp[pp['Spectrum number']==k]['Absorbance'].values
+            try:
+                data = pp[pp['Spectrum number']==k]['Absorbance'].values
+            except:
+                idx = per_run * (k-1)
+                data = pp['Absorbance'].iloc[idx:idx+per_run].values
+                
             df[np.round(t,2)] = pd.Series(data, index=df.index)
         
         return df
