@@ -98,7 +98,7 @@ def read_files(path):
         pp = pd.read_csv(fl, header=0, sep='\t')
         potentials[x] = np.round(pp[pot][0],2)
         
-    return stepfiles, specfiles, potentials, dedopespecfiles, dedopestepfiles
+    return stepfiles, specfiles, potentials, dedopestepfiles, dedopespecfiles
 
 
 class uv_vis(object):
@@ -146,7 +146,7 @@ class uv_vis(object):
         
         return
     
-    def spec_echem_voltage(self, wavelength=800, which_run=-1, 
+    def spec_echem_voltage(self, wavelength=800, which_run=1, 
                            smooth=3, digits=None):
         '''
         Takes the list of spectra files specfiles, then extracts the final spectra
