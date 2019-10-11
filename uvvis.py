@@ -22,10 +22,14 @@ UV Vis spec-echem processing
 Usage:
     
     >> steps, specs, potentials = uvvis.read_files(path_to_folder)
-    >> data = uvvis.uv_vis(steps,specs,potentials)
+    >> data = uvvis.uv_vis(steps, specs, potentials)
     >> data.spec_echem_voltage() # spectra at each voltage in one dataFrame
     >> data.time_dep_spectra() # generates a dict of spectra vs time at a voltage
-    >> data.single_wl_time(0.8, 800) # wavelength vs time at a given bias
+    >> data.single_wl_time(0.8, 800) # wavelength vs time at a given bias (0.8 V) and wavelength (800 nm)
+    >> data.abs_voltage(800, 20) # absorbance vs voltage at specific wavelength (800 nm) and specific time (20 s)
+    
+    >> 
+    >> uvvis.plot_voltage(data)
 
 '''
 
@@ -164,7 +168,7 @@ class uv_vis(object):
             wavelength to extract voltage-dependent data on
             
         which_run : int, optional
-            Which run to select and save. By default is the last (the final time slice)
+            Which run to select and save. By default is the first (the initial time slice)
 
         smooth : int
             simple boxcar smooth of data for plotting/analysis purposes, controls
@@ -217,7 +221,10 @@ class uv_vis(object):
 
         self.spectra = df
         self.spectra_sm = dfs
-        self.abs_vs_voltage(wavelength)  # absorbance vs voltage @ a wavelength
+        pp = pd.read_csv(self.steps[0], sep='\t')
+
+        self.tx = pp['Corrected time (s)'].values
+        self.tx = np.round(self.tx, 2)
 
         return
 
@@ -230,14 +237,13 @@ class uv_vis(object):
         pp = pd.read_csv(self.steps[0], sep='\t')
 
         tx = pp['Corrected time (s)'].values
-        df = pd.DataFrame(index=tx)
+        df = pd.DataFrame(index=np.round(tx, 2))
 
         for fl, v in zip(self.steps, self.potentials):
             pp = pd.read_csv(fl, sep='\t')
             data = pp['WE(1).Current (A)']
             df[v] = pd.Series(data.values, index=df.index)
 
-        self.tx = tx
         self.current = df
 
         return
@@ -297,11 +303,19 @@ class uv_vis(object):
         idx = self.spectra.index
         wl = idx.searchsorted(wavelength)
         tx = self.tx.searchsorted(time)
-        #self.vt = self.spectra.loc[idx[wl]]
+        if time == -1:
+            tx = self.tx[-1]
+        # self.vt = self.spectra.loc[idx[wl]]
 
         vt = []
         for dv in self.spectra_vs_time:
-            vt.append(vt, self.spectra_vs_time[dv].loc[idx[wl]][tx])
+            try:
+                vt.append(self.spectra_vs_time[dv].loc[idx[wl]][tx])
+            except:
+                # if somehow the column names aren't matching
+                ctx = self.spectra[dv].columns
+                tx = np.searchsorted(ctx, 39.2)
+                vt.append(self.spectra_vs_time[dv].loc[idx[wl]][tx])
 
         self.vt = np.array(vt)
 
@@ -418,35 +432,93 @@ def plot_time(uv, ax=None, norm=True, smooth=False, **kwargs):
     return ax
 
 
-def plot_spectra(uv, ax=None, smooth=False, **kwargs):
+def plot_spectra(uv, ax=None, smooth=False, crange=[0.2, 0.75], title=None, **kwargs):
+    '''
+    Simple plot of the spectra
+    :param uv: uvvis Class object
+    :param ax: Axes object
+        if None, creates Figure
+    :param crange: 2-size array
+        Controls the color-range for generating the colormap
+    :param title: str
+        Image title
+    :param smooth: bool
+        Whether to use the smoothed or raw spectra
+
+     The time slice printed is dependent on how the data are processed (default is t=0 s)
+    '''
+
+    cm = np.linspace(crange[0], crange[1], len(uv.spectra_sm.columns))
+
     if ax == None:
-        fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
+        fig, ax = plt.subplots(nrows=1, figsize=(12, 6), facecolor='white')
 
     if smooth:
-        uv.spectra_sm.plot(ax=ax, **kwargs)
+        for i, cl in zip(uv.spectra_sm, cm):
+            uv.spectra_sm[i].plot(ax=ax, linewidth=3, color=plt.cm.bone(cl), **kwargs)
     else:
-        uv.spectra.plot(ax=ax, **kwargs)
+        for i, cl in zip(uv.spectra_sm, cm):
+            uv.spectra[i].plot(ax=ax, linewidth=3, color=plt.cm.bone(cl), **kwargs)
 
+    ax.legend(labels=uv.potentials)
     ax.set_xlabel('Wavelength (nm)')
     ax.set_ylabel('Absorbance (a.u.)')
+    ax.set_title(title)
 
     return ax
 
 
-def plot_voltage(uv, ax=None, norm=None, **kwargs):
+def plot_spectra_vs_time(uv, ax=None, crange=[0.2, 0.75], potential=0.7, **kwargs):
     '''
+    Plots the spectra vs time
+    :param uv: uvvis Class object
+    :param ax: Axes object
+        if None, creates Figure
+    :param crange: 2-size array
+        Controls the color-range for generating the colormap
+    :param kwargs:
+    :return:
+    '''
+    endtime = uv.spectra_vs_time[potential].columns[-1]
+    cm = np.linspace(crange[0], crange[1], len(uv.spectra_vs_time[potential].columns))
+
+    if ax == None:
+        fig, ax = plt.subplots(nrows=1, figsize=(12, 6), facecolor='white')
+
+    for i, cl in zip(uv.spectra_vs_time[potential], cm):
+        ax.plot(uv.spectra_vs_time[potential][i], color=plt.cm.bone(cl))
+
+    ax.set_xlabel('Wavelength (nm)')
+    ax.set_ylabel('Absorbance (a.u.)')
+    ax.set_title(str(potential) + ' V kinetics over ' + str(endtime) + ' s')
+
+    return ax
+
+
+def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1, **kwargs):
+    '''
+
+    Plots the "threshold" from the absorbance.
     norm = normalize the threshold UV-Vis data
+
+    wavelength : float
+    t : float
+        The time slice to plot, in seconds. -1 is the final time
+
     '''
     if ax == None:
-        fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
+        fig, ax = plt.subplots(nrows=1, figsize=(12, 6), facecolor='white')
+
+    uv.abs_vs_voltage(wavelength=wavelength, time=time)
 
     if norm == None:
-        ax.plot(uv.potentials * -1, uv.vt.values, **kwargs)
+        ax.plot(uv.potentials * -1, uv.vt, **kwargs)
     else:
         numerator = (uv.vt.values - uv.vt.values.min())
         ax.plot(uv.potentials * -1, numerator / numerator.max(), **kwargs)
     ax.set_xlabel('Gate Bias (V)')
     ax.set_ylabel('Absorbance (a.u.)')
+    ax.set_title('Absorbance vs Voltage at ' + str(wavelength) + ' nm')
 
     return ax
 
@@ -455,7 +527,8 @@ def spectrogram(uv, potential=0.8, **kwargs):
     fig, ax = plt.subplots(nrows=2, figsize=(12, 18))
 
     if 'cmap' not in kwargs:
-        kwargs['cmap'] = 'BrBG_r'
+        # kwargs['cmap'] = 'BrBG_r'
+        kwargs['cmap'] = 'icefire'
 
     wl = np.round(uv.spectra_vs_time[potential].index.values, 2)
     df = pd.DataFrame.copy(uv.spectra_vs_time[potential])
