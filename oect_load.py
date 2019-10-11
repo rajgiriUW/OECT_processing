@@ -26,7 +26,7 @@ Usage:
 '''
 
 
-def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False, 
+def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
              retrace_only=False, verbose=True, options={}):
     '''
     path: str
@@ -93,12 +93,11 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
     if any(options):
         for o in options:
             opts[o] = options[o]
-    
 
     # loads all the folders
-    if type(plot)==bool or len(plot) == 1:
+    if type(plot) == bool or len(plot) == 1:
         plot = [plot, plot]
-        
+
     for p, f in zip(paths, pixkeys):
 
         if os.listdir(p):
@@ -124,15 +123,15 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
     uC_dv = {}
 
     for pixel in pixels:
-        
+
         if not pixels[pixel].gms.empty:
-            
+
             ix = len(pixels[pixel].VgVts)
             Vt = np.append(Vt, pixels[pixel].Vts)
             Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts)
             gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
             W = np.append(W, pixels[pixel].W)
-            
+
             # appends WdL as many times as there are transfer curves
             for i in range(len(pixels[pixel].VgVts)):
                 Wd_L = np.append(Wd_L, pixels[pixel].WdL)
@@ -142,11 +141,10 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
                 Vg_Vt = np.delete(Vg_Vt, -ix)
                 gms = np.delete(gms, -ix)
                 Wd_L = np.delete(Wd_L, -ix)
-    
+
             uC_dv['L'] = pixels[pixel].L
             uC_dv['d'] = pixels[pixel].d
-            
-    
+
     # fit functions
     def line_f(x, a, b):
 
@@ -176,10 +174,11 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
         if verbose:
             print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
 
-    if verbose: 
+    if verbose:
         print('Vt = ', uC_dv['Vt'])
 
     return pixels, uC_dv
+
 
 def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=True):
     """
@@ -203,7 +202,7 @@ def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=Tru
     if verbose:
         for key in device.gms:
             print(key, ': {:.2f}'.format(np.max(device.gms[key].values * 1e-2) / scaling), 'S/cm scaled')
-            print(key, ': {:.2f}'.format(np.max(device.gms[key].values*1000)), 'mS max')
+            print(key, ': {:.2f}'.format(np.max(device.gms[key].values * 1000)), 'mS max')
 
     if plot:
         fig = oect_plot.plot_transfers_gm(device, gm_plot=gm_plot, leakage=True)

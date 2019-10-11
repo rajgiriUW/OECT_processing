@@ -34,7 +34,8 @@ The other plotting functions are mostly used in OECT_loading or in OECT itself
 
 '''
 
-def plot_uC(dv, label='', savefig=True, axlin=None, axlog = None, 
+
+def plot_uC(dv, label='', savefig=True, axlin=None, axlog=None,
             fit=True, **kwargs):
     """
     dv : dict of parameters needed for plotting
@@ -75,36 +76,36 @@ def plot_uC(dv, label='', savefig=True, axlin=None, axlog = None,
     uC = dv['uC']
     uC_0 = dv['uC_0']
     gms = dv['gms']
-    
+
     if savefig:
         if 'folder' in dv:
             path = dv['folder']
         else:
             import os
             path = os.getcwd()
-    
-##### Linear Plot
+
+    ##### Linear Plot
     if not np.any(axlin):
         fig, axlin = plt.subplots(nrows=1, facecolor='white', figsize=(9, 6))
 
     params = {'color': 'b', 'markersize': 10, 'marker': 's', 'linestyle': ''}
-    
+
     for k in kwargs:
         params[k] = kwargs[k]
-    
+
     plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
     plt.rc('axes', linewidth=4)
     axlin.tick_params(labeltop=False, labelright=False)
     axlin.tick_params(axis='both', length=14, width=3, which='major',
-                   bottom='on', left='on', right='on', top='on')
+                      bottom='on', left='on', right='on', top='on')
     axlin.tick_params(axis='both', length=10, width=3, which='minor',
-                   bottom='on', left='on', right='on', top='on')
+                      bottom='on', left='on', right='on', top='on')
 
     axlin.plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, **params)
     axlin.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
     axlin.set_ylabel('gm (mS)')
-    #ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
+    # ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
     axlin.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
     plt.tight_layout()
 
@@ -117,47 +118,46 @@ def plot_uC(dv, label='', savefig=True, axlin=None, axlog = None,
         _xl = np.argmin(WdL * Vg_Vt)
         _xh = np.argmax(WdL * Vg_Vt)
         Wd_L_fitx = np.arange(WdL[_xl] * Vg_Vt[_xl], WdL[_xh] * Vg_Vt[_xh], 1e-9)
-        #ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]) * 1000, 'k--')
+        # ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]) * 1000, 'k--')
         axlin.plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx) * 1000, 'r--')
         axlin.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
         axlin.tick_params(axis='both', length=17, width=3, which='major',
-                       bottom='on', left='on', right='on', top='on')
+                          bottom='on', left='on', right='on', top='on')
         axlin.tick_params(axis='both', length=10, width=3, which='minor',
-                       bottom='on', left='on', right='on', top='on')
+                          bottom='on', left='on', right='on', top='on')
         plt.tight_layout()
-    
+
         print('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
-    
+
         if savefig:
             fig.savefig(path + r'\scaling_uC_+fit' + label + '.tif', format='tiff')
 
-#### Now the Log plot
-    if not np.any(axlog):            
+    #### Now the Log plot
+    if not np.any(axlog):
         fig, axlog = plt.subplots(nrows=1, facecolor='white', figsize=(9, 6))
 
     params = {'color': 'b', 'markersize': 10, 'marker': 's', 'linestyle': ''}
     for k in kwargs:
-        params[k] = kwargs[k]        
-    #fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
+        params[k] = kwargs[k]
+        # fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
     axlog.set_xscale('log')
     axlog.set_yscale('log')
-    axlog.plot(np.abs(WdL * Vg_Vt) * 1e2, gms*1000, **params)
+    axlog.plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, **params)
     axlog.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
     axlog.set_ylabel('gm (mS)')
 
     axlog.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
     axlog.tick_params(axis='both', length=17, width=3, which='major',
-                   bottom='on', left='on', right='on', top='on')
+                      bottom='on', left='on', right='on', top='on')
     axlog.tick_params(axis='both', length=10, width=3, which='minor',
-                   bottom='on', left='on', right='on', top='on')
-    
+                      bottom='on', left='on', right='on', top='on')
+
     if savefig:
         fig.savefig(path + r'\scaling_uC_loglog' + label + '.tif', format='tiff')
-    
-    #ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]), 'k--')
+
+    # ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]), 'k--')
     if fit:
-        axlog.plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx)*1000, 'r--')
-        
+        axlog.plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx) * 1000, 'r--')
 
     plt.tight_layout()
 
@@ -165,6 +165,7 @@ def plot_uC(dv, label='', savefig=True, axlin=None, axlog = None,
         fig.savefig(path + r'\scaling_uC_loglog_+fit' + label + '.tif', format='tiff')
 
     return [axlin, axlog]
+
 
 def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     ''' 
@@ -204,7 +205,7 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
 
     if leakage:
         for k in dv.transfer_raw:
-           ax1.plot(dv.transfer_raw[k].index, dv.transfer_raw[k]['I_G (A)'] * 1000,
+            ax1.plot(dv.transfer_raw[k].index, dv.transfer_raw[k]['I_G (A)'] * 1000,
                      linewidth=1, linestyle='--')
 
     markers = ['o', 's', '^', 'd', 'x']
@@ -231,6 +232,7 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     plt.title(dv.folder, y=1.05)
 
     return fig
+
 
 def plot_outputs(dv, leakage=False):
     '''
@@ -280,6 +282,7 @@ def plot_outputs(dv, leakage=False):
 
     return fig
 
+
 def plot_output_avg(dv):
     '''
     called by OECT_loading functions
@@ -311,6 +314,7 @@ def plot_output_avg(dv):
     plt.title('Output Average', y=1.05)
 
     return fig
+
 
 def plot_transfer_avg(dv, Wd_L, label=''):
     ''' 

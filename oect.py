@@ -150,14 +150,14 @@ class OECT:
         self.gms = pd.DataFrame()
 
         # Data descriptors
-        self.make_config = False # if config doesn't exist, for backwards-compatibility
+        self.make_config = False  # if config doesn't exist, for backwards-compatibility
         self.transfer_avgs = 1
         self.folder = folder
         self.num_outputs = 0
         self.num_transfers = 0
         self.reverse = False
         self.rev_point = np.nan
-        
+
         # Threshold
         self.Vt = np.nan
         self.Vts = np.nan
@@ -181,7 +181,7 @@ class OECT:
 
         if 'd' not in self.params:
             self.params['d'] = 40e-9
-        elif self.params['d'] > 1: #wrong units
+        elif self.params['d'] > 1:  # wrong units
             self.params['d'] *= 1e-9
         self.d = self.params['d']
 
@@ -196,7 +196,7 @@ class OECT:
         par and opt from the config file
         params is passed from the function call
         '''
-                # processing and device parameters
+        # processing and device parameters
         self.params = {}
         self.options = {}
 
@@ -225,7 +225,7 @@ class OECT:
             self.options['V_low'] = False
         if 'overwrite' not in self.options:
             self.options['overwrite'] = False
-        
+
         return
 
     def loaddata(self):
@@ -254,9 +254,9 @@ class OECT:
         self.num_transfers = len(self.transfers.columns)
         self.num_outputs = len(self.outputs.columns)
 
-        if self.make_config:    # no proper config file found
+        if self.make_config:  # no proper config file found
             self.update_config()
-        
+
         # can manually use options to overwrite the config file
         if 'overwrite' in self.options:
             if self.options['overwrite']:
@@ -305,7 +305,7 @@ class OECT:
                 self.Vd = float(line.split()[-1])
             if 'V_G = ' in line:
                 self.Vg = float(line.split()[-1])
-                
+
             # if no config file found, populate based on the raw data
             if 'Width/um' in line and (self.make_config or self.options['overwrite']):
                 self.W = float(line.split()[-1])
@@ -327,7 +327,7 @@ class OECT:
         """
 
         # find inflection point where trace reverses
-        
+
         # First, check if any voltages repeated (indicates both a fwd/rev sweep)
         vs = np.abs(v)
         reverse = False
@@ -335,30 +335,30 @@ class OECT:
             if len(np.argwhere(vs == k)) > 1:
                 reverse = True
                 break
-            
+
         # Then, find where the voltage range reverses (gradient = 0)
         if reverse:
-            
-            mx = np.argwhere(np.gradient(v)== 0)[0][0]
-            
+
+            mx = np.argwhere(np.gradient(v) == 0)[0][0]
+
             if transfer:
-                self.rev_point = mx # find inflection
+                self.rev_point = mx  # find inflection
                 self.rev_v = v[mx]
                 self.options['Reverse'] = True
                 self.reverse = True
-            
+
             return mx, True
-        
+
         else:
-            
+
             mx = len(v) - 1
-            
+
             if transfer:
                 self.rev_point = mx
                 self.rev_v = v[mx]
                 self.options['Reverse'] = False
                 self.reverse = False
-            
+
             return mx, False
 
     def calc_gms(self):
@@ -489,14 +489,14 @@ class OECT:
         Vfwd = str(V) + '_fwd'
         self.output[Vfwd] = op[:idx]
         self.output_raw[Vfwd] = op[:idx]
-        self.output[Vfwd] = self.output[Vfwd].drop(['I_DS Error (A)', 
+        self.output[Vfwd] = self.output[Vfwd].drop(['I_DS Error (A)',
                                                     'I_G (A)',
                                                     'I_G Error (A)'], 1)
         if reverse:
             Vbwd = str(V) + '_bwd'
             self.output[Vbwd] = op[idx:]
             self.output_raw[Vbwd] = op[idx:]
-            self.output[Vbwd] = self.output[Vbwd].drop(['I_DS Error (A)', 
+            self.output[Vbwd] = self.output[Vbwd].drop(['I_DS Error (A)',
                                                         'I_G (A)',
                                                         'I_G Error (A)'], 1)
 
@@ -599,17 +599,16 @@ class OECT:
         return
 
     def quadrant(self):
-        
-        if np.any(self.gm_peaks.index < 0):
-            
-            self.quad = 'III' # positive voltage, positive current
-        
-        elif np.any(self.gm_peaks.index > 0):
-            
-            self.quad = 'I' # negative voltage, negative curret=nt
-        
-        return
 
+        if np.any(self.gm_peaks.index < 0):
+
+            self.quad = 'III'  # positive voltage, positive current
+
+        elif np.any(self.gm_peaks.index > 0):
+
+            self.quad = 'I'  # negative voltage, negative curret=nt
+
+        return
 
     def thresh(self, plot=False):
         """
@@ -633,7 +632,6 @@ class OECT:
             plt.ylabel('|$I_{DS}$$^{0.5}$| ($A^{0.5}$)')
             labels = []
 
-
         # Find and fit at inflection between regimes
         for tf, pk in zip(self.transfers, self.gm_peaks.index):
             # use second derivative to find inflection, then fit line to get Vt
@@ -645,18 +643,18 @@ class OECT:
             if plot:
                 plt.plot(np.sqrt(np.abs(self.transfers[tf])), 'bo-')
                 v = self.transfers[tf].index.values
-                tx = np.arange(np.min(v), -fit[1] / fit[0] + 0.1, 0.01 )
-                
-                if self.quad == 'I': 
-                    tx = np.arange(-fit[1] / fit[0] - 0.1, np.max(v),  0.01 )
-                
+                tx = np.arange(np.min(v), -fit[1] / fit[0] + 0.1, 0.01)
+
+                if self.quad == 'I':
+                    tx = np.arange(-fit[1] / fit[0] - 0.1, np.max(v), 0.01)
+
                 plt.plot(tx, self.line_f(tx, *fit), 'r--')
                 labels.append('{:.4f}'.format(-fit[1] / fit[0]))
 
             # fits line, finds threshold from x-intercept
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
             VgVts = np.append(VgVts, np.abs(pk + fit[1] / fit[0]))  # Vg - Vt, + sign from -fit[1]/fit[0]
-            
+
         if plot:
             plt.legend(labels=labels)
             plt.axhline(0, color='k', linestyle='--')
@@ -676,19 +674,19 @@ class OECT:
         _residuals = np.array([])
         _fits = np.array([0, 0])
 
-        #splines needs to be ascending
+        # splines needs to be ascending
         if V[2] < V[1]:
             V = np.flip(V)
             Id = np.flip(Id)
 
         self.quadrant()
 
-        if self.quad == 'I': #top right
+        if self.quad == 'I':  # top right
 
             Id = np.flip(Id)
             V = np.flip(-V)
 
-        mx_d2 = self._find_peak(Id*1000, V) #*1000 improves numerical spline accuracy
+        mx_d2 = self._find_peak(Id * 1000, V)  # *1000 improves numerical spline accuracy
 
         # sometimes for very small currents run into numerical issues
         if not mx_d2:
@@ -697,7 +695,7 @@ class OECT:
         # for each peak found, fits a line. Uses that to determine Vt, then residual up to that found Vt
         for m in mx_d2:
             # Id = Id - np.min(Id) # 0-offset
-            
+
             fit, _ = cf(self.line_f, V[:m], Id[:m],
                         bounds=([-np.inf, -np.inf], [0, np.inf]))
 
@@ -709,8 +707,8 @@ class OECT:
         _fits = _fits[1:, :]
         fit = _fits[np.argmin(_residuals), :]
 
-        if self.quad == 'I': 
-            fit[0] *= -1 
+        if self.quad == 'I':
+            fit[0] *= -1
 
         return fit
 
@@ -721,7 +719,7 @@ class OECT:
         return f1 + f0 * x
 
     @staticmethod
-    def _find_peak(I, V, negative_Vt = True, width=15):
+    def _find_peak(I, V, negative_Vt=True, width=15):
         """
         Uses spline to find the transition point then return it for fitting Vt
           to sqrt(Id) vs Vg
@@ -758,7 +756,7 @@ class OECT:
         return mx_d2
 
     def update_config(self):
-    
+
         config = configparser.ConfigParser()
         config.read(self.config)
 
@@ -767,24 +765,25 @@ class OECT:
         config['Dimensions']['Length (um)'] = str(self.L)
         config['Transfer']['Vds (V)'] = str(self.Vd)
 
-        config['Output'] = {'Preread (ms)': 500.0, 
+        config['Output'] = {'Preread (ms)': 500.0,
                             'First Bias (ms)': 200.0}
         config['Output']['Output Vgs'] = str(len(self.Vg_array))
         for v in range(len(self.Vg_array)):
             config['Output']['Vgs (V) ' + str(v)] = str(self.Vg_array[v])
-        
+
         # overwrite the file
         try:
             with open(self.config, 'w') as configfile:
-    
+
                 config.write(configfile)
         except:
-        
+
             with open(self.config[0], 'w') as configfile:
-    
+
                 config.write(configfile)
-            
+
         return
+
 
 def config_file(cfg):
     """
@@ -857,23 +856,22 @@ def make_config(path):
     
     '''
     config = configparser.ConfigParser()
-    config.optionxform=str
-    
+    config.optionxform = str
+
     config['Dimensions'] = {'Width (um)': 2000, 'Length (um)': 20}
-    config['Transfer'] = {'Preread (ms)': 30000.0, 
+    config['Transfer'] = {'Preread (ms)': 30000.0,
                           'First Bias (ms)': 120000.0,
                           'Vds (V)': -0.60}
-    
-    config['Output'] = {'Preread (ms)': 500.0, 
-                          'First Bias (ms)': 200.0,
-                          'Output Vgs': 4,
-                          'Vgs (V) 0': -0.1,
-                          'Vgs (V) 1': -0.3,
-                          'Vgs (V) 2': -0.5,
-                          'Vgs (V) 3': -0.9}
-    
+
+    config['Output'] = {'Preread (ms)': 500.0,
+                        'First Bias (ms)': 200.0,
+                        'Output Vgs': 4,
+                        'Vgs (V) 0': -0.1,
+                        'Vgs (V) 1': -0.3,
+                        'Vgs (V) 2': -0.5,
+                        'Vgs (V) 3': -0.9}
+
     with open(path + r'\config.cfg', 'w') as configfile:
         config.write(configfile)
-    
-    return path + r'\config.cfg'
 
+    return path + r'\config.cfg'
