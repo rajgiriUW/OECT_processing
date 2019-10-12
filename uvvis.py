@@ -514,7 +514,7 @@ def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1, **kwargs):
     if norm == None:
         ax.plot(uv.potentials * -1, uv.vt, **kwargs)
     else:
-        numerator = (uv.vt.values - uv.vt.values.min())
+        numerator = (uv.vt - uv.vt.min())
         ax.plot(uv.potentials * -1, numerator / numerator.max(), **kwargs)
     ax.set_xlabel('Gate Bias (V)')
     ax.set_ylabel('Absorbance (a.u.)')
