@@ -11,6 +11,7 @@ from scipy import signal as sg
 from scipy.optimize import curve_fit
 import os
 import re
+import h5py
 
 import seaborn as sns
 
@@ -37,7 +38,6 @@ Usage:
 def read_files(path):
     '''
     Takes a folder and finds the potential from all the "Steps" files
-    NOTE: rename "steps" and "Stepspectra" to "steps(0)" and "stepspectra(0)", respectively
         
     Input
     -----
@@ -545,3 +545,54 @@ def spectrogram(uv, potential=0.8, **kwargs):
     ax[1].set_ylabel('Wavelength (nm)')
 
     return ax
+
+def save_h5(data, filename):
+    '''
+    Saves the to two HDF5 files (.h5)
+    '''
+    with h5py.File(filename+'.h5', 'w') as f:
+        dset = f.create_dataset('potentials', (len(data.potentials),))
+        dset[:] = data.potentials[:]
+    f.close()
+    
+    for p in data.spectra_vs_time:
+        data.spectra_vs_time[p].to_hdf(filename+'.h5', key=str(p), mode='a')
+
+    return
+
+def convert_h5(h5file):
+    '''
+    axis0 = time
+    axis1 = wavelength
+    block0_items
+    '''
+    data = uv_vis(None,None,None)
+    file =  h5py.File(h5file, 'r')
+    data.potentials = file['potentials'][()]
+    
+    folders = []
+    for f in file:
+        if 'x' in f:
+            folders.append(f[1:])
+        else:
+            folders.append(f)
+    folders = folders[1:]
+    folders_num = [float(p) for p in folders[1:]]
+    
+    df_dict = {}
+    for v, n in zip(folders, folders_num):
+        p = 'x'+v
+        spec_file = file[p]
+        df = pd.DataFrame(data = spec_file['block0_values'][()], 
+                          index = spec_file['axis1'][()], 
+                          columns = spec_file['axis0'])
+        df.index.name = 'Wavelength (nm)'
+        df.columns.name = 'Time (s)'
+        df_dict[n] = df
+        data.tx = np.round(spec_file['axis0'], 2)
+        
+    data.spectra_vs_time = df_dict
+    
+    file.close()
+    
+    return data
