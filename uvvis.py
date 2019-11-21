@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from scipy import signal as sg
 from scipy.optimize import curve_fit
+from scipy import integrate as spint
 import os
 import re
 import h5py
@@ -107,7 +108,7 @@ def read_files(path):
 
 class uv_vis(object):
 
-    def __init__(self, steps, specs, potentials):
+    def __init__(self, steps=None, specs=None, potentials=None):
         '''
         steps : list
             List of step(current) files
@@ -120,11 +121,6 @@ class uv_vis(object):
             
         Class contains:
         --------------
-        file paths:
-            steps : current vs time
-            specs : spectra vs time
-            potentials : list of voltages used
-        
         spectra : pandas Dataframe
             The spectra at each voltage in a large dataframe
         spectra_sm : pandas DataFrame
@@ -141,34 +137,111 @@ class uv_vis(object):
             
         vt : pandas Series
             The voltage spectra at a particular wavelength (for threshold measurement)
+        tx : ndArray
+            The time-axis used for plotting and fitting time
+        fits : ndArray
+            The fits generated from banded_fits (exponential fits to time-slices)
         '''
         self.steps = steps
         self.specs = specs
         self.potentials = potentials
 
-        self.wavelength = 800
+        return
+
+    def time_dep_spectra(self, specfiles, smooth=None, round_wl = 2):
+        '''
+        Generates all the time-dependent spectra. This yields a dictionary where
+        each voltage key contains the time-dependent spectra dataframe 
+        
+        e.g. at spectra_vs_time[0.9] you have the spectra for potential of 0.9 V
+        in a dataFrame where wavelength is the index and each column is time-slice
+        
+        This dict is the major component of this Class
+        
+        specfiles : list of str
+            Contains paths to the spectra files on the disk somewhere
+        
+        smooth : int, optional
+            For smoothing the spectra via a boxcar filter. None = no smoothing
+            Typical value is 3 (i.e. 3 point smoothing)
+        
+        round_wl : int, optional
+            Digits to round the wavelength values to in the dataFrames
+            None = no rounding
+        
+        '''
+
+        self.spectra_vs_time = {}
+        for v, r in zip(self.potentials, range(len(self.potentials))):
+            spectra_path = specfiles[r]
+            
+            df = self._single_time_spectra(spectra_path, smooth=smooth, digits=round_wl)
+            self.spectra_vs_time[v] = df
+
+        self.time_index()
 
         return
 
-    def spec_echem_voltage(self, wavelength=800, which_run=1,
-                           smooth=3, digits=None):
+    def _single_time_spectra(self, spectra_path, smooth=3, digits=None):
         '''
-        Takes the list of spectra files specfiles, then extracts the final spectra
-        from each file and returns as a single dataframe
+        Generates the time-dependent spectra for a single dataframe.
+        This is used internally to generate the dataFrame then passed to time_dep_spectra()
+        
+        spectra_path : str
+            Path to a specific spectra file
+            
+        smooth : int, optional
+            For smoothing the data via a boxcar filter. None = no smoothing. 
+        
+        Returns
+        ---------
+        df : dataFrame
+            dataFrame of index = wavelength, columns = times, data = absorbance
+            
+        '''
+
+        pp = pd.read_csv(spectra_path, sep='\t')
+
+        try:
+            runs = np.unique(pp['Spectrum number'])
+        except:
+            wl = pp['Wavelength (nm)'][0]
+            runs = np.arange(1, len(np.where(pp['Wavelength (nm)'] == wl)[0]) + 1)
+
+        times = np.unique(pp['Time (s)'])
+        times = times - times[0]
+        per_run = int(len(pp) / runs[-1])
+        wl = pp['Wavelength (nm)'][0:per_run]
+
+        # Set up dataframe
+        df = pd.DataFrame(index=wl)
+        if digits:
+            df = df.set_index(np.round(df.index.values, digits)) # rounds wavelengths
+
+        for k, t in zip(runs, times):
+
+            try:
+                data = pp[pp['Spectrum number'] == k]['Absorbance'].values
+            except:
+                idx = per_run * (k - 1)
+                data = pp['Absorbance'].iloc[idx:idx + per_run].values
+
+            if smooth:
+                data = sg.fftconvolve(data, np.ones(smooth) / smooth, mode='same')
+
+            df[np.round(t, 2)] = pd.Series(data, index=df.index)
+
+        return df
+
+    def spec_echem_voltage(self, time=0, smooth=3, digits=None):
+        '''
+        Takes the list of spectra files specfiles, then extracts the time-slice of 
+        spectra from each file and returns as a single dataframe
         
         Also extracts the absorbance vs voltage at a particular wavelength
         
-        specfiles : list of str
-            Contains paths to the specfiles
-            
-        potentials : list
-            Contains correlated list of Gate voltages
-            
-        wavelength : int
-            wavelength to extract voltage-dependent data on
-            
-        which_run : int, optional
-            Which run to select and save. By default is the first (the initial time slice)
+        time : int, optional
+            What time slice to return
 
         smooth : int
             simple boxcar smooth of data for plotting/analysis purposes, controls
@@ -181,7 +254,6 @@ class uv_vis(object):
         ------
         spectra : time=0 spectra at each voltage
         spectra_sm : time=0 spectra (smoothed) at each voltage
-        vt : absorbance at 'wavelength' vs voltage (like a transfer curve)
             
         '''
         pp = pd.read_csv(self.specs[0], sep='\t')
@@ -201,64 +273,67 @@ class uv_vis(object):
         # Set up a "smoothed" dataFrame
         dfs = pd.DataFrame(index=wl)
 
-        for fl, v in zip(self.specs, self.potentials):
-
-            pp = pd.read_csv(fl, sep='\t')
-            try:
-                data = pp[pp['Spectrum number'] == runs[which_run]]['Absorbance'].values
-            except:
-                idx = per_run * (runs[which_run] - 1)
-                data = pp['Absorbance'].iloc[idx:idx + per_run].values
+        for v in self.potentials:
+            col = np.searchsorted(self.spectra_vs_time[v].columns.values, time)
+            col = self.spectra_vs_time[v].columns.values[col]
+            data = self.spectra_vs_time[v][col]
             df[v] = pd.Series(data, index=df.index)
             data = sg.fftconvolve(data, np.ones(smooth) / smooth, mode='same')
             dfs[v] = pd.Series(data, index=df.index)
 
-            if digits:
-                dfs[v] = dfs[v].set_index(np.round(dfs[v].index.values, digits))
-
-        idx = df[v].index
-        wl = idx.searchsorted(wavelength)
-
         self.spectra = df
         self.spectra_sm = dfs
-        pp = pd.read_csv(self.steps[0], sep='\t')
-
-        self.tx = pp['Corrected time (s)'].values
-        self.tx = np.round(self.tx, 2)
 
         return
 
-    def current_vs_time(self):
+    def time_index(self, stepfiles=None):
+        '''
+        Sets up the time index by reading from the first working electrode current file
+        
+        Alternatively, can read from the time-dependent spectra dataframe
+        '''
+        if stepfiles:
+            pp = pd.read_csv(stepfiles, sep='\t')
+
+            self.tx = pp['Corrected time (s)'].values
+            self.tx = np.round(self.tx, 2)
+        
+        else:
+                
+            key = next(iter(self.spectra_vs_time)) # random key
+            self.tx = self.spectra_vs_time[key].columns.values
+        
+        return
+    
+
+    def current_vs_time(self, stepfiles):
         '''
         Processes "step" files to generate the current vs time at each voltage
 
-        Saves the time-series data as well
+        Saves the integrated charge as well
+        
+        stepfiles : str, list
+            List of steps files (containing working electrode current) on disk
         '''
-        pp = pd.read_csv(self.steps[0], sep='\t')
-
-        tx = pp['Corrected time (s)'].values
+        
+        tx = self.tx
+        
         df = pd.DataFrame(index=np.round(tx, 2))
 
-        for fl, v in zip(self.steps, self.potentials):
+        for fl, v in zip(stepfiles, self.potentials):
             pp = pd.read_csv(fl, sep='\t')
             data = pp['WE(1).Current (A)']
             df[v] = pd.Series(data.values, index=df.index)
 
         self.current = df
-
-        return
-
-    def time_dep_spectra(self, smooth=3):
-        '''
-        Generates all the time-dependent spectra
-        '''
-
-        self.spectra_vs_time = {}
-        for v, r in zip(self.potentials, range(len(self.potentials))):
-            spectra_path = self.specs[r]
-            df = self.single_time_spectra(spectra_path)
-
-            self.spectra_vs_time[v] = df
+      
+        charge = pd.DataFrame(columns=self.current.columns, index = [0])
+        charge.columns.name = 'Potential (V)'
+        tx = self.current.index.values
+        for p in self.current:
+            charge[p] = spint.trapz(self.current.index.values, self.current[p].values)*1e3
+        
+        self.charge = charge
 
         return
 
@@ -321,42 +396,6 @@ class uv_vis(object):
 
         return
 
-    def single_time_spectra(self, spectra_path, time=0):
-        '''
-        Generates the time-dependent spectra for a single dataframe
-        
-        spectra_path : str
-            Path to a specific spectra file
-        '''
-
-        pp = pd.read_csv(spectra_path, sep='\t')
-
-        try:
-            runs = np.unique(pp['Spectrum number'])
-        except:
-            wl = pp['Wavelength (nm)'][0]
-            runs = np.arange(1, len(np.where(pp['Wavelength (nm)'] == wl)[0]) + 1)
-
-        times = np.unique(pp['Time (s)'])
-        times = times - times[0]
-        per_run = int(len(pp) / runs[-1])
-        wl = pp['Wavelength (nm)'][0:per_run]
-
-        # Set up dataframe
-        df = pd.DataFrame(index=wl)
-
-        for k, t in zip(runs, times):
-
-            try:
-                data = pp[pp['Spectrum number'] == k]['Absorbance'].values
-            except:
-                idx = per_run * (k - 1)
-                data = pp['Absorbance'].iloc[idx:idx + per_run].values
-
-            df[np.round(t, 2)] = pd.Series(data, index=df.index)
-
-        return df
-
     def volt(self, bias):
         '''
         returns voltage from potential list
@@ -366,9 +405,29 @@ class uv_vis(object):
 
         return out
 
-    def banded_plot(self, wl_start=700, wl_stop=900, voltage=1, fittype='exp'):
+    def banded_fits(self, wl_start=700, wl_stop=900, voltage=1, fittype='exp'):
         '''
-        Returns the fits from a range of spectra_vs_time data
+        Returns the fits from a range of spectra_vs_time data for a particular potential
+        
+        wl_start : int
+        wl_stop : int
+            The start and stop wavelengths for generating fits
+            
+        voltage : float
+            The potential data to analyze in the spectra_vs_time dataFrame
+            
+        fittype: str
+            of 'exp' 'biexp' and 'stretched', the form of the fitting function
+            exp = single exponential (fastest)
+            biexp = two exponentials
+            stretched = stretched expontential
+            
+        Generates
+        -------
+        fits : ndarray list
+            Contains the fit values. Either a single entry list for exp or a list of
+                tuples for biexp and stretched
+        
         '''
 
         wl_x = self.spectra_vs_time[voltage][wl_start:wl_stop]
@@ -391,7 +450,7 @@ class uv_vis(object):
                 popt, _ = curve_fit(fit_strexp, tx, self.spectra_vs_time[voltage].loc[wl])
                 fits.append((popt[2], popt[3]))
 
-        self.fits = fits
+        self.fits = np.array(fits)
 
         return
 
@@ -553,15 +612,21 @@ def save_h5(data, filename):
     with h5py.File(filename+'.h5', 'w') as f:
         dset = f.create_dataset('potentials', (len(data.potentials),))
         dset[:] = data.potentials[:]
+        dset = f.create_dataset('charge', (len(data.charge.values[0]),))
+        dset[:] = data.charge.values[0][:]
     f.close()
     
     for p in data.spectra_vs_time:
         data.spectra_vs_time[p].to_hdf(filename+'.h5', key=str(p), mode='a')
-
+    
+    data.current.to_hdf(data_path+'\dopingdata.h5', key ='current', mode='a')
+    
     return
 
 def convert_h5(h5file):
     '''
+    Converts a saved hdf5 to uvvis Class format
+    
     axis0 = time
     axis1 = wavelength
     block0_items
@@ -579,6 +644,7 @@ def convert_h5(h5file):
     folders = folders[1:]
     folders_num = [float(p) for p in folders[1:]]
     
+    # The spectra_vs_time data
     df_dict = {}
     for v, n in zip(folders, folders_num):
         p = 'x'+v
@@ -592,6 +658,20 @@ def convert_h5(h5file):
         data.tx = np.round(spec_file['axis0'], 2)
         
     data.spectra_vs_time = df_dict
+    
+    # Now get the current data
+    current_dict = {}
+    for v, n in zip(folders, folders_num):
+        p = 'x'+v
+        spec_file = file[p]
+        df = pd.DataFrame(data = spec_file['block0_values'][()], 
+                          index = spec_file['axis1'][()], 
+                          columns = spec_file['axis0'])
+        df.index.name = 'Wavelength (nm)'
+        df.columns.name = 'Time (s)'
+        df_dict[n] = df
+        data.tx = np.round(spec_file['axis0'], 2)
+        
     
     file.close()
     
