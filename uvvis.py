@@ -375,24 +375,21 @@ class uv_vis(object):
         '''
         Extracts the absorbance vs voltage at a particular wavelength (threshold visualizing)
         '''
-        idx = self.spectra.index
-        wl = idx.searchsorted(wavelength)
+
         tx = self.tx.searchsorted(time)
         if time == -1:
             tx = self.tx[-1]
         # self.vt = self.spectra.loc[idx[wl]]
 
         vt = []
+        vt = pd.DataFrame(columns=['Abs'])
         for dv in self.spectra_vs_time:
-            try:
-                vt.append(self.spectra_vs_time[dv].loc[idx[wl]][tx])
-            except:
-                # if somehow the column names aren't matching
-                ctx = self.spectra[dv].columns
-                tx = np.searchsorted(ctx, 39.2)
-                vt.append(self.spectra_vs_time[dv].loc[idx[wl]][tx])
-
-        self.vt = np.array(vt)
+            
+            df = self.spectra_vs_time[dv]
+            wl = df.index.values.searchsorted(wavelength)
+            vt.loc[dv] = self.spectra_vs_time[dv].iloc[wl][tx]
+            
+        self.vt = vt
 
         return
 
@@ -554,7 +551,7 @@ def plot_spectra_vs_time(uv, ax=None, crange=[0.2, 0.75], potential=0.7, **kwarg
     return ax
 
 
-def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1, **kwargs):
+def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=0, **kwargs):
     '''
 
     Plots the "threshold" from the absorbance.
@@ -571,10 +568,10 @@ def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1, **kwargs):
     uv.abs_vs_voltage(wavelength=wavelength, time=time)
 
     if norm == None:
-        ax.plot(uv.potentials * -1, uv.vt, **kwargs)
+        ax.plot(uv.vt, **kwargs)
     else:
-        numerator = (uv.vt - uv.vt.min())
-        ax.plot(uv.potentials * -1, numerator / numerator.max(), **kwargs)
+        numerator = (uv.vt.values[0] - uv.vt.values[0]())
+        ax.plot(uv.vt.index.values * -1, numerator / numerator.max(), **kwargs)
     ax.set_xlabel('Gate Bias (V)')
     ax.set_ylabel('Absorbance (a.u.)')
     ax.set_title('Absorbance vs Voltage at ' + str(wavelength) + ' nm')
