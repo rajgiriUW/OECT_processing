@@ -13,6 +13,7 @@ from scipy import integrate as spint
 import os
 import re
 import h5py
+from pathlib import Path
 
 import seaborn as sns
 
@@ -25,12 +26,10 @@ Usage:
     
     >> steps, specs, potentials = uvvis.read_files(path_to_folder)
     >> data = uvvis.uv_vis(steps, specs, potentials)
-    >> data.spec_echem_voltage() # spectra at each voltage in one dataFrame
-    >> data.time_dep_spectra() # generates a dict of spectra vs time at a voltage
+    >> data.time_dep_spectra(specfiles=specs)  # Dict of spectra vs time
     >> data.single_wl_time(0.8, 800) # wavelength vs time at a given bias (0.8 V) and wavelength (800 nm)
     >> data.abs_voltage(800, 20) # absorbance vs voltage at specific wavelength (800 nm) and specific time (20 s)
     
-    >> 
     >> uvvis.plot_voltage(data)
 
 '''
@@ -54,20 +53,22 @@ def read_files(path):
     potentials : ndarray
         Numpy array of the potentials in filelist order
     '''
-
+    if isinstance(path, str):
+        path = Path(path)
+        
     filelist = os.listdir(path)
 
     # Rename the first files
     if 'steps.txt' in filelist:
-        os.rename(path + '\steps.txt', path + '\steps(0).txt')
+        os.rename(path / 'steps.txt', path / 'steps(0).txt')
     if 'spectra.txt' in filelist:
-        os.rename(path + '\spectra.txt', path + '\spectra(0).txt')
+        os.rename(path / 'spectra.txt', path / 'spectra(0).txt')
     if 'stepsspectra.txt' in filelist:
-        os.rename(path + '\stepsspectra.txt', path + '\stepsspectra(0).txt')
+        os.rename(path / 'stepsspectra.txt', path / 'stepsspectra(0).txt')
     if 'dedoping.txt' in filelist:
-        os.rename(path + '\dedoping.txt', path + '\dedoping(0).txt')
+        os.rename(path / 'dedoping.txt', path / 'dedoping(0).txt')
     if 'dedopingspectra.txt' in filelist:
-        os.rename(path + '\dedopingspectra.txt', path + '\dedopingspectra(0).txt')
+        os.rename(path / 'dedopingspectra.txt', path / 'dedopingspectra(0).txt')
 
     filelist = os.listdir(path)
 
@@ -81,8 +82,7 @@ def read_files(path):
     dedopespecfiles = [os.path.join(path, name)
                        for name in filelist if (name[-3:] == 'txt' and 'dedopingspectra(' in name)]
 
-    ''' Need to "human sort" the filenames '''
-
+    ''' Need to "human sort" the filenames or sorts 1,10,11,2,3,4, etc'''
     # https://stackoverflow.com/questions/4836710/does-python-have-a-built-in-function-for-string-natural-sort
     def natural_sort(l):
         convert = lambda text: int(text) if text.isdigit() else text.lower()
@@ -316,13 +316,17 @@ class uv_vis(object):
             List of steps files (containing working electrode current) on disk
         '''
         
-        tx = self.tx
+        tx = []
         
-        df = pd.DataFrame(index=np.round(tx, 2))
-
         for fl, v in zip(stepfiles, self.potentials):
+            
             pp = pd.read_csv(fl, sep='\t')
             data = pp['WE(1).Current (A)']
+            
+            if not any(tx):
+                tx = pp['Corrected time (s)']
+                df = pd.DataFrame(index=np.round(tx, 2))
+            
             df[v] = pd.Series(data.values, index=df.index)
 
         self.current = df
