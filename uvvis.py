@@ -24,7 +24,7 @@ UV Vis spec-echem processing
 
 Usage:
     
-    >> steps, specs, potentials = uvvis.read_files(path_to_folder)
+    >> steps, specs, potentials,_,_ = uvvis.read_files(path_to_folder)
     >> data = uvvis.uv_vis(steps, specs, potentials)
     >> data.time_dep_spectra(specfiles=specs)  # Dict of spectra vs time
     >> data.single_wl_time(0.8, 800) # wavelength vs time at a given bias (0.8 V) and wavelength (800 nm)
@@ -554,7 +554,8 @@ def plot_spectra_vs_time(uv, ax=None, crange=[0.2, 0.75], potential=0.7, **kwarg
     return ax
 
 
-def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1, **kwargs):
+def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1, 
+                 flip_x = False, **kwargs):
     '''
 
     Plots the "threshold" from the absorbance.
@@ -568,13 +569,18 @@ def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1, **kwargs):
     if ax == None:
         fig, ax = plt.subplots(nrows=1, figsize=(12, 6), facecolor='white')
 
+    if flip_x:
+        flip = -1
+    else:
+        flip = 1
+
     uv.abs_vs_voltage(wavelength=wavelength, time=time)
 
     if norm == None:
-        ax.plot(uv.vt, **kwargs)
+        ax.plot(uv.vt.index.values * flip, **kwargs)
     else:
-        numerator = (uv.vt.values[0] - uv.vt.values[0]())
-        ax.plot(uv.vt.index.values * -1, numerator / numerator.max(), **kwargs)
+        numerator = (uv.vt.values - uv.vt.values.min())
+        ax.plot(uv.vt.index.values * flip, numerator / numerator.max(), **kwargs)
     ax.set_xlabel('Gate Bias (V)')
     ax.set_ylabel('Absorbance (a.u.)')
     ax.set_title('Absorbance vs Voltage at ' + str(wavelength) + ' nm')
@@ -651,8 +657,11 @@ def convert_h5(h5file):
     non_potentials = ['current', 'charge', 'potentials']
     _fold_temp = [c if c not in non_potentials else None for c in folders]
     folders = [c for c in _fold_temp if(c)]            
-                
-    folders_num = [float(p) for p in folders[:]]
+    
+    try:
+        folders_num = [float(p) for p in folders[:]]
+    except: # for old 'x-1.0V' style, crops 'x'
+        folders_num = [float(p[1:]) for p in folders[:]]
     
     # The spectra_vs_time data
     df_dict = {}
