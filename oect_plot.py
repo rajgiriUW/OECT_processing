@@ -92,6 +92,9 @@ def plot_uC(dv, label='', savefig=True, axlin=None, axlog=None,
 
     for k in kwargs:
         params[k] = kwargs[k]
+    if 'ax' in params:
+        axlin = params['ax']
+        del params['ax']
 
     plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
