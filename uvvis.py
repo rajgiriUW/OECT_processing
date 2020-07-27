@@ -56,7 +56,7 @@ def read_files(path):
     if isinstance(path, str):
         path = Path(path)
         
-    filelist = os.listdir(path)
+    filelist = [f for f in os.listdir(path) if not f.startswith('.')]
 
     # Rename the first files
     if 'steps.txt' in filelist:
