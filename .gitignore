@@ -1,2 +1,10 @@
 
 *.pyc
+
+*.tif
+
+test_data/101/
+
+test_data/102/
+
+test_data/
