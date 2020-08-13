@@ -148,7 +148,7 @@ class uv_vis(object):
 
         return
 
-    def time_dep_spectra(self, specfiles, smooth=None, round_wl = 2):
+    def time_dep_spectra(self, specfiles, smooth=None, round_wl = 2, droptimes = None):
         '''
         Generates all the time-dependent spectra. This yields a dictionary where
         each voltage key contains the time-dependent spectra dataframe 
@@ -168,6 +168,10 @@ class uv_vis(object):
         round_wl : int, optional
             Digits to round the wavelength values to in the dataFrames
             None = no rounding
+            
+        droptimes : list or array, optional
+            Specific time indices to drop. This functionality is for initial or final
+            errors in spectroelectrochemistry data
         
         '''
 
@@ -177,6 +181,10 @@ class uv_vis(object):
             
             df = self._single_time_spectra(spectra_path, smooth=smooth, digits=round_wl)
             self.spectra_vs_time[v] = df
+
+        if any(droptimes):
+            for st in self.spectra_vs_time:
+                self.spectra_vs_time[st] = self.spectra_vs_time[st].drop(droptimes, axis=1)
 
         self.time_index()
 
