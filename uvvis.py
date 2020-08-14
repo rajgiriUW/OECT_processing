@@ -264,16 +264,8 @@ class uv_vis(object):
         spectra_sm : time=0 spectra (smoothed) at each voltage
             
         '''
-        pp = pd.read_csv(self.specs[0], sep='\t')
 
-        try:
-            runs = np.unique(pp['Spectrum number'])
-        except:
-            wl = pp['Wavelength (nm)'][0]
-            runs = np.arange(1, len(np.where(pp['Wavelength (nm)'] == wl)[0]) + 1)
-        per_run = int(len(pp) / runs[-1])
-        #    last_run = runs[-1]
-        wl = pp['Wavelength (nm)'][0:per_run]
+        wl = self.spectra_vs_time[0].index.values
 
         # Set up dataFrame
         df = pd.DataFrame(index=wl)
@@ -281,13 +273,15 @@ class uv_vis(object):
         # Set up a "smoothed" dataFrame
         dfs = pd.DataFrame(index=wl)
 
-        for v in self.potentials:
+        for v in self.spectra_vs_time:
+            
             col = np.searchsorted(self.spectra_vs_time[v].columns.values, time)
             col = self.spectra_vs_time[v].columns.values[col]
+            
             data = self.spectra_vs_time[v][col]
-            df[v] = pd.Series(data, index=df.index)
+            df[v] = pd.Series(data, index=df.index, name=str(v))
             data = sg.fftconvolve(data, np.ones(smooth) / smooth, mode='same')
-            dfs[v] = pd.Series(data, index=df.index)
+            dfs[v] = pd.Series(data, index=df.index, name=str(v))
 
         self.spectra = df
         self.spectra_sm = dfs
