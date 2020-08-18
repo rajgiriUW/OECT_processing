@@ -8,3 +8,13 @@ test_data/101/
 test_data/102/
 
 test_data/
+
+*.jpg
+
+Kinetics, KPF6, 825 and 800 nm.png
+
+output.txt
+
+wavelength.txt
+
+*.pkl

@@ -354,7 +354,7 @@ class uv_vis(object):
             Wavelength to extract. This will search for nearest wavelength row
             
         '''
-        df = self.spectra_vs_time[potential]
+        df = self.spectra_vs_time[potential].copy(deep=True)
 
         idx = df.index
         wl = idx.searchsorted(wavelength)
