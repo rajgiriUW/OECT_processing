@@ -4,30 +4,35 @@ This small set of files processes sets of OECT device measurements in Python via
 It includes some simplified extraction and processing of recorded data.  
 There is also simplified scripts for extracting and processing spectroelectrochemistry data.  
 
-There are two primary modes of operation:  
-1. Individual device pixels.  
-2. A folder containing pixels for generating a uC* plot. 
-
 All pixels are expected to have a .cfg file or will auto-generate one. These files contain:
 * Width and Length
 * Film thickness
 * Vg and Vd for output and transfer curves
 * Read times (dwell time before first measurement and before each subsequent voltage step)
 
-#### Usage (in Spyder or equivalent):
-```
->> path = r'\path\to\data_folder'
->> import OECT, OECT_plotting, OECT_loading
->> devices, uC = OECT_loading.uC_scale(path_uC, thickness=100e-9)
+#### Requirements
+- PyQt5
+- numpy
+- pyqtgraph
+- pandas
+- scipy
+- matplotlib
 
->> path = r'\path\to\specific\device'
->> dv = OECT.OECT(path, thickness=100e-9)
->> dv.calc_gms()
->> dv.thresh()
->> OECT_plotting.plot_transfers_gm(dv)
-```
+#### Running the Application
+1. Pull or download code from this repository.
+2. In command prompt, install dependencies with
+```pip install pyqt5 numpy pyqtgraph pandas scipy matplotlib```
+3. Navigate to folder containing oect_processing_app.py.
+4. Run the app with ```python oect_processing_app.py```
 
-This will then generate uC* graph, an averaged transfer curve and output curve, and individual transfer and output curves. Thickness is the film thickness. You will have to know this for these data to be correct, of course, but it is more critical to uC* scaling
-
-
-
+#### Usage
+![application panel screenshot](https://github.com/rajgiriUW/OECT_processing/blob/pythongui/screenshots/app_panel.jpg)
+1. Load parent folder(s) containing device subfolder(s), with "Load parent folder". Folders will show up in the sidebar below the button, all automatically selected for uC* plotting.
+2. Deselect any device subfolders to omit from plotting by clicking on highlighted subfolders. 
+3. If needed, use spinboxes to adjust device dimensions.
+4. If needed, check "Average devices with the same WdL".
+5. Click "Analyze" button. 
+6. Once analysis is completed:
+   - gm peaks for each device, uC*, and Vt values will be shown in text browser under the "Analyze" button
+   - uC will be plotted on the graphs on the right, with a draggable legend on the linear graph
+   - uC graphs will be automatically saved as .tif files in parent folder.
