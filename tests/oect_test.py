@@ -21,7 +21,7 @@ class TestOECT:
 
 	#test that parameters are read from config
 	def test_set_params(self):
-		test_oect = oect.OECT(folder='test_device/01') #called in init
+		test_oect = oect.OECT(folder='tests/test_device/01') #called in init
 		assert (test_oect.params['W'] == 4000.0
 			and test_oect.params['L'] == 20.0
 			and test_oect.params['d'] == 4e-8
@@ -35,7 +35,7 @@ class TestOECT:
 
 	#test that options are read from config
 	def test_set_opts(self):
-		test_oect = oect.OECT(folder='test_device/options_test') #called in init
+		test_oect = oect.OECT(folder='tests/test_device/options_test') #called in init
 		assert (test_oect.options['Reverse'] == True
 			and test_oect.options['Average'] == False
 			and test_oect.options['gm_method'] == 'method'
@@ -43,7 +43,7 @@ class TestOECT:
 
 	#test that additional parameters can be added from constructor
 	def test_set_params_add(self):
-		test_oect = oect.OECT(folder='test_device/01', params={'test_param1': 100},
+		test_oect = oect.OECT(folder='tests/test_device/01', params={'test_param1': 100},
 			options={'test_option1': 200})
 		assert (test_oect.params['test_param1'] == 100
 			and test_oect.options['test_option1'] == 200)
@@ -70,19 +70,19 @@ class TestOECT:
 
 	#test that txt filelist is correctly grabbed from path
 	def test_filelist(self):
-		test_oect = oect.OECT(folder='test_device/01')
+		test_oect = oect.OECT(folder='tests/test_device/01')
 		test_oect.filelist()
-		assert (test_oect.files == ['test_device/01\\uc1_kpf6_output_0.txt',
-			'test_device/01\\uc1_kpf6_output_1.txt',
-			'test_device/01\\uc1_kpf6_transfer_0.txt']
-			and test_oect.config[0] == 'test_device/01\\uc1_kpf6_config.cfg')
+		assert ('tests/test_device/01/uc1_kpf6_output_0.txt' in test_oect.files
+			and 'tests/test_device/01/uc1_kpf6_output_1.txt' in test_oect.files
+			and 'tests/test_device/01/uc1_kpf6_transfer_0.txt' in test_oect.files
+			and test_oect.config[0] == 'tests/test_device/01/uc1_kpf6_config.cfg')
 
 	#test that config file is generated when folder starts with no cfg
 	def test_filelist_noconfig(self):
-		test_oect = oect.OECT(folder='test_device/no_config')
-		config_check = os.path.isfile('test_device/no_config\\config.cfg')
+		test_oect = oect.OECT(folder='tests/test_device/no_config')
+		config_check = os.path.isfile('tests/test_device/no_config/config.cfg')
 		try:
-			os.remove('test_device/no_config\\config.cfg')
+			os.remove('tests/test_device/no_config/config.cfg')
 		except:
 			pass
 		assert config_check 
@@ -93,7 +93,7 @@ class TestOECT:
 	#test that metadata is correctly taken from file
 	def test_get_metadata(self):
 		test_oect = oect.OECT(folder=os.getcwd())
-		test_file = 'test_device/metadata_test/uc1_kpf6_output_0.txt'
+		test_file = 'tests/test_device/metadata_test/uc1_kpf6_output_0.txt'
 		test_oect.get_metadata(test_file)
 		assert (test_oect.Vg == -.5
 			and test_oect.W == 2000
@@ -101,9 +101,9 @@ class TestOECT:
 
 	#test that metadata is correctly grabbed from data file if config doesn't exist
 	def test_get_metadata_no_config(self):
-		test_oect = oect.OECT(folder='test_device/metadata_test')
+		test_oect = oect.OECT(folder='tests/test_device/metadata_test')
 		test_oect.make_config = True
-		test_file = 'test_device/metadata_test/uc1_kpf6_output_0.txt'
+		test_file = 'tests/test_device/metadata_test/uc1_kpf6_output_0.txt'
 		test_oect.get_metadata(test_file)
 		assert (test_oect.Vg == -.5
 			and test_oect.W == 4000
@@ -116,7 +116,7 @@ class TestOECT:
 	def test_transfer_curve_wrong_col_names(self):
 		test_oect = oect.OECT(folder=os.getcwd())
 		with pytest.raises(KeyError):
-			test_file = 'test_device/broken/broken_uc1_kpf6_transfer_0.txt'
+			test_file = 'tests/test_device/broken/broken_uc1_kpf6_transfer_0.txt'
 			test_oect.get_metadata(test_file)
 			test_oect.transfer_curve(test_file)
 
@@ -127,7 +127,7 @@ class TestOECT:
 	def test_output_curve_wrong_col_names(self):
 		test_oect = oect.OECT(folder=os.getcwd())
 		with pytest.raises(KeyError):
-			test_file = 'test_device/01/uc1_kpf6_output_0.txt'
+			test_file = 'tests/test_device/01/uc1_kpf6_output_0.txt'
 			test_oect.get_metadata(test_file)
 			test_oect.transfer_curve(test_file)
 
@@ -136,12 +136,12 @@ class TestOECT:
 
 	#test that correct number of outputs were added
 	def test_all_outputs(self):
-		test_oect = oect.OECT(folder='test_device/01') #called in init
+		test_oect = oect.OECT(folder='tests/test_device/01') #called in init
 		assert test_oect.num_outputs == 4
 
 	#test that outputs are added to existing outputs
 	def test_all_outputs_append(self):
-		test_oect = oect.OECT(folder='test_device/01') #called in init
+		test_oect = oect.OECT(folder='tests/test_device/01') #called in init
 		test_oect.all_outputs() #call again
 		assert test_oect.num_outputs == 8
 
@@ -150,7 +150,7 @@ class TestOECT:
 	
 	#test that correct number of transfers were added
 	def test_all_transfers(self):
-		test_oect = oect.OECT(folder='test_device/01') #called in init
+		test_oect = oect.OECT(folder='tests/test_device/01') #called in init
 		assert test_oect.num_transfers == 2
 
 	#_reverse
@@ -176,7 +176,7 @@ class TestOECT:
 	
 	#test that config file is updated to match oect attributes
 	def test_update_config(self):
-		test_oect = oect.OECT(folder='test_device/no_config')
+		test_oect = oect.OECT(folder='tests/test_device/no_config')
 		#config will be auto generated in init
 		#default config will be made with values:
 		# [Dimensions]
@@ -214,7 +214,7 @@ class TestOECT:
 			and config['Output']['Vgs (V) 3'] == '0.3'
 			and config['Output']['Vgs (V) 4'] == '0.4')
 		try:
-			os.remove('test_device/no_config\\config.cfg')
+			os.remove('tests/test_device/no_config/config.cfg')
 		except:
 			pass
 		assert update_check
@@ -233,23 +233,23 @@ class TestOECT:
 	
 	#test that params exist when loaded from config
 	def test_config_file_params(self):
-		params, opts = oect.config_file('config.cfg')
-		assert params and not opts
+		params, opts = oect.config_file('tests/config.cfg')
+		assert bool(params) and not bool(opts)
 
 	#test that options exist when loaded from config
 	def test_config_file_opts(self):
-		params, opts = oect.config_file('test_device/options_test\\uc1_kpf6_config.cfg')
-		assert params and opts
+		params, opts = oect.config_file('tests/test_device/options_test/uc1_kpf6_config.cfg')
+		assert bool(params) and bool(opts)
 		
 	#tests that nothing is added when provided with invalid path
 	def test_config_file_invalid_file(self):
 		params, opts = oect.config_file('a_nonexistent_file')
-		assert not params
+		assert not bool(params)
 
 	#test that configparser error thrown when provided with non-cfg file
 	def test_config_not_cfg(self):
 		with pytest.raises(configparser.MissingSectionHeaderError):
-			params, opts = oect.config_file('dummy_file.py')
+			params, opts = oect.config_file('tests/dummy_file.py')
 
 
 
