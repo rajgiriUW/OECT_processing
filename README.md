@@ -26,7 +26,7 @@ All pixels are expected to have a .cfg file or will auto-generate one. These fil
 4. Run the app with ```python oect_processing_app.py```
 
 #### Usage
-![application panel screenshot](https://github.com/rajgiriUW/OECT_processing/blob/pythongui/screenshots/app_panel.jpg)
+![application panel screenshot](https://github.com/rajgiriUW/OECT_processing/blob/pythongui/app_panel.jpg)
 1. Load parent folder(s) containing device subfolder(s), with "Load parent folder". Folders will show up in the sidebar below the button, all automatically selected for uC* plotting.
 2. Deselect any device subfolders to omit from plotting by clicking on highlighted subfolders. 
 3. If needed, use spinboxes to adjust device dimensions.
