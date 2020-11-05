@@ -182,7 +182,7 @@ class uv_vis(object):
             df = self._single_time_spectra(spectra_path, smooth=smooth, digits=round_wl)
             self.spectra_vs_time[v] = df
 
-        if any(droptimes):
+        if droptimes:
             for st in self.spectra_vs_time:
                 self.spectra_vs_time[st] = self.spectra_vs_time[st].drop(droptimes, axis=1)
 
@@ -265,7 +265,7 @@ class uv_vis(object):
             
         '''
 
-        wl = self.spectra_vs_time[0].index.values
+        wl = self.spectra_vs_time[self.potentials[0]].index.values
 
         # Set up dataFrame
         df = pd.DataFrame(index=wl)
