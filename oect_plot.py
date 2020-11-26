@@ -12,7 +12,7 @@ import matplotlib.cbook
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
-import pyqtgraph as pg
+#import pyqtgraph as pg
 import os
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 

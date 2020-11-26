@@ -413,7 +413,7 @@ class OECT:
                     nm = 'gm_' + g[:-1] + str(labels)
 
                 df = pd.Series(data=gm, index=idx)
-                df.sort_index(inplace=True)
+                #df.sort_index(inplace=True)
                 self.gms[nm] = df
 
         for g in self.gm_bwd:
@@ -430,7 +430,7 @@ class OECT:
                     nm = 'gm_' + g[:-1] + str(labels)
 
                 df = pd.Series(data=gm, index=idx)
-                df.sort_index(inplace=True)
+                #df.sort_index(inplace=True)
                 self.gms[nm] = df
 
         self.peak_gm = self.gm_peaks['peak gm (S)'].values
@@ -588,13 +588,13 @@ class OECT:
             mx, reverse = self._reverse(idx, transfer=True)
             nm = tf + '_01'
             df = pd.Series(data=transfer[:mx], index=idx[:mx])
-            df.sort_index(inplace=True)
+            #df.sort_index(inplace=True)
             self.transfers[nm] = df
 
             if reverse:
                 nm = tf + '_02'
                 df = pd.Series(data=transfer[mx:], index=idx[mx:])
-                df.sort_index(inplace=True)
+                #df.sort_index(inplace=True)
                 self.transfers[nm] = df
 
         if 'Average' in self.options and self.options['Average']:
