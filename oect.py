@@ -22,6 +22,8 @@ from collections import Counter
 
 from deriv import gm_deriv
 
+import re
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
@@ -66,6 +68,7 @@ class OECT:
         dictionary in format of {parentfolder1: {subfolder1: w1, l1}, {subfolder2: w2, l2}, parentfolder2...}
     params : dict, optional
         device parameters, typically Width (W), length (L), thickness (d)
+        Can also pass c_star (volumetric capacitance) here
     options : dict, optional
         processing optional parameters (for transfer curves only)
         Average : bool
@@ -93,6 +96,10 @@ class OECT:
             Element 0: forward, 1: reverse
         WdL : float
             The value of W*d/L, d=thickness, W=width, L=length of the device
+        c_star : float
+            Volumetric capacitance in F/cm^3. Manually provided by the user
+        capacitance : float
+            In Farads. Manually provided, then scaled itnernally to F/cm^3
 
     Other attributes:
         
@@ -202,6 +209,12 @@ class OECT:
         self.d = self.params['d']
 
         self.WdL = self.W * self.d / self.L
+        
+        self.c_star = None
+        if 'c_star' in self.params and self.params['c_star'] != None:
+            self.c_star = self.params['c_star']
+        elif 'capacitance' in self.params and self.params['capacitance'] != None:
+            self.c_star = self.params['capacitance'] / (self.W*1e-4 * self.L*1e-4 * self.d )
 
         return
 
@@ -616,9 +629,9 @@ class OECT:
                     if (idx[x + 1] - idx[x]) > 0:
                         break
 
-                cut = vdx[x]
+                cut = x
 
-                self.transfers = self.transfers[cut:]
+                self.transfers[e] = self.transfers.iloc[cut:][e]
 
         return
 
@@ -634,20 +647,31 @@ class OECT:
 
         return
 
-    def thresh(self, plot=False):
+    def thresh(self, plot=False, c_star=None, cap=None):
         """
         Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
             x-offset
 
         plot : bool, Optional
             To show the threshold fit and line
+                   
+        c_star : float, optional
+            Farad / cm^3 volumetric Capacitance
+            This looks for C_star first before using capacitance
+            
+        cap : float, optional
+            Capacitance in Farads, manually scaled by W*d*L in this Class to get C*
+
+        Id_sat = uC*/2 * Wd/L * (Vgs-Vt)^2 for high Vd > Vg - Vt
+        Id_sat^0.5 = sqrt(uC*/2 * Wd/L) * (Vg-Vt)
+        Meaning from the fit to find Vt, which fits Id_sat^0.5  = mx + b
+        u = (fit[1] / (-Vt * sqrt(C*/2 * Wd/L) ))**2
 
         """
 
         Vts = np.array([])
         VgVts = np.array([])
-
-        v_lo = self.transfers.index.values
+        mobilities = np.array([])
 
         if plot:
             from matplotlib import pyplot as plt
@@ -656,10 +680,24 @@ class OECT:
             plt.ylabel('|$I_{DS}$$^{0.5}$| ($A^{0.5}$)')
             labels = []
 
+        if c_star:
+            self.c_star = c_star
+            
+        elif cap:
+            vol = self.W*1e-4 * self.L*1e-4 * self.d  #assumes W, L in um
+            self.c_star = cap / vol # in F/cm^3
+
         # Find and fit at inflection between regimes
         for tf, pk in zip(self.transfers, self.gm_peaks.index):
             # use second derivative to find inflection, then fit line to get Vt
+            v_lo = self.transfers[tf].index.values
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values)
+            
+            # Check for nans
+            _ix = np.where(np.isnan(Id_lo) == False)
+            if any(_ix[0]):
+                Id_lo = Id_lo[_ix[0][0]:]
+                v_lo = v_lo[_ix[0][0]:]
 
             # minimize residuals by finding right peak
             fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
@@ -679,6 +717,12 @@ class OECT:
             Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
             VgVts = np.append(VgVts, np.abs(pk + fit[1] / fit[0]))  # Vg - Vt, + sign from -fit[1]/fit[0]
 
+            if self.c_star:
+                
+                mu = (-Vts[-1] * np.sqrt(0.5 * self.c_star * self.WdL * 1e2)) #1e2 for scaling Wd/L to cm
+                mu = (fit[1] / mu)**2
+                mobilities = np.append(mobilities, mu)
+
         if plot:
             plt.legend(labels=labels)
             plt.axhline(0, color='k', linestyle='--')
@@ -689,12 +733,18 @@ class OECT:
         self.Vts = Vts
         self.VgVt = np.mean(VgVts)
         self.VgVts = VgVts
+        self.mobilities = mobilities
+        self.mobility = np.mean(mobilities)
 
         return
 
     # find minimum residual through fitting a line to several found peaks
     def _min_fit(self, Id, V):
-
+        """
+        Calculates the best linear fit through the Id_saturation regime by
+        iterating through several potential peaks in the second derivative
+        
+        """
         _residuals = np.array([])
         _fits = np.array([0, 0])
 
@@ -743,10 +793,10 @@ class OECT:
         return f1 + f0 * x
 
     @staticmethod
-    def _find_peak(I, V, negative_Vt=True, width=15):
+    def _find_peak(I, V, width=15):
         """
         Uses spline to find the transition point then return it for fitting Vt
-          to sqrt(Id) vs Vg
+          to sqrt(Id) vs Vg (find second derivative peak)
 
         Parameters
         ----------
@@ -754,8 +804,6 @@ class OECT:
             Id vs Vg, currents
         V : array
             Id vs Vg, voltages
-        negative_Vt : bool
-            Assumes Vt is a negative voltage (typical for many p-type polymer)
         width : int
             Width to use in CWT peak-finder. 
 

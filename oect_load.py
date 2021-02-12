@@ -15,18 +15,24 @@ import oect
 import oect_plot
 
 '''
-load_uC : for loading the four pixels to generate a uC* plot
-load_avg : for loading all the subfolders that are the 4 "averaging" pixels
-    this is somewhat uncommon
+Wrapper function for generating a uC* plot. This file contains one main function:
+
+    load_uC : for loading the pixels to generate a uC* plot
+    
 Usage:
     
-    >> pixels, uC_dv = oect_load.uC_scale(r'path_to_uC_scale', new_geom=False)
-    
+    >> pixels, uC_dv = oect_load.uC_scale(r'path_to_folder_of_data', thicknes=40e-9, plot=[True, False)
+
+This function assumes that folders are labeled 01, 02, etc for each pixel
+The uC_Scale function then processes each subfolder of data, calculates the 
+gm, Vt, and mobility (assuming you have a capacitance value)                                                          
+
 '''
 
 
 def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
-             retrace_only=False, verbose=True, options={}):
+             retrace_only=False, verbose=True, capacitance=None, c_star = None,
+             options={}):
     '''
     path: str
         string path to folder '.../avg'. Note Windows path are of form r'Path_name'
@@ -40,11 +46,18 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
         Whether to plot or not. Not plotting is very fast!    
     retrace_only : bool, optional
         Whether to only do the retrace in case trace isn't saturating
-        
     V_low : bool, optional
         Whether to find erroneous "turnover" points when devices break down
     verbose: bool, optional
         Print to display
+    capacitance: float, optional
+        In Farads
+        If provided, will calculate the mobility. This should be a sanity check
+        against the calculated uC*, since this is somewhat circular logic
+    c_star : float, optional
+        in Farad / cm^3 NOTE THE CENTIMETERS^3 units
+        This value is calculated from EIS or so
+    
     Returns
     -------
     pixels : dict of OECT
@@ -100,7 +113,8 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
 
             if verbose:
                 print(p)
-            dv = loadOECT(p, {'d': thickness}, gm_plot=plot, plot=plot[1],
+            dv = loadOECT(p, {'d': thickness, 'capacitance': capacitance, 'c_star': c_star}, 
+                          gm_plot=plot, plot=plot[1],
                           options=opts, verbose=verbose)
             pixels[f] = dv
 
@@ -114,6 +128,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
     Vg_Vt = np.array([])  # threshold offset
     Vt = np.array([])
     gms = np.array([])
+    mobility = np.array([])
 
     # assumes Length and thickness are fixed
     uC_dv = {}
@@ -127,6 +142,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
             Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts)
             gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
             W = np.append(W, pixels[pixel].W)
+            mobility = np.append(mobility, pixels[pixel].mobility)
 
             # appends WdL as many times as there are transfer curves
             for i in range(len(pixels[pixel].VgVts)):
@@ -163,6 +179,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
     uC_dv['uC_0'] = uC_0
     uC_dv['gms'] = gms
     uC_dv['folder'] = path
+    uC_dv['mobility'] = mobility
 
     if plot[0]:
         fig = oect_plot.plot_uC(uC_dv)
