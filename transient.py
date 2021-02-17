@@ -14,13 +14,15 @@ from matplotlib import pyplot as plt
 import lmfit
 
 
-def read_time_dep(path, croptime=30, v_limit=None):
+def read_time_dep(path, start=30, stop=0, v_limit=None, skipfooter=1):
     '''
     Reads in the time-dependent data using Raj's automated version
     Saves all the different current 
     
-    croptime : int
-        Time index (s) to set as t=0 for the data
+    start : int
+        Time index (in ms) to set as t=0 for the data
+    stop : int
+        Time index (in ms) to set as the end point for the data
     v_limit : float
         Limits constant current data to when the voltage_compliance limit is reached
         Do not use this for Constant Voltage data
@@ -36,70 +38,34 @@ def read_time_dep(path, croptime=30, v_limit=None):
     Both have equivalent data, it just can be easier to deal with dicts sometimes
     but a single DataFrame is convenient for SeaBorn plotting
     '''
-    df = pd.read_csv(path, sep='\t')
-    df = df.set_index('Time (s)')  # convert to seconds
-    df = df.set_index(df.index.values / 1000.0)
-
-    try:
-        currents = pd.unique(df['Setpoint'])
-    except:
-        currents = pd.unique(df['Ig (A) '])
-        df = df.rename(columns={'Ig (A) ': 'Current (A)'})
+    df = pd.read_csv(path, sep='\t', skipfooter=skipfooter, engine='python')
+    df = df.set_index('Time (ms)')  # convert to seconds
 
     # crop the pre-trigger stuff
-    for i in currents:
-        d = df.loc[df['Setpoint'] == i]
-        f = d.index.searchsorted(croptime)
-        df = df.drop(d.index[:f])
-        if v_limit:
-            df = df.loc[np.abs(df['Voltage (V)']) <= np.abs(v_limit)]
-
-    # create a dict to separate the currents
-    device = {}
-    for i in currents:
-        d = df.loc[df['Setpoint'] == i]
-        d = d.set_index(d.index.values - d.index.values[0])
-        device[i] = d
-
-    # concatenate the corrected index dataframes into a single DataFrame
-    _dv = [device[dv] for dv in device]
-    df = pd.DataFrame()
-    df = pd.concat(_dv)
-
-    # correct units to something useful
-    df['Ids (A)'] = df['Ids (A)'] * 1000
-    df['Error (A)'] = df['Error (A)'] * 1000
-    df['Current (A)'] = df['Current (A)'] * 1000
-    setpointscale = False
-    if np.where(np.abs(df['Setpoint'].values) < 1e-6)[0].any():  # quick way to see if voltages or current
-        setpointscale = True
-        df['Setpoint'] = df['Setpoint'] * 1e9  # nA
-
-    df.index.rename('Time (ms)', inplace=True)
-    df.rename(columns={'Ids (A)': 'Ids (mA)', 'Error (A)': 'Error (mA)',
-                       'Current (A)': 'Current (mA)'}, inplace=True)
-    if setpointscale:
-        df.rename(columns={'Setpoint': 'Setpoint Current (nA)'}, inplace=True)
-    else:
-        df.rename(columns={'Setpoint': 'Setpoint Voltage (V)'}, inplace=True)
+    f = df.index.searchsorted(start)
+    df = df.drop(df.index.values[:f])
+    if stop != 0:
+        f = df.index.searchsorted(stop)
+        df = df.drop(df.index.values[f:])
+    if v_limit:
+        df = df.loc[np.abs(df['V_G (V)']) <= np.abs(v_limit)]
 
     # Add the setpoints as attributes for easy reference
-    try:
-        df.setpoints = pd.unique(df['Setpoint Current (nA)'])
-        df.is_cc = True  # constant current
+    if df.columns[0] == 'I_G (A)':
+        df.is_cc = True
         df.is_cv = False
-    except:
-        df.setpoints = pd.unique(df['Setpoint Voltage (V)'])
-        df.is_cc = False  # constant current
+    elif df.columns[1] == 'V_G (V)':
+        df.is_cc = False
         df.is_cv = True
-
+    
     df.name = path.split(r'/')[-1][:-4]
 
-    return df, device
+    return df
 
 
 def plot_ccurrent(df, v_comp=-0.9):
     '''
+    Constant current plotting
     Only plots the current where voltage doesn't saturate
     
     This only matters if you don't crop the voltage upon reading it in
@@ -110,15 +76,10 @@ def plot_ccurrent(df, v_comp=-0.9):
 
     fig, ax = plt.subplots(figsize=(9, 6))
 
-    s = 'Setpoint Current (nA)' if df.is_cc == True else 'Setpoint Voltage (V)'
+    yy = df.loc[np.abs(df['V_G(V)']) <= np.abs(v_comp)]
+    xx = df.loc[np.abs(df['V_G(V)']) <= np.abs(v_comp)].index.values
+    ax.plot(xx, yy['I_DS(A)'])
 
-    for i in df.setpoints:
-        d = df.loc[df[s] == i]
-        yy = d.loc[np.abs(d['Voltage (V)']) <= np.abs(v_comp)]
-        xx = d.loc[np.abs(d['Voltage (V)']) <= np.abs(v_comp)].index.values
-        ax.plot(xx, yy['Ids (mA)'])
-
-    ax.legend(labels=df.setpoints)
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('Current (mA)')
     ax.set_title(df.name)
@@ -468,7 +429,7 @@ def friedlein_sat(t, mu, Cg, L, Vg, Rg, Vt, Ierr):
 def fit_time(df, func='bernards', plot=True):
     xx = df.index.values / 1000.0
 
-    yy = df.values[:, 0]
+    yy = df['I_DS(A)'].values
 
     # Bernards model parameters
     y_err = 0
