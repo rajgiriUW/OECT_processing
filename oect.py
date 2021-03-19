@@ -18,11 +18,8 @@ import pandas as pd
 from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
-from collections import Counter
 
-from deriv import gm_deriv
-
-import re
+from oect_utils.deriv import gm_deriv
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -47,7 +44,7 @@ class OECT:
         
     Usage
     --------
-    >>> import OECT
+    >>> import oect
     >>>
     >>> path = '../device_data/pixel_01'
     >>>

@@ -1,12 +1,10 @@
-import configparser
 import sys
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
 from PyQt5 import QtGui
 import pyqtgraph as pg
 from ..oect import *
-from .utils.oect_plot import *
-from .utils.oect_load import *
+from ..oect_utils.oect_plot import *
+from ..oect_utils.oect_load import uC_scale
 import os
 
 pg.setConfigOption('background', 'w')

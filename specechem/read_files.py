@@ -1,3 +1,10 @@
+import os
+import numpy as np
+import pandas as pd
+import re
+from pathlib import Path
+
+
 def read_files(path):
     '''
     Takes a folder and finds the potential from all the "Steps" files

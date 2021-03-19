@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit as cf
 
-import oect
-import oect_plot
+from .. import oect
+from . import oect_plot
 
 '''
 Wrapper function for generating a uC* plot. This file contains one main function:
@@ -21,7 +21,7 @@ Wrapper function for generating a uC* plot. This file contains one main function
     
 Usage:
     
-    >> pixels, uC_dv = oect_load.uC_scale(r'path_to_folder_of_data', thicknes=40e-9, plot=[True, False)
+    >> pixels, uC_dv = oect_load.uC_scale(r'path_to_folder_of_data', thickness=40e-9, plot=[True, False)
 
 This function assumes that folders are labeled 01, 02, etc for each pixel
 The uC_Scale function then processes each subfolder of data, calculates the 

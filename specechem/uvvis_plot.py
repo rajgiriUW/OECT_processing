@@ -1,3 +1,9 @@
+from matplotlib import pyplot as plt
+import numpy as np
+import seaborn as sns
+import pandas as pd
+
+
 def plot_time(uv, ax=None, norm=True, smooth=False, **kwargs):
     if ax == None:
         fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
@@ -24,18 +30,21 @@ def plot_time(uv, ax=None, norm=True, smooth=False, **kwargs):
 
 def plot_spectra(uv, ax=None, smooth=False, crange=[0.2, 0.75], title=None, **kwargs):
     '''
-    Simple plot of the spectra
-    :param uv: uvvis Class object
-    :param ax: Axes object
+    Parameters
+    ----------
+    uv: UVVis Class object
+    ax: Axes object
         if None, creates Figure
-    :param crange: 2-size array
-        Controls the color-range for generating the colormap
-    :param title: str
-        Image title
-    :param smooth: bool
+    smooth: bool
         Whether to use the smoothed or raw spectra
+    crange: 2-size array
+        Controls the color-range for generating the colormap
+    title: str
+        Image title
+    kwargs: dict
+        matplotlib kwargs
 
-     The time slice printed is dependent on how the data are processed (default is t=0 s)
+    The time slice printed is dependent on how the data are processed (default is t=0 s)
     '''
 
     cm = np.linspace(crange[0], crange[1], len(uv.spectra_sm.columns))
@@ -59,34 +68,43 @@ def plot_spectra(uv, ax=None, smooth=False, crange=[0.2, 0.75], title=None, **kw
 
 
 def plot_spectra_vs_time(uv, ax=None, crange=[0.2, 0.75], potential=0.7, **kwargs):
-
-
     '''
-    
+    Parameters
+    ----------
+    uv: UVVis Class object
+    ax: Axes object
+        if None, creates Figure
+    crange: 2-size array
+        Controls the color-range for generating the colormap
+    potential: float
+        Valid column in the UVVis object, chooses which potential to plot
+    kwargs: dict
+        matplotlib kwargs
     '''
-endtime = uv.spectra_vs_time[potential].columns[-1]
-cm = np.linspace(crange[0], crange[1], len(uv.spectra_vs_time[potential].columns))
+    endtime = uv.spectra_vs_time[potential].columns[-1]
+    cm = np.linspace(crange[0], crange[1], len(uv.spectra_vs_time[potential].columns))
 
-if ax == None:
-    fig, ax = plt.subplots(nrows=1, figsize=(12, 6), facecolor='white')
+    if ax == None:
+        fig, ax = plt.subplots(nrows=1, figsize=(12, 6), facecolor='white')
 
-for i, cl in zip(uv.spectra_vs_time[potential], cm):
-    ax.plot(uv.spectra_vs_time[potential][i], color=plt.cm.bone(cl))
+    for i, cl in zip(uv.spectra_vs_time[potential], cm):
+        ax.plot(uv.spectra_vs_time[potential][i], color=plt.cm.bone(cl))
 
-ax.set_xlabel('Wavelength (nm)')
-ax.set_ylabel('Absorbance (a.u.)')
-ax.set_title(str(potential) + ' V kinetics over ' + str(endtime) + ' s')
+    ax.set_xlabel('Wavelength (nm)')
+    ax.set_ylabel('Absorbance (a.u.)')
+    ax.set_title(str(potential) + ' V kinetics over ' + str(endtime) + ' s')
 
-return ax
+    return ax
 
 
 def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1,
                  flip_x=False, **kwargs):
     '''
-
     Plots the "threshold" from the absorbance.
     norm = normalize the threshold UV-Vis data
 
+    Parameters
+    ----------
     wavelength : float
     t : float
         The time slice to plot, in seconds. -1 is the final time

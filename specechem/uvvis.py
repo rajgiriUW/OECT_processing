@@ -35,7 +35,7 @@ Usage:
 '''
 
 
-class uv_vis(object):
+class UVVis(object):
 
     def __init__(self, steps=None, specs=None, potentials=None):
         '''

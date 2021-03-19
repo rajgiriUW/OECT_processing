@@ -518,7 +518,7 @@ def fit_time(df, func='bernards', plot=True):
     f = 0.7
 
     if func is 'bernards':
-        popt, _ = curve_fit(bernards, xx, yy, p0=[del_I, 0.5, tau_e, tau_i, y_err])
+        popt, _ = curve_fit(bernards_cv, xx, yy, p0=[del_I, 0.5, tau_e, tau_i, y_err])
     elif func is 'friedlein':
         popt, _ = curve_fit(friedlein, xx, yy, p0=[mu, Cg, L, -0.8, Rg, Vt, Vd])
     elif func is 'faria':
@@ -529,7 +529,7 @@ def fit_time(df, func='bernards', plot=True):
         plt.plot(xx, yy, 'b-', linewidth=3)
 
         if func is 'bernards':
-            plt.plot(xx, bernards(xx, *popt), 'r--', linewidth=3)
+            plt.plot(xx, bernards_cv(xx, *popt), 'r--', linewidth=3)
         elif func is 'friedlein':
             plt.plot(xx, friedlein(xx, *popt), 'r--', linewidth=3)
         elif func is 'faria':

@@ -1,3 +1,10 @@
+import h5py
+from pathlib import Path
+from .uvvis import UVVis
+import numpy as np
+import pandas as pd
+
+
 def save_h5(data, filename):
     '''
     Saves the to two HDF5 files (.h5)
@@ -35,7 +42,7 @@ def convert_h5(h5file):
     axis1 = wavelength
     block0_items
     '''
-    data = uv_vis(None, None, None)
+    data = UVVis(None, None, None)
     file = h5py.File(h5file, 'r')
     data.potentials = file['potentials'][()]
 

@@ -11,9 +11,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit as cf
 
-import oect
-import oect_plot
-import matplotlib as plt
+from .. import oect
+from ..oect_utils import oect_plot
 from collections import Counter
 
 '''
@@ -277,7 +276,7 @@ def average_same_widths(pixels):
 
     for pixelToDel in pixelsToDel:  # delete duplicates
         del pixels[pixelToDel]
-    # produces a list of tuples. tuple index 0 is unique width value, index 1 is occurences of that value
+    # produces a list of tuples. tuple index 0 is unique width value, index 1 is occurrences of that value
     # this is sorted from most to least occurring
     widthCounts = Counter(widths).most_common()
 
