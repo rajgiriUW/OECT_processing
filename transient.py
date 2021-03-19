@@ -57,7 +57,7 @@ def read_time_dep(path, start=30, stop=0, v_limit=None, skipfooter=1):
     elif df.columns[1] == 'V_G (V)':
         df.is_cc = False
         df.is_cv = True
-    
+
     df.name = path.split(r'/')[-1][:-4]
 
     return df
@@ -81,7 +81,7 @@ def plot_ccurrent(df, v_comp=-0.9):
     ax.plot(xx, yy['I_DS(A)'], 'b')
     ax2 = ax.twinx()
     ax2.plot(xx, yy['V_G(V)'], 'r--')
-    
+
     ax2.set_ylabel('Voltage (V)')
     ax.set_xlabel('Time (ms)')
     ax.set_ylabel('Current (mA)')
@@ -389,7 +389,8 @@ def line_f(x, a, b):
 BERNARDS
 '''
 
-def bernards_cc(t, del_I, f, tau_e, tau_i, i_ss):
+
+def bernards_cc(t, Ig, f, tau_e, tau_i, i_ss):
     '''
     Bernards model fitting
     Adv. Funct. Mater. 17, pp. 3538–3544 (2007)
@@ -398,8 +399,7 @@ def bernards_cc(t, del_I, f, tau_e, tau_i, i_ss):
     valid at low gate currents becaues of voltage compliance
     
     '''
-    return i_ss - del_I * (f + t/tau_e)
-
+    return i_ss - Ig * (f + t / tau_e)
 
 
 def bernards_cv(t, del_I, f, tau_e, tau_i, i_ss):
@@ -414,8 +414,8 @@ def bernards_cv(t, del_I, f, tau_e, tau_i, i_ss):
     '''
     return i_ss + del_I * (1 - f * tau_e / tau_i) * np.exp(-t / tau_i)
 
-def lmfit_bernards(df, v_d = -0.6):
 
+def lmfit_bernards(df, v_d=-0.6, Ig=1e-6):
     '''
     For Bernards fitting of constant CURRENT data
     df : pandas DataFrame
@@ -423,40 +423,45 @@ def lmfit_bernards(df, v_d = -0.6):
         The drain voltage used during this run
     '''
     xx = (df.index.values - df.index.values[0]) / 1000.0
-    yy = df['I_DS(A)'].values * 1e6 #to get into uA instead of A
+    yy = df['I_DS(A)'].values * 1e6  # to get into uA instead of A
 
     bmod = lmfit.Model(bernards_cc)
     i_ss = yy[0]
     del_I = -np.min(yy)  # change in drain current
     tau_e = 1e-5  # electronic response time
     tau_i = 1  # ionic diffusion time
-    L = 20e-4 # channel length, fixed, 20 um= 20e-4 cm
-    params = bmod.make_params(del_I = del_I, f=0.5, tau_e=tau_e, 
-                              tau_i=tau_i, i_ss = i_ss)
-    
+    L = 20e-4  # channel length, fixed, 20 um= 20e-4 cm
+    params = bmod.make_params(Ig=Ig, f=0.5, tau_e=tau_e,
+                              tau_i=tau_i, i_ss=i_ss)
+
     # set up key params
     params['f'].vary = False
     params['tau_e'].set(min=1e-8, max=1e-2)
     params['tau_i'].set(min=1e-8, max=1e3)
     params['i_ss'].set(min=np.min(yy), max=np.max(yy))
+    params['Ig'].vary = False
     # params['del_I'].set()
-    
+
     result = bmod.fit(params=params, t=xx, data=yy)
     print(result.fit_report())
     result.plot()
-    
+
     tau_e = result.values['tau_e']
-    del_I = result.values['del_I']
+    del_I = result.values['Ig']
     # tau_i = result.values['tau_i']
-    
-    print ('mobility =',np.abs(L**2 / (tau_e * v_d)), 'cm^2/V-s')
-    print ('dIsd/dIg =', del_I / tau_e, 'uA/s')
-    
-    return bmod, result
+
+    mob = np.abs(L ** 2 / (tau_e * v_d))
+    slope = del_I / tau_e
+    print('mobility =', mob, 'cm^2/V-s')
+    print('dIsd/dIg =', del_I / tau_e, 'uA/s')
+
+    return bmod, result, mob, slope
+
 
 '''
 FRIEDLEIN (CONSTANT VOLTAGE STEP)
 '''
+
 
 def friedlein(t, mu, Cg, L, Vg, Rg, Vt, Vd):
     '''

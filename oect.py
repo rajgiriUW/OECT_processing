@@ -191,7 +191,7 @@ class OECT:
         self.set_params(_par, _opt, params, options)
         self.loaddata()
         # 
-        if dimDict: #set W and L based on dictionary
+        if dimDict:  # set W and L based on dictionary
             subfolder = os.path.basename(folder)
             parentFolder = os.path.dirname(folder)
             dims = dimDict[parentFolder][subfolder]
@@ -209,12 +209,12 @@ class OECT:
         self.d = self.params['d']
 
         self.WdL = self.W * self.d / self.L
-        
+
         self.c_star = None
         if 'c_star' in self.params and self.params['c_star'] != None:
             self.c_star = self.params['c_star']
         elif 'capacitance' in self.params and self.params['capacitance'] != None:
-            self.c_star = self.params['capacitance'] / (self.W*1e-4 * self.L*1e-4 * self.d )
+            self.c_star = self.params['capacitance'] / (self.W * 1e-4 * self.L * 1e-4 * self.d)
 
         return
 
@@ -360,12 +360,12 @@ class OECT:
         # two ways to do this
 
         # a) find reverse sweep using np.allclose
-        midpoint = len(v)//2 + 1
+        midpoint = len(v) // 2 + 1
         if len(v) % 2 == 1:
-            x = v[:len(v)//2]
+            x = v[:len(v) // 2]
             y = np.flip(v[midpoint:])
         else:
-            x = v[1:len(v)//2]
+            x = v[1:len(v) // 2]
             y = np.flip(v[midpoint:])
         reverse = np.allclose(x, y)
 
@@ -426,7 +426,7 @@ class OECT:
                     nm = 'gm_' + g[:-1] + str(labels)
 
                 df = pd.Series(data=gm, index=idx)
-                #df.sort_index(inplace=True)
+                # df.sort_index(inplace=True)
                 self.gms[nm] = df
 
         for g in self.gm_bwd:
@@ -443,7 +443,7 @@ class OECT:
                     nm = 'gm_' + g[:-1] + str(labels)
 
                 df = pd.Series(data=gm, index=idx)
-                #df.sort_index(inplace=True)
+                # df.sort_index(inplace=True)
                 self.gms[nm] = df
 
         self.peak_gm = self.gm_peaks['peak gm (S)'].values
@@ -601,13 +601,13 @@ class OECT:
             mx, reverse = self._reverse(idx, transfer=True)
             nm = tf + '_01'
             df = pd.Series(data=transfer[:mx], index=idx[:mx])
-            #df.sort_index(inplace=True)
+            # df.sort_index(inplace=True)
             self.transfers[nm] = df
 
             if reverse:
                 nm = tf + '_02'
                 df = pd.Series(data=transfer[mx:], index=idx[mx:])
-                #df.sort_index(inplace=True)
+                # df.sort_index(inplace=True)
                 self.transfers[nm] = df
 
         if 'Average' in self.options and self.options['Average']:
@@ -682,17 +682,17 @@ class OECT:
 
         if c_star:
             self.c_star = c_star
-            
+
         elif cap:
-            vol = self.W*1e-4 * self.L*1e-4 * self.d  #assumes W, L in um
-            self.c_star = cap / vol # in F/cm^3
+            vol = self.W * 1e-4 * self.L * 1e-4 * self.d  # assumes W, L in um
+            self.c_star = cap / vol  # in F/cm^3
 
         # Find and fit at inflection between regimes
         for tf, pk in zip(self.transfers, self.gm_peaks.index):
             # use second derivative to find inflection, then fit line to get Vt
             v_lo = self.transfers[tf].index.values
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values)
-            
+
             # Check for nans
             _ix = np.where(np.isnan(Id_lo) == False)
             if any(_ix[0]):
@@ -718,9 +718,8 @@ class OECT:
             VgVts = np.append(VgVts, np.abs(pk + fit[1] / fit[0]))  # Vg - Vt, + sign from -fit[1]/fit[0]
 
             if self.c_star:
-                
-                mu = (-Vts[-1] * np.sqrt(0.5 * self.c_star * self.WdL * 1e2)) #1e2 for scaling Wd/L to cm
-                mu = (fit[1] / mu)**2
+                mu = (-Vts[-1] * np.sqrt(0.5 * self.c_star * self.WdL * 1e2))  # 1e2 for scaling Wd/L to cm
+                mu = (fit[1] / mu) ** 2
                 mobilities = np.append(mobilities, mu)
 
         if plot:

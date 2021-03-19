@@ -12,8 +12,9 @@ import matplotlib.cbook
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
-#import pyqtgraph as pg
+# import pyqtgraph as pg
 import os
+
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
 '''
@@ -36,7 +37,7 @@ The other plotting functions are mostly used in OECT_loading or in OECT itself
 '''
 
 
-def plot_uC(dv, pg_graphs=[None,None], label='', savefig=True, axlin=None, axlog=None,
+def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None, axlog=None,
             fit=True, dot_color='r', **kwargs):
     """
     dv : dict of parameters needed for plotting
@@ -115,21 +116,21 @@ def plot_uC(dv, pg_graphs=[None,None], label='', savefig=True, axlin=None, axlog
 
     axlin.plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, **params)
 
-    #plot on linear pg_graph
+    # plot on linear pg_graph
     if (pg_graphs[0]):
         pg_graphs[0].setTitle('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
         folder_name = os.path.basename(dv['folder'])
-        for i in range(len(Vg_Vt)): #ensure log plot won't throw error
+        for i in range(len(Vg_Vt)):  # ensure log plot won't throw error
             if Vg_Vt[i] == 0: Vg_Vt[i] = 10e-10
             if gms[i] == 0: gms[i] = 10e-10
-        pg_graphs[0].plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, pen=None, symbolBrush=dot_color, symbol='o', name=folder_name)
-    
+        pg_graphs[0].plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, pen=None, symbolBrush=dot_color, symbol='o',
+                          name=folder_name)
+
     axlin.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
     axlin.set_ylabel('gm (mS)')
     # ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
     axlin.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
     plt.tight_layout()
-
 
     if savefig:
         fig = plt.gcf()
@@ -166,15 +167,16 @@ def plot_uC(dv, pg_graphs=[None,None], label='', savefig=True, axlin=None, axlog
     axlog.set_yscale('log')
     axlog.plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, **params)
 
-    #plot on log pg_graph
+    # plot on log pg_graph
     if (pg_graphs[1]):
         pg_graphs[1].setTitle('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
         folder_name = os.path.basename(dv['folder'])
-        for i in range(len(Vg_Vt)): #ensure log plot won't through error
+        for i in range(len(Vg_Vt)):  # ensure log plot won't through error
             if Vg_Vt[i] == 0: Vg_Vt[i] = 10e-10
             if gms[i] == 0: gms[i] = 10e-10
-        pg_graphs[1].plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, pen=None, symbolBrush=dot_color, symbol='o', name=folder_name)
-    
+        pg_graphs[1].plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, pen=None, symbolBrush=dot_color, symbol='o',
+                          name=folder_name)
+
     axlog.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
     axlog.set_ylabel('gm (mS)')
 
@@ -183,7 +185,7 @@ def plot_uC(dv, pg_graphs=[None,None], label='', savefig=True, axlin=None, axlog
                       bottom='on', left='on', right='on', top='on')
     axlog.tick_params(axis='both', length=10, width=3, which='minor',
                       bottom='on', left='on', right='on', top='on')
-    
+
     if savefig:
         fig.savefig(path + r'\scaling_uC_loglog' + label + '.tif', format='tiff')
 
@@ -192,7 +194,6 @@ def plot_uC(dv, pg_graphs=[None,None], label='', savefig=True, axlin=None, axlog
         axlog.plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx) * 1000, 'r--')
 
         plt.tight_layout()
-
 
         if savefig:
             fig.savefig(path + r'\scaling_uC_loglog_+fit' + label + '.tif', format='tiff')
