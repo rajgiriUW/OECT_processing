@@ -6,7 +6,7 @@ import numpy as np
 
 sys.path.insert(0, '..')
 
-from .. import oect
+import oect
 
 
 # most values are hardcoded - be careful if modifying cfg/txt files
