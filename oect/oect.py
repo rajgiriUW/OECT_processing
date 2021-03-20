@@ -18,11 +18,9 @@ import pandas as pd
 from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
-from collections import Counter
 
-from deriv import gm_deriv
-
-import re
+from .oect_utils.deriv import gm_deriv
+from .oect_utils.config import make_config, config_file
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -47,7 +45,7 @@ class OECT:
         
     Usage
     --------
-    >>> import OECT
+    >>> import oect
     >>>
     >>> path = '../device_data/pixel_01'
     >>>
@@ -191,7 +189,7 @@ class OECT:
         self.set_params(_par, _opt, params, options)
         self.loaddata()
         # 
-        if dimDict: #set W and L based on dictionary
+        if dimDict:  # set W and L based on dictionary
             subfolder = os.path.basename(folder)
             parentFolder = os.path.dirname(folder)
             dims = dimDict[parentFolder][subfolder]
@@ -209,12 +207,12 @@ class OECT:
         self.d = self.params['d']
 
         self.WdL = self.W * self.d / self.L
-        
+
         self.c_star = None
         if 'c_star' in self.params and self.params['c_star'] != None:
             self.c_star = self.params['c_star']
         elif 'capacitance' in self.params and self.params['capacitance'] != None:
-            self.c_star = self.params['capacitance'] / (self.W*1e-4 * self.L*1e-4 * self.d )
+            self.c_star = self.params['capacitance'] / (self.W * 1e-4 * self.L * 1e-4 * self.d)
 
         return
 
@@ -360,12 +358,12 @@ class OECT:
         # two ways to do this
 
         # a) find reverse sweep using np.allclose
-        midpoint = len(v)//2 + 1
+        midpoint = len(v) // 2 + 1
         if len(v) % 2 == 1:
-            x = v[:len(v)//2]
+            x = v[:len(v) // 2]
             y = np.flip(v[midpoint:])
         else:
-            x = v[1:len(v)//2]
+            x = v[1:len(v) // 2]
             y = np.flip(v[midpoint:])
         reverse = np.allclose(x, y)
 
@@ -426,7 +424,7 @@ class OECT:
                     nm = 'gm_' + g[:-1] + str(labels)
 
                 df = pd.Series(data=gm, index=idx)
-                #df.sort_index(inplace=True)
+                # df.sort_index(inplace=True)
                 self.gms[nm] = df
 
         for g in self.gm_bwd:
@@ -443,7 +441,7 @@ class OECT:
                     nm = 'gm_' + g[:-1] + str(labels)
 
                 df = pd.Series(data=gm, index=idx)
-                #df.sort_index(inplace=True)
+                # df.sort_index(inplace=True)
                 self.gms[nm] = df
 
         self.peak_gm = self.gm_peaks['peak gm (S)'].values
@@ -601,13 +599,13 @@ class OECT:
             mx, reverse = self._reverse(idx, transfer=True)
             nm = tf + '_01'
             df = pd.Series(data=transfer[:mx], index=idx[:mx])
-            #df.sort_index(inplace=True)
+            # df.sort_index(inplace=True)
             self.transfers[nm] = df
 
             if reverse:
                 nm = tf + '_02'
                 df = pd.Series(data=transfer[mx:], index=idx[mx:])
-                #df.sort_index(inplace=True)
+                # df.sort_index(inplace=True)
                 self.transfers[nm] = df
 
         if 'Average' in self.options and self.options['Average']:
@@ -682,17 +680,17 @@ class OECT:
 
         if c_star:
             self.c_star = c_star
-            
+
         elif cap:
-            vol = self.W*1e-4 * self.L*1e-4 * self.d  #assumes W, L in um
-            self.c_star = cap / vol # in F/cm^3
+            vol = self.W * 1e-4 * self.L * 1e-4 * self.d  # assumes W, L in um
+            self.c_star = cap / vol  # in F/cm^3
 
         # Find and fit at inflection between regimes
         for tf, pk in zip(self.transfers, self.gm_peaks.index):
             # use second derivative to find inflection, then fit line to get Vt
             v_lo = self.transfers[tf].index.values
             Id_lo = np.sqrt(np.abs(self.transfers[tf]).values)
-            
+
             # Check for nans
             _ix = np.where(np.isnan(Id_lo) == False)
             if any(_ix[0]):
@@ -718,9 +716,8 @@ class OECT:
             VgVts = np.append(VgVts, np.abs(pk + fit[1] / fit[0]))  # Vg - Vt, + sign from -fit[1]/fit[0]
 
             if self.c_star:
-                
-                mu = (-Vts[-1] * np.sqrt(0.5 * self.c_star * self.WdL * 1e2)) #1e2 for scaling Wd/L to cm
-                mu = (fit[1] / mu)**2
+                mu = (-Vts[-1] * np.sqrt(0.5 * self.c_star * self.WdL * 1e2))  # 1e2 for scaling Wd/L to cm
+                mu = (fit[1] / mu) ** 2
                 mobilities = np.append(mobilities, mu)
 
         if plot:
@@ -857,93 +854,6 @@ class OECT:
         return
 
 
-def config_file(cfg):
-    """
-    Generates parameters from supplied config file
-    """
-    config = configparser.ConfigParser()
-    config.read(cfg)
-    params = {}
-    options = {}
-
-    dim_keys = {'Width (um)': 'W', 'Length (um)': 'L', 'Thickness (nm)': 'd'}
-    vgs_keys = ['Preread (ms)', 'First Bias (ms)', 'Vds (V)']
-    vds_keys = ['Preread (ms)', 'First Bias (ms)', 'Output Vgs']
-    opts_bools = ['Reverse', 'Average']
-    opts_str = ['gm_method']
-    opts_flt = ['V_low']
-
-    for key in dim_keys:
-
-        if config.has_option('Dimensions', key):
-            params[dim_keys[key]] = config.getfloat('Dimensions', key)
-
-    for key in vgs_keys:
-
-        if config.has_option('Transfer', key):
-            params[key] = int(config.getfloat('Transfer', key))
-
-    for key in vds_keys:
-
-        if config.has_option('Output', key):
-            val = int(config.getfloat('Output', key))
-
-            # to avoid duplicate keys
-            if key in params:
-                key = 'output_' + key
-            params[key] = val
-
-    if 'Output Vgs' in params:
-
-        params['Vgs'] = []
-        for i in range(0, params['Output Vgs']):
-            nm = 'Vgs (V) ' + str(i)
-
-            val = config.getfloat('Output', nm)
-            params['Vgs'].append(val)
-
-    if 'Options' in config.sections():
-
-        for key in opts_bools:
-
-            if config.has_option('Options', key):
-                options[key] = config.getboolean('Options', key)
-
-        for key in opts_str:
-
-            if config.has_option('Options', key):
-                options[key] = config.get('Options', key)
-
-        for key in opts_flt:
-
-            if config.has_option('Options', key):
-                options[key] = config.getfloat('Options', key)
-
-    return params, options
 
 
-def make_config(path):
-    '''
-    If a config file does not exist, this will generate one automatically.
-    
-    '''
-    config = configparser.ConfigParser()
-    config.optionxform = str
 
-    config['Dimensions'] = {'Width (um)': 2000, 'Length (um)': 20}
-    config['Transfer'] = {'Preread (ms)': 30000.0,
-                          'First Bias (ms)': 120000.0,
-                          'Vds (V)': -0.60}
-
-    config['Output'] = {'Preread (ms)': 500.0,
-                        'First Bias (ms)': 200.0,
-                        'Output Vgs': 4,
-                        'Vgs (V) 0': -0.1,
-                        'Vgs (V) 1': -0.3,
-                        'Vgs (V) 2': -0.5,
-                        'Vgs (V) 3': -0.9}
-
-    with open(path + r'\config.cfg', 'w') as configfile:
-        config.write(configfile)
-
-    return path + r'\config.cfg'

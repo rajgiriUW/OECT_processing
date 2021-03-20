@@ -12,7 +12,7 @@ import pandas as pd
 from scipy.optimize import curve_fit as cf
 
 import oect
-import oect_plot
+from . import oect_plot
 
 '''
 Wrapper function for generating a uC* plot. This file contains one main function:
@@ -21,7 +21,7 @@ Wrapper function for generating a uC* plot. This file contains one main function
     
 Usage:
     
-    >> pixels, uC_dv = oect_load.uC_scale(r'path_to_folder_of_data', thicknes=40e-9, plot=[True, False)
+    >> pixels, uC_dv = oect_load.uC_scale(r'path_to_folder_of_data', thickness=40e-9, plot=[True, False)
 
 This function assumes that folders are labeled 01, 02, etc for each pixel
 The uC_Scale function then processes each subfolder of data, calculates the 
@@ -31,7 +31,7 @@ gm, Vt, and mobility (assuming you have a capacitance value)
 
 
 def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
-             retrace_only=False, verbose=True, capacitance=None, c_star = None,
+             retrace_only=False, verbose=True, capacitance=None, c_star=None,
              options={}):
     '''
     path: str
@@ -113,7 +113,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
 
             if verbose:
                 print(p)
-            dv = loadOECT(p, {'d': thickness, 'capacitance': capacitance, 'c_star': c_star}, 
+            dv = loadOECT(p, {'d': thickness, 'capacitance': capacitance, 'c_star': c_star},
                           gm_plot=plot, plot=plot[1],
                           options=opts, verbose=verbose)
             pixels[f] = dv
