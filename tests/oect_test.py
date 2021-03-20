@@ -101,7 +101,7 @@ class TestOECT:
 
     # test that metadata is correctly taken from file
     def test_get_metadata(self):
-        test_oect = oect.OECT(folder=os.getcwd())
+        test_oect = oect.OECT(folder='tests/test_device/01')
         test_file = 'tests/test_device/metadata_test/uc1_kpf6_output_0.txt'
         test_oect.get_metadata(test_file)
         assert (test_oect.Vg == -.5
