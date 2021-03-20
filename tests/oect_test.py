@@ -7,7 +7,7 @@ import numpy as np
 sys.path.insert(0, '..')
 
 import oect
-from oect.oect_utils.config import make_config
+from oect.oect_utils.config import make_config, config_file
 
 # most values are hardcoded - be careful if modifying cfg/txt files
 # some tests use different subfolders to avoid conflicts
@@ -233,30 +233,30 @@ class TestOECT:
     @pytest.mark.xfail
     def test_make_config_invalid_path(self):
         with pytest.raises(FileNotFoundError):
-            oect.make_config('a_nonexistent_path')
+            make_config('a_nonexistent_path')
 
     # config_file
     #############################################################
 
     # test that params exist when loaded from config
     def test_config_file_params(self):
-        params, opts = oect.config_file('tests/config.cfg')
+        params, opts = config_file('tests/config.cfg')
         assert bool(params) and not bool(opts)
 
     # test that options exist when loaded from config
     def test_config_file_opts(self):
-        params, opts = oect.config_file('tests/test_device/options_test/uc1_kpf6_config.cfg')
+        params, opts = config_file('tests/test_device/options_test/uc1_kpf6_config.cfg')
         assert bool(params) and bool(opts)
 
     # tests that nothing is added when provided with invalid path
     def test_config_file_invalid_file(self):
-        params, opts = oect.config_file('a_nonexistent_file')
+        params, opts = config_file('a_nonexistent_file')
         assert not bool(params)
 
     # test that configparser error thrown when provided with non-cfg file
     def test_config_not_cfg(self):
         with pytest.raises(configparser.MissingSectionHeaderError):
-            params, opts = oect.config_file('tests/dummy_file.py')
+            params, opts = config_file('tests/dummy_file.py')
 
 # questions/why I didn't write tests for these functions
 # loaddata - just consolidates a lot of functions
