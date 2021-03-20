@@ -24,13 +24,9 @@ setup(
                       'scipy >=1.5.2',
                       'matplotlib',
                       'seaborn',
-                      'h5py'
+                      'h5py',
+                      'configparser'
                       ],
 
-    # entry_points={
-    #      'console_scripts': [
-    #          'ffta-analyze = ffta.analyze:main',
-    #      ],
-    # },
 
 )

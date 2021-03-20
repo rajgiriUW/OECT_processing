@@ -4,4 +4,5 @@ scipy >=1.5.2
 matplotlib
 seaborn
 h5py
+configparser
 

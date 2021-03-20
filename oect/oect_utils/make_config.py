@@ -1,3 +1,5 @@
+import configparser
+
 def make_config(path):
     '''
     If a config file does not exist, this will generate one automatically.
