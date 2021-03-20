@@ -105,7 +105,7 @@ class TestOECT:
         test_file = 'tests/test_device/metadata_test/uc1_kpf6_output_0.txt'
         test_oect.get_metadata(test_file)
         assert (test_oect.Vg == -.5
-                and test_oect.W == 2000
+                and test_oect.W == 4000
                 and test_oect.L == 20)
 
     # test that metadata is correctly grabbed from data file if config doesn't exist
