@@ -7,7 +7,7 @@ import numpy as np
 sys.path.insert(0, '..')
 
 import oect
-from oect.oect_utils.make_config import make_config
+from oect.oect_utils.config import make_config
 
 # most values are hardcoded - be careful if modifying cfg/txt files
 # some tests use different subfolders to avoid conflicts
