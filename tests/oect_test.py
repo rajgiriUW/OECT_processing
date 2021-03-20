@@ -20,16 +20,12 @@ class TestOECT:
 
     def test_load_pixel(self):
         test_oect = oect.OECT(folder='tests/test_device/01') 
-        with pytest.raises(RuntimeError):
-            test_oect.calc_gms()
-        
-        with pytest.raises(RuntimeError):
-            test_oect.thresh()
+        test_oect.calc_gms()
+        test_oect.thresh()
         
     def test_load_device(self):
-        with pytest.raises(RuntimeError):
-            test_oect = oect.OECTDevice(path='tests/test_device/full_device', 
-                                        options={'plot':[False, False]})
+        test_oect = oect.OECTDevice(path='tests/test_device/full_device', 
+                                    options={'plot':[False, False]})
         
 
     # test that parameters are read from config
