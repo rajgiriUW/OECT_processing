@@ -7,16 +7,30 @@ import numpy as np
 sys.path.insert(0, '..')
 
 import oect
-
+from oect.oect_utils.make_config import make_config
 
 # most values are hardcoded - be careful if modifying cfg/txt files
 # some tests use different subfolders to avoid conflicts
 
 class TestOECT:
-    oect.make_config(os.getcwd())
+    make_config(os.getcwd())
 
     # set_params
     ############################################################################
+
+    def test_load_pixel(self):
+        test_oect = oect.OECT(folder='tests/test_device/01') 
+        with pytest.raises(RuntimeError):
+            test_oect.calc_gms()
+        
+        with pytest.raises(RuntimeError):
+            test_oect.thresh()
+        
+    def test_load_device(self):
+        with pytest.raises(RuntimeError):
+            test_oect = oect.OECTDevice(path='tests/test_device/full_device', 
+                                        options={'plot':[False, False]})
+        
 
     # test that parameters are read from config
     def test_set_params(self):
