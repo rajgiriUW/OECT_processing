@@ -1,6 +1,6 @@
 # Organic Electrochemical Transistor (OECT) device processing
 
-This small set of files processes sets of OECT device measurements in Python via Pandas, with primary users being the Ginger Lab at University of Washington.
+This package processes sets of OECT device measurements in Python via Pandas, with primary users being the Ginger Lab at University of Washington.
 It includes some simplified extraction and processing of recorded data.  
 There is also simplified scripts for extracting and processing spectroelectrochemistry data.  
 
@@ -9,6 +9,18 @@ All pixels are expected to have a .cfg file or will auto-generate one. These fil
 * Film thickness
 * Vg and Vd for output and transfer curves
 * Read times (dwell time before first measurement and before each subsequent voltage step)
+
+An example can be found in the ```tests/test_device/01/uc1_kpf6_config.cfg``` file.
+
+To install, download the source code locally and then run:
+
+```python setup.py```
+
+To edit locally:
+
+```python setup.py develop```
+
+## Using the GUI App
 
 #### Requirements
 - PyQt5
