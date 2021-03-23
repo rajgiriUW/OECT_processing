@@ -12,6 +12,7 @@ All pixels are expected to have a .cfg file or will auto-generate one. These fil
 
 An example can be found in the ```tests/test_device/01/uc1_kpf6_config.cfg``` file.
 
+## Installation/Using from Source
 To install, download the source code locally and then run:
 
 ```python setup.py```
