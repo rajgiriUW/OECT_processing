@@ -22,7 +22,6 @@ class OECTDevice:
     
     Parameters
     -------
-    
     Path : string
         Path to folder containing pixels in folders '01', '02', etc.
         A config file will be auto-generated if not in that folder

@@ -57,7 +57,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
     c_star : float, optional
         in Farad / cm^3 NOTE THE CENTIMETERS^3 units
         This value is calculated from EIS or so
-    
+
     Returns
     -------
     pixels : dict of OECT
@@ -183,6 +183,7 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
 
     if plot[0]:
         fig = oect_plot.plot_uC(uC_dv)
+        fig = oect_plot.plot_uC(uC_dv, average=True, label='avg')
 
         if verbose:
             print('uC* = ', str(uC_0 * 1e-2), ' F/cm*V*s')
