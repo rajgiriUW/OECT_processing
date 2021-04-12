@@ -17,12 +17,19 @@ import pickle
 class OECTDevice:
     '''
     Class containing the processed pixels for a single device
+    This simplifies comparing and plotting various uC* datasets together.
     
-    This simplifies comparing and plotting various uC* datasets together
-    
+
+    Usage
+    --------
+    >>> import oect
+    >>>
+    >>> path = '../device_data'
+    >>>
+    >>> device = oect.OECTDevice(path)
+
     Parameters
     -------
-    
     Path : string
         Path to folder containing pixels in folders '01', '02', etc.
         A config file will be auto-generated if not in that folder
@@ -31,9 +38,32 @@ class OECTDevice:
         If passing an existing set of data from a previous run
         
     Params : dict, optional
-        Necessary if passing in 
+        Currently not used, for future-proofing to pass is specific parameters
     
-    
+    Attributes
+    ----------
+    L : float
+        Device channel length
+    W : float
+        Device channel width
+    d : float
+        Device thickness
+    WdL : array
+        W*d/L (prefactor in gm equation) for each device
+    Vg_Vt : array
+        Vg - Vt value for each device (gate voltage of peak gm minus threshold votlage)
+    Vt : array
+        Threshold voltage
+    uC : float
+        uC* extracted from the gm vs WdL * Vg_Vt plot
+    uC_0 : float
+        uC* forced to go through 0,0 
+    gms : array
+        peak transconductances for each device
+    pix_paths : array
+        Folder paths for the pixels
+    pixels : dictionary
+        Dictionary of the generated pixels using OECT class for each folder
     '''
 
     def __init__(self, path='', pixels={}, params={},

@@ -14,8 +14,9 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 # import pyqtgraph as pg
 import os
-
+from ..oect_device import OECTDevice
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
+import pandas as pd
 
 '''
 ### PLOTTING FUNCTIONS ###
@@ -37,8 +38,8 @@ The other plotting functions are mostly used in OECT_loading or in OECT itself
 '''
 
 
-def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None, axlog=None,
-            fit=True, dot_color='r', **kwargs):
+def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None, 
+            axlog=None, fit=True, dot_color='r', average=False, **kwargs):
     """
     dv : dict of parameters needed for plotting
 
@@ -73,23 +74,45 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None, axlo
     ax : matplotlib axes object, optional
         Plot on an existing axis
         
-       
     fit : bool, optional
         Plot the best fit line or not
+      
+    average: bool, optional
+        Plot only the average gms
         
     kwargs : dict, optional
         Standard plotting params, e.g. {'color': 'b'}
         Default is size 10 blue squares 
     """
-    WdL = dv['WdL']
-    Vg_Vt = dv['Vg_Vt']
-    uC = dv['uC']
-    uC_0 = dv['uC_0']
-    gms = dv['gms']
-
+    if isinstance(dv, dict):
+        WdL = dv['WdL']
+        Vg_Vt = dv['Vg_Vt']
+        uC = dv['uC']
+        uC_0 = dv['uC_0']
+        gms = dv['gms']
+    elif 'OECTDevice' in str(type(dv)):
+        WdL = dv.WdL
+        Vg_Vt = dv.Vg_Vt
+        uC = dv.uC
+        uC_0 = dv.uC_0
+        gms = dv.gms
+        
+    if average:
+        df = pd.DataFrame(index=WdL)
+        df['gms'] = gms
+        df['Vg_Vt'] = Vg_Vt
+        df = df.groupby(df.index).mean()
+        WdL = df.index.values
+        gms = df['gms'].values.flatten()
+        Vg_Vt = df['Vg_Vt'].values
+        
     if savefig:
-        if 'folder' in dv:
-            path = dv['folder']
+        
+        if isinstance(dv, dict):
+            if 'folder' in dv:
+                path = dv['folder']
+        elif 'OECTDevice' in str(type(dv)):
+            path = dv.path
         else:
             path = os.getcwd()
 
@@ -186,6 +209,8 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None, axlo
     axlog.tick_params(axis='both', length=10, width=3, which='minor',
                       bottom='on', left='on', right='on', top='on')
 
+    plt.tight_layout()
+    
     if savefig:
         fig.savefig(path + r'\scaling_uC_loglog' + label + '.tif', format='tiff')
 
@@ -263,14 +288,23 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     xminor = AutoMinorLocator(4)
     ax2.yaxis.set_minor_locator(xminor)
 
-    plt.title(dv.folder, y=1.05)
+    plt.title(dv.folder.split('\\')[-1], y=1.05)
 
     return fig
 
 
-def plot_outputs(dv, leakage=False):
+def plot_outputs(dv, leakage=False, direction='both', sort = False):
     '''
     dv : OECT class object
+    
+    leakage : bool, optional
+        Show the Gate leakage current on right axis
+        
+    direction : 'fwd', 'bwd', or 'both'
+        Plot only the specified direction or both
+        
+    sort : bool, optional
+        Whether to plot from lowest to highest Vg
     '''
 
     fig, ax = plt.subplots(facecolor='white', figsize=(12, 8))
@@ -290,15 +324,35 @@ def plot_outputs(dv, leakage=False):
     markers = ['o', 's', '^', 'd', 'x']
     mk = cycle(markers)
 
-    for k in dv.outputs.columns:
-        ax.plot(dv.outputs.index, dv.outputs[k] * 1000,
-                linewidth=2, marker=next(mk), markersize=7)
+    nm = {}
+    nms = []
+    # Plot by sorted by Vg
+    if sort:
+        for c in dv.outputs.columns:
+            if direction in c:
+                nm[float(c[:-4])] = dv.outputs[c].values
+                nms.append(float(c[:-4]))
+        nms = np.sort(nms)
+        for n in nms:
+            
+            ax.plot(dv.outputs.index, nm[n] * 1000,
+                    linewidth=2, marker=next(mk), markersize=8)     
+        
+        ax.legend(labels=nms, frameon=False,
+              fontsize=16, loc=4)
+    
+    else:
+        for k in dv.outputs.columns:
+            
+            if direction == 'both' or direction in k:
+                ax.plot(dv.outputs.index, dv.outputs[k] * 1000,
+                        linewidth=2, marker=next(mk), markersize=8)
+    
+                if leakage:
+                    ax2.plot(dv.outputs.index, dv.output_raw[k]['I_G (A)'] * 1000,
+                                 linewidth=1, linestyle='--')
 
-        if leakage:
-            ax2.plot(dv.outputs.index, dv.output_raw[k]['I_G (A)'] * 1000,
-                     linewidth=1, linestyle='--')
-
-    ax.legend(labels=dv.Vg_labels, frameon=False,
+        ax.legend(labels=dv.Vg_labels, frameon=False,
               fontsize=16, loc=4)
     ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial', fontsize=18)
     ax.set_xlabel('Vds Voltage (V)', fontweight='bold', fontname='Arial', fontsize=18)
@@ -312,7 +366,7 @@ def plot_outputs(dv, leakage=False):
     xminor = AutoMinorLocator(4)
     ax.yaxis.set_minor_locator(xminor)
 
-    plt.title(dv.folder, y=1.05)
+    plt.title(dv.folder.split('\\')[-1], y=1.05)
 
     return fig
 

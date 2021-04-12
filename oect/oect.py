@@ -49,14 +49,13 @@ class OECT:
     >>>
     >>> path = '../device_data/pixel_01'
     >>>
-    >>> device = OECT.OECT(path)
+    >>> device = oect.OECT(path)
     >>> device.calc_gms()
     >>> device.thresh()
     >>> 
-    >>> from matplotlib import pyplot as plt
-    >>> plt.plot(device.transfers)
-    >>> plt.figure(), plt.plot(device.outputs)
-    >>> plt.figure(), plt.plot(device.gms)    
+    >>> from oect.oect_utils import oect_plot
+    >>> oect_plot.plot_transfers_gm(device)
+    >>> oect_plot.plot_outputs(device)
 
     Parameters
     ----------
@@ -69,6 +68,9 @@ class OECT:
         Can also pass c_star (volumetric capacitance) here
     options : dict, optional
         processing optional parameters (for transfer curves only)
+
+		Reverse : bool
+			Whether to use the reverse trace or just the forward trace
         Average : bool
             Whether instead to average forward and reverse trace
             Reverse XOR Average must be true
@@ -77,6 +79,11 @@ class OECT:
             'sg' = Savitsky_golay smoothed derivative
             'raw' = raw derivative
             'poly' = 8th order polynomial fit
+        overwrite : bool
+        	Overwrites the associated config file. For debugging
+        V_low : bool
+        	Detects if there is a non-monotonic transfer curve (sometimes occurs at very negative voltages)
+
 
     Attributes
     ----------

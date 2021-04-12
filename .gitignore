@@ -2,3 +2,9 @@
 *.pyc
 
 oect.egg-info/
+
+oect/notebooks/.ipynb_checkpoints/
+
+docs/_build/html/
+
+docs/_build/doctrees/
