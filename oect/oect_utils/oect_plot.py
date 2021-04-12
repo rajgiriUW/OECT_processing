@@ -293,7 +293,7 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     return fig
 
 
-def plot_outputs(dv, leakage=False, direction='both'):
+def plot_outputs(dv, leakage=False, direction='both', sort = False):
     '''
     dv : OECT class object
     
@@ -302,6 +302,9 @@ def plot_outputs(dv, leakage=False, direction='both'):
         
     direction : 'fwd', 'bwd', or 'both'
         Plot only the specified direction or both
+        
+    sort : bool, optional
+        Whether to plot from lowest to highest Vg
     '''
 
     fig, ax = plt.subplots(facecolor='white', figsize=(12, 8))
@@ -321,17 +324,35 @@ def plot_outputs(dv, leakage=False, direction='both'):
     markers = ['o', 's', '^', 'd', 'x']
     mk = cycle(markers)
 
-    for k in dv.outputs.columns:
+    nm = {}
+    nms = []
+    # Plot by sorted by Vg
+    if sort:
+        for c in dv.outputs.columns:
+            if direction in c:
+                nm[float(c[:-4])] = dv.outputs[c].values
+                nms.append(float(c[:-4]))
+        nms = np.sort(nms)
+        for n in nms:
+            
+            ax.plot(dv.outputs.index, nm[n] * 1000,
+                    linewidth=2, marker=next(mk), markersize=8)     
         
-        if direction == 'both' or direction in k:
-            ax.plot(dv.outputs.index, dv.outputs[k] * 1000,
-                    linewidth=2, marker=next(mk), markersize=8)
+        ax.legend(labels=nms, frameon=False,
+              fontsize=16, loc=4)
+    
+    else:
+        for k in dv.outputs.columns:
+            
+            if direction == 'both' or direction in k:
+                ax.plot(dv.outputs.index, dv.outputs[k] * 1000,
+                        linewidth=2, marker=next(mk), markersize=8)
+    
+                if leakage:
+                    ax2.plot(dv.outputs.index, dv.output_raw[k]['I_G (A)'] * 1000,
+                                 linewidth=1, linestyle='--')
 
-            if leakage:
-                ax2.plot(dv.outputs.index, dv.output_raw[k]['I_G (A)'] * 1000,
-                             linewidth=1, linestyle='--')
-
-    ax.legend(labels=dv.Vg_labels, frameon=False,
+        ax.legend(labels=dv.Vg_labels, frameon=False,
               fontsize=16, loc=4)
     ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial', fontsize=18)
     ax.set_xlabel('Vds Voltage (V)', fontweight='bold', fontname='Arial', fontsize=18)
