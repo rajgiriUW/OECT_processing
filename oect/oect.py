@@ -49,14 +49,13 @@ class OECT:
     >>>
     >>> path = '../device_data/pixel_01'
     >>>
-    >>> device = OECT.OECT(path)
+    >>> device = oect.OECT(path)
     >>> device.calc_gms()
     >>> device.thresh()
     >>> 
-    >>> from matplotlib import pyplot as plt
-    >>> plt.plot(device.transfers)
-    >>> plt.figure(), plt.plot(device.outputs)
-    >>> plt.figure(), plt.plot(device.gms)    
+    >>> from oect.oect_utils import oect_plot
+    >>> oect_plot.plot_transfers_gm(device)
+    >>> oect_plot.plot_outputs(device)
 
     Parameters
     ----------
