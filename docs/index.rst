@@ -1,5 +1,5 @@
 .. OECT documentation master file, created by
-   sphinx-quickstart on Thu Mar 25 22:43:21 2021.
+   sphinx-quickstart on Sun Apr 11 23:16:51 2021.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
@@ -10,7 +10,7 @@ Welcome to OECT's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   Guide <OECTProcessing.ipynb>
 
 Indices and tables
 ==================
