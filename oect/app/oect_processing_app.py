@@ -1,9 +1,11 @@
-import sys
+import sys, os
 from PyQt5.QtWidgets import *
 from PyQt5 import QtGui
 import pyqtgraph as pg
+
+sys.path.insert(0, os.path.abspath('..'))
+sys.path.append(os.path.abspath('..'))
 import oect
-from oect.oect_utils.oect_plot import *
 from oect.oect_utils.oect_load import uC_scale
 import os
 

@@ -32,8 +32,13 @@ class TestOECT:
     # test device with defined thicknesses
     def test_load_device_with_thickness(self):
         test_oect = oect.OECTDevice(path='tests/test_device/full_device',
-                                    options={'plot': [False, False]}
+                                    options={'plot': [False, False]},
                                     params={'thickness': 41e-9})
+        assert(test_oect.d == 41e-9)
+
+        test_oect = oect.OECTDevice(path='tests/test_device/full_device',
+                                    options={'plot': [False, False]},
+                                    params={'d': 41e-9})
         assert(test_oect.d == 41e-9)
 
     # test that parameters are read from config
