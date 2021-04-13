@@ -11,6 +11,7 @@ from scipy.optimize import curve_fit as cf
 from .oect_utils import oect_plot
 from .oect_utils import oect_load
 
+import pandas as pd
 import pickle
 
 
@@ -30,15 +31,26 @@ class OECTDevice:
 
     Parameters
     -------
-    Path : string
+    path : string
         Path to folder containing pixels in folders '01', '02', etc.
         A config file will be auto-generated if not in that folder
-    
-    Pixels : dict, optional
+
+    thickness : float
+        The device layer thickness, assuming it is fixed for all dimensions
+
+    pixels : dict, optional
         If passing an existing set of data from a previous run
         
-    Params : dict, optional
-        Currently not used, for future-proofing to pass is specific parameters
+    params : dict, optional
+        For passing specific device parameters. Currently, this only supports
+        d : float
+            Film thickness (cm)
+        thickness : float
+            Film thickness (cm)
+        Both variables are the same and for ease of use (oect.OECT uses 'd')
+
+    options : dict, optional
+
     
     Attributes
     ----------
@@ -66,9 +78,11 @@ class OECTDevice:
         Dictionary of the generated pixels using OECT class for each folder
     '''
 
-    def __init__(self, path='', pixels={}, params={},
-                 options={'V_low': False, 'retrace_only': False,
-                          'verbose': False, 'plot': [True, False]}):
+    def __init__(self,
+                 path='',
+                 pixels={},
+                 params={},
+                 options={}):
 
         self.path = path
         self.pixels = pixels
@@ -86,28 +100,17 @@ class OECTDevice:
         for m in params:
             self.params[m] = params[m]
 
-        self.options = {}
-
-        defaults = {'V_low': False, 'retrace_only': False,
-                    'verbose': False, 'plot': [True, False]}
-        for d in defaults:
-            if d in options:
-                self.options[d] = options[d]
-            else:
-                self.options[d] = defaults[d]
+        self.options = {'V_low': False, 'retrace_only': False,'verbose': False, 'plot': [True, False]}
+        self.options.update(options)
 
         # if device has not been processed
         if not any(pixels):
 
             pixels, pm = oect_load.uC_scale(self.path,
-                                            V_low=self.options['V_low'],
-                                            retrace_only=self.options['retrace_only'],
-                                            verbose=self.options['verbose'],
-                                            plot=self.options['plot'])
+                                            **self.params,
+                                            **self.options)
 
-            for m in pm:
-                self.params[m] = pm[m]
-
+            self.params.update(pm)
             self.pixels = pixels
 
         elif not any(params):
@@ -210,6 +213,35 @@ class OECTDevice:
 
         return
 
+    def average(self, overwrite = False):
+        '''
+        Averages data for the same voltages together.
+
+        Parameters
+        ----------
+        overwrite : bool, optional
+            If true, does not save a backup version to the class
+
+        Returns
+        -------
+
+        '''
+
+        df = pd.DataFrame(index=self.WdL)
+        df['gms'] = self.gms
+        df['Vg_Vt'] = self.Vg_Vt
+        df = df.groupby(df.index).mean()
+        if overwrite:
+            self.WdL = df.index.values
+            self.gms = df['gms'].values.flatten()
+            self.Vg_Vt = df['Vg_Vt'].values
+        else:
+            self.average = {}
+            self.average['WdL']  = df.index.values
+            self.average['gms'] = df['gms'].values.flatten()
+            self.average['Vg_Vt'] = df['Vg_Vt'].values
+
+        return
 
 def save(dv, append=''):
     with open(dv.path + r'\uC_data_' + append + '.pkl', 'wb') as output:

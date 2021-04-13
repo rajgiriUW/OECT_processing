@@ -64,8 +64,21 @@ class OECT:
     dimDict : dict
         dictionary in format of {parentfolder1: {subfolder1: w1, l1}, {subfolder2: w2, l2}, parentfolder2...}
     params : dict, optional
-        device parameters, typically Width (W), length (L), thickness (d)
+        Optionally, can explicitly pass device parameters, typically Width (W), length (L), thickness (d)
+        Otherwise thes are read from the .cfg file
         Can also pass c_star (volumetric capacitance) here
+
+        W : float
+        L : float
+        d : float
+            Width, length, thickness
+        capacitance: float, optional
+            In Farads
+            If provided, will calculate the mobility. This should be a sanity check
+            against the calculated uC*, since this is somewhat circular logic
+        c_star : float, optional
+            in Farad / cm^3 NOTE THE CENTIMETERS^3 units
+            This value is calculated from EIS or so
     options : dict, optional
         processing optional parameters (for transfer curves only)
 
@@ -149,7 +162,11 @@ class OECT:
             Voltage where the Id trace starts reverse sweep
     '''
 
-    def __init__(self, folder='', dimDict={}, params={}, options={}):
+    def __init__(self,
+                 folder='',
+                 dimDict={},
+                 params={},
+                 options={}):
 
         # Data containers
         self.output = {}
@@ -195,7 +212,7 @@ class OECT:
 
         self.set_params(_par, _opt, params, options)
         self.loaddata()
-        # 
+        
         if dimDict:  # set W and L based on dictionary
             subfolder = os.path.basename(folder)
             parentFolder = os.path.dirname(folder)
@@ -207,7 +224,7 @@ class OECT:
         else:
             self.W, self.L = self.params['W'], self.params['L']
 
-        if 'd' not in self.params:
+        if 'd' not in self.params or not self.params['d']:
             self.params['d'] = 40e-9
         elif self.params['d'] > 1:  # wrong units
             self.params['d'] *= 1e-9
@@ -235,18 +252,14 @@ class OECT:
         self.options = {}
 
         # From the config flie
-        for p in par:
-            self.params[p] = par[p]
-        for o in opt:
-            self.options[o] = opt[o]
+        self.params.update(par)
+        self.options.update(opt)
 
         # Overwrite with passed parameters
         if any(params):
-            for p in params:
-                self.params[p] = params[p]
+            self.params.update(params)
         if any(options):
-            for o in options:
-                self.options[o] = options[o]
+            self.options.update(options)
 
         # defaults
         if 'gm_method' not in self.options:
@@ -859,8 +872,3 @@ class OECT:
                 config.write(configfile)
 
         return
-
-
-
-
-

@@ -2,9 +2,9 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5 import QtGui
 import pyqtgraph as pg
-from ..oect import *
-from ..oect_utils.oect_plot import *
-from ..oect_utils.oect_load import uC_scale
+import oect
+from oect.oect_utils.oect_plot import *
+from oect.oect_utils.oect_load import uC_scale
 import os
 
 pg.setConfigOption('background', 'w')
@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('OECT Processing')
         self.mainLayout = QHBoxLayout()  # overarching window layout
 
-        # setup scrollarea that will contain listwidgets for each parent folder
+        # setup scrollArea that will contain listWidgets for each parent folder
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidget = QWidget()

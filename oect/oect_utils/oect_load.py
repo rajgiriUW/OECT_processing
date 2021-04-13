@@ -30,8 +30,16 @@ gm, Vt, and mobility (assuming you have a capacitance value)
 '''
 
 
-def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
-             retrace_only=False, verbose=True, capacitance=None, c_star=None,
+def uC_scale(path='',
+             plot=[True, False],
+             V_low=False,
+             retrace_only=False,
+             verbose=True,
+             thickness=None,
+             d = None,
+             capacitance=None,
+             c_star=None,
+             params = {},
              options={}):
     '''
     path: str
@@ -45,11 +53,14 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
         [1]: plot the individual plots
         Whether to plot or not. Not plotting is very fast!    
     retrace_only : bool, optional
-        Whether to only do the retrace in case trace isn't saturating
+        Only use the retrace in case trace isn't saturating
     V_low : bool, optional
         Whether to find erroneous "turnover" points when devices break down
     verbose: bool, optional
         Print to display
+    thickness, d : float, optional
+        The film thickness
+        Both variables are the same and is for ease of use (oect.OECT uses 'd')
     capacitance: float, optional
         In Farads
         If provided, will calculate the mobility. This should be a sanity check
@@ -102,6 +113,11 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
     if any(options):
         for o in options:
             opts[o] = options[o]
+    if thickness:
+        d = thickness
+    for k, v in {'d': d, 'capacitance': capacitance, 'c_star': c_star}.items():
+        if v:
+            params[k] = v
 
     # loads all the folders
     if type(plot) == bool or len(plot) == 1:
@@ -113,9 +129,8 @@ def uC_scale(path='', thickness=40e-9, plot=[True, False], V_low=False,
 
             if verbose:
                 print(p)
-            dv = loadOECT(p, {'d': thickness, 'capacitance': capacitance, 'c_star': c_star},
-                          gm_plot=plot, plot=plot[1],
-                          options=opts, verbose=verbose)
+            print(params)
+            dv = loadOECT(p, params, gm_plot=plot, plot=plot[1], options=opts, verbose=verbose)
             pixels[f] = dv
 
         else:

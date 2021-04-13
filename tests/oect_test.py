@@ -18,15 +18,23 @@ class TestOECT:
     # set_params
     ############################################################################
 
+    # test basic single device processing
     def test_load_pixel(self):
         test_oect = oect.OECT(folder='tests/test_device/01') 
         test_oect.calc_gms()
         test_oect.thresh()
-        
+
+    # test loading a device works
     def test_load_device(self):
         test_oect = oect.OECTDevice(path='tests/test_device/full_device', 
                                     options={'plot':[False, False]})
-        
+
+    # test device with defined thicknesses
+    def test_load_device_with_thickness(self):
+        test_oect = oect.OECTDevice(path='tests/test_device/full_device',
+                                    options={'plot': [False, False]}
+                                    params={'thickness': 41e-9})
+        assert(test_oect.d == 41e-9)
 
     # test that parameters are read from config
     def test_set_params(self):
