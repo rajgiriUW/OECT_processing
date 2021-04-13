@@ -212,7 +212,7 @@ class OECT:
 
         self.set_params(_par, _opt, params, options)
         self.loaddata()
-        
+
         if dimDict:  # set W and L based on dictionary
             subfolder = os.path.basename(folder)
             parentFolder = os.path.dirname(folder)
@@ -251,6 +251,9 @@ class OECT:
         self.params = {}
         self.options = {}
 
+        for k in [par, opt, params, options]:
+            if k and not isinstance(k, dict):
+                raise TypeError('Must pass a dictionary')
         # From the config flie
         self.params.update(par)
         self.options.update(opt)

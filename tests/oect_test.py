@@ -5,6 +5,9 @@ import configparser
 import numpy as np
 
 sys.path.insert(0, '..')
+print(os.getcwd())
+if 'tests' in os.getcwd():
+    os.chdir('..')
 
 import oect
 from oect.oect_utils.config import make_config, config_file
@@ -20,13 +23,13 @@ class TestOECT:
 
     # test basic single device processing
     def test_load_pixel(self):
-        test_oect = oect.OECT(folder='tests/test_device/01') 
+        test_oect = oect.OECT(folder='tests/test_device/01')
         test_oect.calc_gms()
         test_oect.thresh()
 
     # test loading a device works
     def test_load_device(self):
-        test_oect = oect.OECTDevice(path='tests/test_device/full_device', 
+        test_oect = oect.OECTDevice(path='tests/test_device/full_device',
                                     options={'plot':[False, False]})
 
     # test device with defined thicknesses
@@ -83,7 +86,7 @@ class TestOECT:
     # test that TypeError is raised when parameters passed are not dicts
     def test_set_params_not_dict(self):
         test_oect = oect.OECT(folder=os.getcwd())
-        with pytest.raises(IndexError) or pytest.raises(TypeError):
+        with pytest.raises(TypeError):
             test_oect.set_params([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2, 3, 4, 5])
 
     # filelist
