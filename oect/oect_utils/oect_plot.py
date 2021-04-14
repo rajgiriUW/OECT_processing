@@ -152,7 +152,7 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
     axlin.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
     axlin.set_ylabel('gm (mS)')
     # ax.xaxis.get_major_formatter().set_powerlimits((0, 1))
-    axlin.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
+    axlin.set_title('uC* = ' + str(np.round(uC_0 * 1e-2, 2)) + ' F/cm*V*s')
     plt.tight_layout()
 
     if savefig:
@@ -166,6 +166,7 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
         Wd_L_fitx = np.arange(WdL[_xl] * Vg_Vt[_xl], WdL[_xh] * Vg_Vt[_xh], 1e-9)
         # ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]) * 1000, 'k--')
         axlin.plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx) * 1000, 'r--')
+
         axlin.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
         axlin.tick_params(axis='both', length=17, width=3, which='major',
                           bottom='on', left='on', right='on', top='on')
@@ -200,10 +201,10 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
         pg_graphs[1].plot(np.abs(WdL * Vg_Vt) * 1e2, gms * 1000, pen=None, symbolBrush=dot_color, symbol='o',
                           name=folder_name)
 
-    axlog.set_xlabel('Wd/L * (Vg-Vt) (cm*V)')
-    axlog.set_ylabel('gm (mS)')
+    axlog.set_xlabel('$Wd/L * (Vg-Vt) (cm*V)$')
+    axlog.set_ylabel('$g_m (mS)$')
 
-    axlog.set_title('uC* = ' + str(uC_0 * 1e-2) + ' F/cm*V*s')
+    axlog.set_title('$\mu$$C*$ = ' + str(np.round(uC_0 * 1e-2, 2)) + ' F/cm*V*s')
     axlog.tick_params(axis='both', length=17, width=3, which='major',
                       bottom='on', left='on', right='on', top='on')
     axlog.tick_params(axis='both', length=10, width=3, which='minor',
@@ -217,13 +218,14 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
     # ax.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]), 'k--')
     if fit:
         axlog.plot(Wd_L_fitx * 1e2, (uC_0[0] * Wd_L_fitx) * 1000, 'r--')
+        axlog.plot(Wd_L_fitx * 1e2, (uC[1] * Wd_L_fitx + uC[0]) * 1000, 'g--')
 
         plt.tight_layout()
 
         if savefig:
             fig.savefig(path + r'\scaling_uC_loglog_+fit' + label + '.tif', format='tiff')
 
-    return [axlin, axlog]
+    return [axlin, axlog, fig]
 
 
 def plot_transfers_gm(dv, gm_plot=True, leakage=False):
@@ -236,7 +238,7 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     ax2 = ax1.twinx()
 
     plt.rc('axes', linewidth=4)
-    plt.rcParams.update({'font.size': 18, 'font.weight': 'bold',
+    plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
 
     ax1.tick_params(axis='both', length=10, width=3, which='major', top='on')
@@ -274,12 +276,12 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
         for k in dv.gms:
             ax2.plot(dv.gms[k].index, dv.gms[k] * 1000, 'b--', linewidth=2)
 
-    ax1.set_ylabel('Ids Current (mA)', fontweight='bold',
+    ax1.set_ylabel('$I_{ds}  (mA)$', fontweight='bold',
                    fontsize=18, fontname='Arial')
-    ax2.set_ylabel('Transconductance (mS)', rotation=-90, labelpad=20,
-                   fontweight='bold', fontname='Arial', fontsize=18)
-    ax1.set_xlabel('Vgs Voltage (V)', fontweight='bold', fontname='Arial',
-                   fontsize=18)
+    ax2.set_ylabel('$g_m (mS)$', rotation=-90, labelpad=20,
+                   fontweight='bold', fontname='Arial', fontsize=24)
+    ax1.set_xlabel('$V_{gs} (V)$', fontweight='bold', fontname='Arial',
+                   fontsize=24)
 
     xminor = AutoMinorLocator(4)
     ax1.xaxis.set_minor_locator(xminor)
@@ -354,8 +356,8 @@ def plot_outputs(dv, leakage=False, direction='both', sort = False):
 
         ax.legend(labels=dv.Vg_labels, frameon=False,
               fontsize=16, loc=4)
-    ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial', fontsize=18)
-    ax.set_xlabel('Vds Voltage (V)', fontweight='bold', fontname='Arial', fontsize=18)
+    ax.set_ylabel('$I_{ds} (mA)$', fontweight='bold', fontname='Arial', fontsize=24)
+    ax.set_xlabel('$V_{ds}  (V)$', fontweight='bold', fontname='Arial', fontsize=24)
 
     if leakage:
         ax2.set_ylabel('Gate leakage (mA)', fontweight='bold', fontname='Arial',
@@ -391,8 +393,8 @@ def plot_output_avg(dv):
 
     ax.plot(dv * 1000, marker='o')
 
-    ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial')
-    ax.set_xlabel('Vds Voltage (V)', fontweight='bold', fontname='Arial')
+    ax.set_ylabel('$I_ds$ Current (mA)', fontweight='bold', fontname='Arial')
+    ax.set_xlabel('$V_ds$ Voltage (V)', fontweight='bold', fontname='Arial')
 
     xminor = AutoMinorLocator(4)
     ax.xaxis.set_minor_locator(xminor)
@@ -434,8 +436,8 @@ def plot_transfer_avg(dv, Wd_L, label=''):
     ax2.set_ylabel('Transconductance (mS)', rotation=-90, labelpad=20,
                    fontweight='bold', fontname='Arial', fontsize=18)
 
-    ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial')
-    ax.set_xlabel('Vgs Voltage (V)', fontweight='bold', fontname='Arial')
+    ax.set_ylabel('$I_ds$ Current (mA)', fontweight='bold', fontname='Arial')
+    ax.set_xlabel('$V_gs$ Voltage (V)', fontweight='bold', fontname='Arial')
 
     xminor = AutoMinorLocator(4)
     ax.xaxis.set_minor_locator(xminor)
@@ -467,11 +469,11 @@ def plot_transfer_avg(dv, Wd_L, label=''):
     ax2.plot(dv['gm_fwd'] * 1000 / (1e9 * Wd_L), linestyle='--', color='b')
     ax2.plot(dv['gm_bwd'] * 1000 / (1e9 * Wd_L), linestyle='--', color='r')
 
-    ax2.set_ylabel('Norm gm (mS/nm)', rotation=-90, labelpad=20,
+    ax2.set_ylabel('Norm $g_m$ (mS/nm)', rotation=-90, labelpad=20,
                    fontweight='bold', fontname='Arial', fontsize=18)
 
-    ax.set_ylabel('Ids Current (mA)', fontweight='bold', fontname='Arial')
-    ax.set_xlabel('Vgs Voltage (V)', fontweight='bold', fontname='Arial')
+    ax.set_ylabel('$I_ds$ Current (mA)', fontweight='bold', fontname='Arial')
+    ax.set_xlabel('$V_gs$ Voltage (V)', fontweight='bold', fontname='Arial')
 
     xminor = AutoMinorLocator(4)
     ax.xaxis.set_minor_locator(xminor)

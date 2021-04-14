@@ -50,8 +50,17 @@ class OECTDevice:
         Both variables are the same and for ease of use (oect.OECT uses 'd')
 
     options : dict, optional
+        V_low : bool, optional
+            Whether to find erroneous "turnover" points when devices break down
+        retrace_only : bool, optional
+            Only use the retrace in case trace isn't saturating
+        verbose: bool, optional
+            Print to display
+        plot : list of bools, optional
+            [0]: Plot the uC* data
+            [1]: plot the individual plots
+            Whether to plot or not. Plotting can be very fast if both are turned on!
 
-    
     Attributes
     ----------
     L : float
