@@ -19,8 +19,8 @@ from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
 
-from .oect_utils.deriv import gm_deriv
-from .oect_utils.config import make_config, config_file
+from oect_utils.deriv import gm_deriv
+from oect_utils.config import make_config, config_file
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 

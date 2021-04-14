@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 # import pyqtgraph as pg
 import os
-from ..oect_device import OECTDevice
+import oect.OECTDevice as OECTDevice
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 import pandas as pd
 
