@@ -36,7 +36,11 @@ st.write('Pixel folder is `%s`' % pixel_folder)
 st.write('Device folder is `%s`' % device_folder)
 
 st.header('Pixel parameters')
-thickness = float(st.text_input('Thickness (nm)')) * 1e-9
+thickness = st.text_input('Thickness (nm), leave blank to use .cfg files')
+try:
+    thickness = float(thickness) * 1e-9
+except:
+    thickness = None
 
 # Run Pixel analysis
 if thickness:
@@ -78,3 +82,4 @@ df['Vt'] = device.Vt
 df['VgVts'] = device.Vg_Vt
 df['Wd/L (nm)'] = np.round(device.WdL * 1e9, 0)
 st.sidebar.write(df)
+st.sidebar.write('$\mu C^*$ = ', '$'+str(np.round(device.uC_0)*1e-2)[1:-1]+'$', ' $Fcm^{-1}V^{-1}s^{-1}$')
