@@ -254,7 +254,7 @@ class OECT:
         for k in [par, opt, params, options]:
             if k and not isinstance(k, dict):
                 raise TypeError('Must pass a dictionary')
-        # From the config flie
+        # From the config file
         self.params.update(par)
         self.options.update(opt)
 

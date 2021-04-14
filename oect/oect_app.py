@@ -83,3 +83,5 @@ df['VgVts'] = device.Vg_Vt
 df['Wd/L (nm)'] = np.round(device.WdL * 1e9, 0)
 st.sidebar.write(df)
 st.sidebar.write('$\mu C^*$ = ', '$'+str(np.round(device.uC_0)*1e-2)[1:-1]+'$', ' $Fcm^{-1}V^{-1}s^{-1}$')
+
+#st.multiselect('Multiselect', [1,2,3])

@@ -75,7 +75,7 @@ class TestOECT:
 
     # test that if options are not in config, all settings are set to default
     def test_set_params_defaults(self):
-        test_oect = oect.OECT(folder=os.getcwd())
+        test_oect = oect.OECT(folder='tests/test_device/01')
         test_oect.set_params({}, {}, {}, {})  # try defaults
         assert (test_oect.options['gm_method'] == 'sg'
                 and test_oect.options['Reverse'] == True
