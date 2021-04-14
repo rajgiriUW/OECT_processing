@@ -5,13 +5,12 @@ Created on Thu May  9 14:15:37 2019
 @author: GingerLab
 """
 
+import lmfit
 import numpy as np
-from scipy.optimize import curve_fit
-from scipy.optimize import fsolve
 import pandas as pd
 from matplotlib import pyplot as plt
-
-import lmfit
+from scipy.optimize import curve_fit
+from scipy.optimize import fsolve
 
 
 def read_time_dep(path, start=30, stop=0, v_limit=None, skipfooter=1):

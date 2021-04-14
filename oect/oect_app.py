@@ -1,16 +1,17 @@
-import streamlit as st
-import pandas as pd
-import sys, os
 import numpy as np
+import os
+import pandas as pd
+import streamlit as st
+import sys
 from matplotlib import pyplot as plt
 
-#sys.path.insert(0, os.path.abspath('..'))
-#os.chdir('..')
-#os.chdir('..')
-
 import oect
-from oect.oect_utils.oect_load import uC_scale
 from oect.oect_utils import oect_plot
+from oect.oect_utils.oect_load import uC_scale
+
+# sys.path.insert(0, os.path.abspath('..'))
+# os.chdir('..')
+# os.chdir('..')
 
 st.title('OECT processing')
 device_folder = st.sidebar.text_input('Device folder')

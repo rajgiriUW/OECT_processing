@@ -5,14 +5,13 @@ Created on Thu Aug 23 11:04:47 2018
 @author: Raj
 """
 
-import os
-
 import numpy as np
+import os
 import pandas as pd
 from scipy.optimize import curve_fit as cf
 
 import oect
-import oect_plot
+import oect.oect_utils.oect_plot as oect_plot
 
 '''
 Wrapper function for generating a uC* plot. This file contains one main function:

@@ -1,7 +1,7 @@
-from matplotlib import pyplot as plt
 import numpy as np
-import seaborn as sns
 import pandas as pd
+import seaborn as sns
+from matplotlib import pyplot as plt
 
 
 def plot_time(uv, ax=None, norm=True, smooth=False, **kwargs):

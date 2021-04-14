@@ -5,19 +5,19 @@ Created on Tue Jul  3 13:36:20 2018
 @author: Raj
 """
 
+import h5py
 import numpy as np
+import os
 import pandas as pd
+import re
+import seaborn as sns
+from matplotlib import pyplot as plt
+from pathlib import Path
+from scipy import integrate as spint
 from scipy import signal as sg
 from scipy.optimize import curve_fit
-from scipy import integrate as spint
-import os
-import re
-import h5py
-from pathlib import Path
-from . import read_files
-import seaborn as sns
 
-from matplotlib import pyplot as plt
+from . import read_files
 
 '''
 UV Vis spec-echem processing

@@ -1,6 +1,6 @@
-from scipy import signal as sps
 import numpy as np
 import warnings
+from scipy import signal as sps
 
 """
 Derivative for generating gm from Id-Vg plots

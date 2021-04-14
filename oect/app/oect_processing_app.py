@@ -1,7 +1,8 @@
-import sys, os
-from PyQt5.QtWidgets import *
-from PyQt5 import QtGui
+import os
 import pyqtgraph as pg
+import sys
+from PyQt5 import QtGui
+from PyQt5.QtWidgets import *
 
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.append(os.path.abspath('..'))

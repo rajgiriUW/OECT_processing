@@ -10,17 +10,16 @@ __email__ = "rgiri@uw.edu"
 """
 
 import configparser
-import os
-import warnings
-
 import numpy as np
+import os
 import pandas as pd
+import warnings
 from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
 
-from oect_utils.deriv import gm_deriv
 from oect_utils.config import make_config, config_file
+from oect_utils.deriv import gm_deriv
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 

@@ -6,13 +6,12 @@ Created on Wed Apr 24 10:16:43 2019
 """
 
 import numpy as np
-from scipy.optimize import curve_fit as cf
-
-from .oect_utils import oect_plot
-from .oect_utils import oect_load
-
 import pandas as pd
 import pickle
+from scipy.optimize import curve_fit as cf
+
+from .oect_utils import oect_load
+from .oect_utils import oect_plot
 
 
 class OECTDevice:

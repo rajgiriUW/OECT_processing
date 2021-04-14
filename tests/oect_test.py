@@ -5,9 +5,11 @@ import configparser
 import numpy as np
 
 sys.path.insert(0, '..')
+
 print(os.getcwd())
 if 'tests' in os.getcwd():
     os.chdir('..')
+sys.path.append('oect/')
 
 import oect
 from oect.oect_utils.config import make_config, config_file

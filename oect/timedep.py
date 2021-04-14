@@ -6,9 +6,9 @@ Created on Thu May  9 14:15:37 2019
 """
 
 import numpy as np
-from scipy.optimize import curve_fit
 import pandas as pd
 from matplotlib import pyplot as plt
+from scipy.optimize import curve_fit
 
 
 def read_time_dep(path):

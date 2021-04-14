@@ -5,16 +5,16 @@ Created on Sun Nov 19 18:17:40 2017
 @author: Raj
 """
 
-import warnings
-from itertools import cycle
-
 import matplotlib.cbook
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib.ticker import AutoMinorLocator
+import oect
 # import pyqtgraph as pg
 import os
-import oect.OECTDevice as OECTDevice
+import warnings
+from itertools import cycle
+from matplotlib import pyplot as plt
+from matplotlib.ticker import AutoMinorLocator
+
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 import pandas as pd
 

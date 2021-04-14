@@ -5,15 +5,14 @@ Created on Thu Aug 23 11:04:47 2018
 @author: Raj
 """
 
-import os
-
 import numpy as np
+import os
 import pandas as pd
+from collections import Counter
 from scipy.optimize import curve_fit as cf
 
 from .. import oect
 from ..oect_utils import oect_plot
-from collections import Counter
 
 '''
 load_uC : for loading the four pixels to generate a uC* plot
