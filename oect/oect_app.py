@@ -4,9 +4,9 @@ import sys, os
 import numpy as np
 from matplotlib import pyplot as plt
 
-sys.path.insert(0, os.path.abspath('..'))
-os.chdir('..')
-os.chdir('..')
+#sys.path.insert(0, os.path.abspath('..'))
+#os.chdir('..')
+#os.chdir('..')
 
 import oect
 from oect.oect_utils.oect_load import uC_scale
