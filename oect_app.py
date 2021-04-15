@@ -5,9 +5,9 @@ import streamlit as st
 import sys
 from matplotlib import pyplot as plt
 
-import oect_processing as oect
-from oect_utils import oect_plot
-from oect_utils.oect_load import uC_scale
+import oect_processing as oectp
+from oect_processing.oect_utils import oect_plot
+from oect_processing .oect_utils.oect_load import uC_scale
 
 # sys.path.insert(0, os.path.abspath('..'))
 # os.chdir('..')
@@ -15,10 +15,11 @@ from oect_utils.oect_load import uC_scale
 
 st.title('OECT processing')
 
+TEST_DATA = r'oect_processing/notebooks/test_data_manufactured'
 device_folder = st.sidebar.text_input('Device folder')
 
 
-def file_selector(folder_path=r'notebooks/test_data_manufactured'):
+def file_selector(folder_path=TEST_DATA):
     filenames = os.listdir(folder_path)
     selected_filename = st.sidebar.selectbox('Select a pixel in this folder', filenames)
 
@@ -30,7 +31,7 @@ if device_folder:
     pixel_folder = file_selector(device_folder)
 else:
     pixel_folder = file_selector()
-    device_folder = 'notebooks/test_data_manufactured'
+    device_folder = TEST_DATA
 
 paths = [os.path.join(device_folder, name) for name in os.listdir(device_folder)]
 for p in paths:
@@ -49,9 +50,9 @@ except:
 
 # Run Pixel analysis
 if thickness:
-    dv = oect.OECT(pixel_folder, params={'d': thickness})
+    dv = oectp.OECT(pixel_folder, params={'d': thickness})
 else:
-    dv = oect.OECT(pixel_folder)
+    dv = oectp.OECT(pixel_folder)
 
 st.write('Width = `%s`' % dv.W)
 st.write('Length = `%s`' % dv.L)
@@ -73,7 +74,7 @@ fig = oect_plot.plot_outputs(dv, sort=True, direction='bwd')
 st.pyplot(fig)
 
 # Run device analysis
-device = oect.OECTDevice(device_folder,
+device = oectp.OECTDevice(device_folder,
                          params={'thickness': thickness},
                          options={'plot': [False, False], 'verbose': False})
 

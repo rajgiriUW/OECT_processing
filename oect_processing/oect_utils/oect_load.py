@@ -10,7 +10,7 @@ import os
 import pandas as pd
 from scipy.optimize import curve_fit as cf
 
-import oect_processing as oect
+import oect_processing as oectp
 from . import oect_plot
 
 '''
@@ -219,7 +219,7 @@ def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=Tru
     if not path:
         path = file_open(caption='Select device subfolder')
 
-    device = oect.OECT(path, params=params, options=options)
+    device = oectp.OECT(path, params=params, options=options)
     device.calc_gms()
     device.thresh()
 
@@ -335,7 +335,7 @@ def average(path='', thickness=40e-9, plot=True):
         Id_Vg = Id_Vg.set_index(pixels[list(pixels.keys())[-1]])
 
     # find gm of the average
-    temp_dv = oect.OECT(paths[0], {'d': thickness})
+    temp_dv = oectp.OECT(paths[0], {'d': thickness})
     _gm_fwd, _gm_bwd = temp_dv._calc_gm(Id_Vg)
     Id_Vg['gm_fwd'] = _gm_fwd
     if not _gm_bwd.empty:
