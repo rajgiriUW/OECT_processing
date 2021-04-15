@@ -5,19 +5,20 @@ import streamlit as st
 import sys
 from matplotlib import pyplot as plt
 
-import oect
-from oect.oect_utils import oect_plot
-from oect.oect_utils.oect_load import uC_scale
+import oect_processing as oect
+from oect_utils import oect_plot
+from oect_utils.oect_load import uC_scale
 
 # sys.path.insert(0, os.path.abspath('..'))
 # os.chdir('..')
 # os.chdir('..')
 
 st.title('OECT processing')
+
 device_folder = st.sidebar.text_input('Device folder')
 
 
-def file_selector(folder_path):
+def file_selector(folder_path=r'notebooks/test_data_manufactured'):
     filenames = os.listdir(folder_path)
     selected_filename = st.sidebar.selectbox('Select a pixel in this folder', filenames)
 
@@ -25,8 +26,11 @@ def file_selector(folder_path):
 
     return os.path.join(folder_path, selected_filename)
 
-
-pixel_folder = file_selector(device_folder)
+if device_folder:
+    pixel_folder = file_selector(device_folder)
+else:
+    pixel_folder = file_selector()
+    device_folder = 'notebooks/test_data_manufactured'
 
 paths = [os.path.join(device_folder, name) for name in os.listdir(device_folder)]
 for p in paths:

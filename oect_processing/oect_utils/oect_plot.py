@@ -7,7 +7,7 @@ Created on Sun Nov 19 18:17:40 2017
 
 import matplotlib.cbook
 import numpy as np
-import oect
+import oect_processing as oect
 # import pyqtgraph as pg
 import os
 import warnings

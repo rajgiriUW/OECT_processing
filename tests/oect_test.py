@@ -11,8 +11,8 @@ if 'tests' in os.getcwd():
     os.chdir('..')
 sys.path.append('oect/')
 
-import oect
-from oect.oect_utils.config import make_config, config_file
+import oect_processing as oect
+from oect_processing.oect_utils.config import make_config, config_file
 
 # most values are hardcoded - be careful if modifying cfg/txt files
 # some tests use different subfolders to avoid conflicts
