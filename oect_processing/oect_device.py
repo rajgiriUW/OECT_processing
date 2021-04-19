@@ -37,9 +37,9 @@ class OECTDevice:
     thickness : float
         The device layer thickness, assuming it is fixed for all dimensions
 
-    pixels : dict, optional
+    pixels : dict of oect.OECTDevice, optional
         If passing an existing set of data from a previous run
-        
+
     params : dict, optional
         For passing specific device parameters. Currently, this only supports
         d : float
@@ -121,7 +121,7 @@ class OECTDevice:
             self.params.update(pm)
             self.pixels = pixels
 
-        elif not any(params):
+        else:
 
             self.get_params()
 
@@ -145,7 +145,8 @@ class OECTDevice:
 
     def get_params(self):
         '''
-        Generates the parameters from the pixel data
+        Generates the parameters from the pixel data and calculates uC*
+        By default this averages forward and backward curves together
         '''
         Wd_L = np.array([])
         W = np.array([])
@@ -158,26 +159,30 @@ class OECTDevice:
 
         for pixel in self.pixels:
 
-            if not self.pixels[pixel].gms.empty:
+            if self.pixels[pixel].gms.empty:
 
-                ix = len(self.pixels[pixel].VgVts)
-                Vt = np.append(Vt, self.pixels[pixel].Vts)
-                Vg_Vt = np.append(Vg_Vt, self.pixels[pixel].VgVts)
-                gms = np.append(gms, self.pixels[pixel].gm_peaks['peak gm (S)'].values)
-                W = np.append(W, self.pixels[pixel].W)
+                self.pixels[pixel].calc_gms()
+                self.pixels[pixel].thresh()
 
-                # appends WdL as many times as there are transfer curves
-                for i in range(len(self.pixels[pixel].VgVts)):
-                    Wd_L = np.append(Wd_L, self.pixels[pixel].WdL)
-                # remove the trace ()
-                if self.options['retrace_only'] and len(self.pixels[pixel].VgVts) > 1:
-                    Vt = np.delete(Vt, -ix)
-                    Vg_Vt = np.delete(Vg_Vt, -ix)
-                    gms = np.delete(gms, -ix)
-                    Wd_L = np.delete(Wd_L, -ix)
+            ix = len(self.pixels[pixel].VgVts)
+            Vt = np.append(Vt, self.pixels[pixel].Vts)
+            Vg_Vt = np.append(Vg_Vt, self.pixels[pixel].VgVts)
+            gms = np.append(gms, self.pixels[pixel].peak_gm)
+            W = np.append(W, self.pixels[pixel].W)
 
-                params['L'] = self.pixels[pixel].L
-                params['d'] = self.pixels[pixel].d
+            # appends WdL as many times as there are transfer curves
+            for i in range(len(self.pixels[pixel].VgVts)):
+                Wd_L = np.append(Wd_L, self.pixels[pixel].WdL)
+
+            # remove the trace ()
+            if self.options['retrace_only'] and len(self.pixels[pixel].VgVts) > 1:
+                Vt = np.delete(Vt, -ix)
+                Vg_Vt = np.delete(Vg_Vt, -ix)
+                gms = np.delete(gms, -ix)
+                Wd_L = np.delete(Wd_L, -ix)
+
+            params['L'] = self.pixels[pixel].L
+            params['d'] = self.pixels[pixel].d
 
         # fit functions
         def line_f(x, a, b):

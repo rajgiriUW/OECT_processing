@@ -467,6 +467,11 @@ class OECT:
                 self.gms[nm] = df
 
         self.peak_gm = self.gm_peaks['peak gm (S)'].values
+
+        if 'Average' in self.options and self.options['Average']:
+            self.gms = pd.DataFrame(self.gms.mean(1), columns={'gm_avg'})
+            self.peak_gm = self.gm_peaks['peak gm (S)'].values.mean()
+
         return
 
     def _calc_gm(self, df):
@@ -631,7 +636,7 @@ class OECT:
                 self.transfers[nm] = df
 
         if 'Average' in self.options and self.options['Average']:
-            self.transfers = self.transfers.mean(1)
+            self.transfers = pd.DataFrame(self.transfers.mean(1), columns={'transfer_avg'})
 
         # if there's an "inversion" at the end, finds that point
         if self.options['V_low'] is True:
