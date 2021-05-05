@@ -71,7 +71,6 @@ for p in paths:
     if not os.path.isdir(p):
         paths.remove(p)
     else:
-        p = p.replace(r'/', '\\')
         k = p.split('\\')[-1]
         folders.append(k)
         pixel_paths[k] = p
