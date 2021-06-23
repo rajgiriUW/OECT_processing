@@ -18,8 +18,13 @@ from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
 
-from .oect_utils.config import make_config, config_file
-from .oect_utils.deriv import gm_deriv
+try:
+	from .oect_utils.config import make_config, config_file
+	from .oect_utils.deriv import gm_deriv
+except: # Jupyter
+	from oect_utils.config import make_config, config_file
+	from oect_utils.deriv import gm_deriv
+
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -700,9 +705,10 @@ class OECT:
 
         if plot:
             from matplotlib import pyplot as plt
-            plt.figure()
-            plt.xlabel('$V_{GS}$ $Voltage (V)$')
-            plt.ylabel('|$I_{DS}$$^{0.5}$| ($A^{0.5}$)')
+            fig, ax = plt.subplots(facecolor='white')
+            #plt.figure()
+            ax.set_xlabel('$V_{GS}$ $Voltage (V)$')
+            ax.set_ylabel('|$I_{DS}$$^{0.5}$| ($A^{0.5}$)')
             labels = []
 
         if c_star:
@@ -748,10 +754,10 @@ class OECT:
                 mobilities = np.append(mobilities, mu)
 
         if plot:
-            plt.legend(labels=labels)
-            plt.axhline(0, color='k', linestyle='--')
+            ax.legend(labels=labels)
+            ax.axhline(0, color='k', linestyle='--')
             for v in Vts:
-                plt.axvline(v, color='k', linestyle='--')
+                ax.axvline(v, color='k', linestyle='--')
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts
@@ -760,6 +766,9 @@ class OECT:
         self.mobilities = mobilities
         self.mobility = np.mean(mobilities)
 
+        if plot:
+            return fig, ax
+        
         return
 
     # find minimum residual through fitting a line to several found peaks

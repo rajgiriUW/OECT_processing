@@ -111,7 +111,7 @@ st.write('Width = `%s`' % dv.W)
 st.write('Length = `%s`' % dv.L)
 
 dv.calc_gms()
-dv.thresh()
+vt_plot, _ = dv.thresh(plot=True)
 st.write('Transconductance, $g_m$ (S)')
 dv.gms
 st.write('Threshold Voltage $V_t$ (V)')
@@ -125,6 +125,8 @@ st.pyplot(fig)
 
 fig = oect_plot.plot_outputs(dv, sort=True, direction='bwd')
 st.pyplot(fig)
+
+st.pyplot(vt_plot)
 
 # Run device analysis
 
