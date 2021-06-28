@@ -13,7 +13,7 @@ from scipy.optimize import curve_fit
 from scipy.optimize import fsolve
 
 
-def read_time_dep(path, start=30, stop=0, v_limit=None, skipfooter=1):
+def read_time_dep(path, start=0, stop=0, v_limit=None, skipfooter=1):
     '''
     Reads in the time-dependent data using Raj's automated version
     Saves all the different current 
@@ -31,11 +31,7 @@ def read_time_dep(path, start=30, stop=0, v_limit=None, skipfooter=1):
         
     df : DataFrame
         Single DataFrame with all the indices corrected
-    device : Dict
-        Dict of the individual current DataFrames
     
-    Both have equivalent data, it just can be easier to deal with dicts sometimes
-    but a single DataFrame is convenient for SeaBorn plotting
     '''
     df = pd.read_csv(path, sep='\t', skipfooter=skipfooter, engine='python')
     df = df.set_index('Time (ms)')  # convert to seconds
@@ -53,7 +49,7 @@ def read_time_dep(path, start=30, stop=0, v_limit=None, skipfooter=1):
     if df.columns[0] == 'I_G (A)':
         df.is_cc = True
         df.is_cv = False
-    elif df.columns[1] == 'V_G (V)':
+    elif df.columns[0] == 'V_G (V)':
         df.is_cc = False
         df.is_cv = True
 
@@ -62,24 +58,23 @@ def read_time_dep(path, start=30, stop=0, v_limit=None, skipfooter=1):
     return df
 
 
-def plot_ccurrent(df, v_comp=-0.9):
+def plot_current(df, v_comp=-1):
     '''
-    Constant current plotting
-    Only plots the current where voltage doesn't saturate
-    
-    This only matters if you don't crop the voltage upon reading it in
-    
+    Plot the current data
+    Only plots the current where voltage doesn't saturate  (v_comp)
+ 
     v_comp : float
         The voltage compliance limit during constant_current traces
+        This has no real effect in a constant_voltage case
     '''
 
     fig, ax = plt.subplots(figsize=(9, 6))
 
-    yy = df.loc[np.abs(df['V_G(V)']) <= np.abs(v_comp)]
-    xx = df.loc[np.abs(df['V_G(V)']) <= np.abs(v_comp)].index.values
-    ax.plot(xx, yy['I_DS(A)'], 'b')
+    yy = df.loc[np.abs(df['V_G (V)']) <= np.abs(v_comp)]
+    xx = df.loc[np.abs(df['V_G (V)']) <= np.abs(v_comp)].index.values
+    ax.plot(xx, yy['I_DS (A)'], 'b')
     ax2 = ax.twinx()
-    ax2.plot(xx, yy['V_G(V)'], 'r--')
+    ax2.plot(xx, yy['V_G (V)'], 'r--')
 
     ax2.set_ylabel('Voltage (V)')
     ax.set_xlabel('Time (ms)')
@@ -89,37 +84,7 @@ def plot_ccurrent(df, v_comp=-0.9):
 
     return
 
-
-def plot_current(df, norm=False, log=False):
-    fig, ax = plt.subplots(figsize=(9, 6))
-
-    s = 'Setpoint Current (nA)' if df.is_cc == True else 'Setpoint Voltage (V)'
-
-    for i in df.setpoints:
-        if norm:
-            xx = df.loc[df[s] == i]['Ids (mA)'].index.values
-            yy = df.loc[df[s] == i]['Ids (mA)'].values
-            yy = (yy - np.min(yy)) / (np.max(yy) - np.min(yy))
-
-            ax.plot(xx, yy)
-        else:
-            if log:
-                ax.plot(np.abs(df.loc[df[s] == i]['Ids (mA)']))
-                ax.set_yscale('log')
-            else:
-                ax.plot(df.loc[df[s] == i]['Ids (mA)'])
-    if df.is_cc:
-        ax.legend(labels=[str(x) + ' nA' for x in df.setpoints])
-    else:
-        ax.legend(labels=[str(x) + ' V' for x in df.setpoints])
-    ax.set_xlabel('Time (ms)')
-    ax.set_ylabel('Current (mA)')
-    ax.set_title(df.name)
-    plt.tight_layout()
-
-    return ax
-
-
+#### Model fitting ####
 def friedlein_decay(t, mu, Cd, Cs, L, Vg, Rs, Vt, Vd, Ierr):
     '''
     Modified version of the Friedlein model taking into account an exponential
