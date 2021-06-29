@@ -13,6 +13,7 @@ sys.path.append('oect/')
 
 import oect_processing as oect
 from oect_processing.oect_utils.config import make_config, config_file
+from oect_processing import transient
 
 # most values are hardcoded - be careful if modifying cfg/txt files
 # some tests use different subfolders to avoid conflicts
@@ -275,6 +276,28 @@ class TestOECT:
     def test_config_not_cfg(self):
         with pytest.raises(configparser.MissingSectionHeaderError):
             params, opts = config_file('tests/dummy_file.py')
+
+class TestTransient:
+    
+    # test just loading the data
+    def test_load(self):
+        
+        df = transient.read_time_dep('tests/test_transient/03_400um_-0.8V_cycles.txt',start=0)
+    
+    # test loading and then plotting the data
+    def test_load_plot(self):    
+        
+        df = transient.read_time_dep('tests/test_transient/03_400um_-0.8V_cycles.txt',start=0)
+        transient.plot_current(df, norm=True)
+    
+    # test curve_fitting with single exponential
+    def test_load_fit(self):    
+        
+        df = transient.read_time_dep('tests/test_transient/03_400um_-0.8V_cycles.txt',start=0)
+        transient.fit_cycles(df, 40, 20, norm=True)
+    
+        
+        
 
 # questions/why I didn't write tests for these functions
 # loaddata - just consolidates a lot of functions
