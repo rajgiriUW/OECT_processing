@@ -1,5 +1,14 @@
 # Organic Electrochemical Transistor (OECT) device processing
 
+```
+Contact info: 
+
+Rajiv Giridharagopal, Ph.D.
+University of Washington
+Department of Chemistry
+rgiri@uw.edu
+```
+
 This package processes sets of OECT device measurements in Python via Pandas, with primary users being the Ginger Lab at University of Washington.
 It includes some simplified extraction and processing of recorded data.  
 There is also simplified scripts for extracting and processing spectroelectrochemistry data.  
