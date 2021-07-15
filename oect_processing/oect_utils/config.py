@@ -22,7 +22,7 @@ def make_config(path):
                         'Vgs (V) 2': -0.5,
                         'Vgs (V) 3': -0.9}
     
-    if 'pathlib' in type(path):
+    if 'pathlib' in str(type(path)):
 
         with open(path / 'config.cfg', 'w') as configfile:    
             config.write(configfile)
