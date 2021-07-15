@@ -3,6 +3,7 @@ import sys
 import pytest
 import configparser
 import numpy as np
+import pathlib
 
 sys.path.insert(0, '..')
 
@@ -100,10 +101,11 @@ class TestOECT:
     def test_filelist(self):
         test_oect = oect.OECT(folder='tests/test_device/01')
         test_oect.filelist()
-        assert (os.path.join('tests/test_device/01', 'uc1_kpf6_output_0.txt') in test_oect.files
-                and os.path.join('tests/test_device/01', 'uc1_kpf6_output_1.txt') in test_oect.files
-                and os.path.join('tests/test_device/01', 'uc1_kpf6_transfer_0.txt') in test_oect.files
-                and test_oect.config[0] == os.path.join('tests/test_device/01', 'uc1_kpf6_config.cfg'))
+        files = [str(f) for f in test_oect.files]
+        assert (os.path.join('tests/test_device/01', 'uc1_kpf6_output_0.txt') in files
+                and os.path.join('tests/test_device/01', 'uc1_kpf6_output_1.txt') in files
+                and os.path.join('tests/test_device/01', 'uc1_kpf6_transfer_0.txt') in files
+                and os.path.join('tests/test_device/01', 'uc1_kpf6_config.cfg') in str(test_oect.config))
 
     # test that config file is generated when folder starts with no cfg
     @pytest.mark.xfail

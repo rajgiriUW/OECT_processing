@@ -1,5 +1,4 @@
 import configparser
-import pathlib
 
 def make_config(path):
     '''
