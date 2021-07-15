@@ -46,6 +46,14 @@ There is also a fairly simple Streamlit app to use this. To open this:
 
 3) The app should open on your browser. Use the instructions in the **GUIDE** dropdown box. Basically, just copy and paste a path to your local data on the left panel. Then, select the devices to use for calculating uC*
 
-![alt text](http://url/to/img.png)
+#### Initial screen if the App loads
+![Initial Loading](https://github.com/rajgiriUW/OECT_processing/tree/master/imgs/app_screenshot_1.png)
+
+#### Instructions, Part 1
+![Instructions](https://github.com/rajgiriUW/OECT_processing/tree/master/imgs/app_instructions_1.png)
+
+#### Instructions, Part 2
+![Instructions](https://github.com/rajgiriUW/OECT_processing/tree/master/imgs/app_instructions_2.png)
+
 
 
