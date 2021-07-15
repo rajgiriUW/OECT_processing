@@ -17,6 +17,7 @@ import warnings
 from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
+import pathlib
 
 try:
 	from .oect_utils.config import make_config, config_file
@@ -49,7 +50,7 @@ class OECT:
         
     Usage
     --------
-    >>> import oect
+    >>> import oect_processing as oect
     >>>
     >>> path = '../device_data/pixel_01'
     >>>
@@ -293,12 +294,13 @@ class OECT:
 
         for t in self.files:
             print(t)
+            
             self.get_metadata(t)
 
-            if 'transfer' in t:
+            if 'transfer' in t.parts[-1]:
                 self.transfer_curve(t)
 
-            elif 'output' in t:
+            elif 'output' in t.parts[-1]:
                 self.output_curve(t)
 
         self.all_outputs()
@@ -321,18 +323,18 @@ class OECT:
         """ Generates list of files to process and config file"""
 
         filelist = os.listdir(self.folder)
-        files = [os.path.join(self.folder, name)
+        files = [pathlib.Path(os.path.join(self.folder, name))
                  for name in filelist if name[-3:] == 'txt']
 
         # find config file
-        config = [os.path.join(self.folder, name)
+        config = [pathlib.Path(os.path.join(self.folder, name))
                   for name in filelist if name[-4:] == '.cfg']
 
         if config:
 
             for f in files:
 
-                if 'config' in f:
+                if 'config' in str(f):
                     files.remove(f)
 
             self.config = config
@@ -340,7 +342,7 @@ class OECT:
         else:
 
             print('No config file found!')
-            path = '\\'.join(files[0].split('\\')[:-1])
+            path = pathlib.Path('\\'.join(files[0].parts[:-1]))
             self.config = make_config(path)
             self.make_config = True
 
@@ -589,6 +591,7 @@ class OECT:
         return
 
     def transfer_curve(self, path):
+        
         """Loads Id-Vg transfer curve from a path"""
         transfer_raw = pd.read_csv(path, delimiter='\t', engine='python')
 

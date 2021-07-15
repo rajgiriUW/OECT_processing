@@ -182,6 +182,12 @@ class TestOECT:
         test_oect = oect.OECT(folder='tests/test_device/01')  # called in init
         assert test_oect.num_transfers == 2
 
+    # test that multiple transfer curves process correctly
+    def test_multiple_transfers(self):
+        test_oect = oect.OECT(folder='tests/test_device/multiple_transfers')
+        test_oect.calc_gms()
+        test_oect.thresh()
+
     # _reverse
     ###################################################################
 
@@ -279,6 +285,7 @@ class TestOECT:
             params, opts = config_file('tests/dummy_file.py')
 
 
+
 class TestTransient:
 
     # test just loading the data
@@ -294,14 +301,3 @@ class TestTransient:
     def test_load_fit(self):
         df = transient.read_time_dep('tests/test_transient/03_400um_-0.8V_cycles.txt', start=0)
         transient.fit_cycles(df, 40, 20, norm=True)
-
-# questions/why I didn't write tests for these functions
-# loaddata - just consolidates a lot of functions
-# calc_gms - what would an expected gm would be?
-# _calc_gm - ""
-# quadrant - what does the self.gm_peaks.index indicate? what
-#	would be an expected value?
-# thresh - confused about the zip calls, gm_peaks
-# _min_fit - what would an expected result be?
-# line_f - self-explanatory enough to not test
-# _find_peak - what would an expected result be?
