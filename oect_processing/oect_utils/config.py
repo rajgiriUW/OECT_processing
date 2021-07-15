@@ -26,7 +26,7 @@ def make_config(path):
     if 'pathlib' in str(type(path)):
 
         path = pathlib.Path(path / 'config.cfg')
-        with open(path, 'w') as configfile:    
+        with open(path.absolute().as_posix(), 'w') as configfile:    
             config.write(configfile)
         return path
 
