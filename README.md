@@ -11,7 +11,8 @@ rgiri@uw.edu
 
 This package processes sets of OECT device measurements in Python via Pandas, with primary users being the Ginger Lab at University of Washington.
 It includes some simplified extraction and processing of recorded data.  
-There is also simplified scripts for extracting and processing spectroelectrochemistry data.  
+There is also simplified scripts for extracting and processing spectroelectrochemistry data. 
+Included is a simple **Streamlit app**, see below.
 
 All pixels are expected to have a .cfg file or will auto-generate one. These files contain:
 * Width and Length
@@ -30,3 +31,5 @@ To edit locally:
 
 ```python setup.py develop```
 
+## Instructions
+The easiest way to run this is by going through the [OECT Processing Notebook]('\oect_processing\notebooks\OECT Processing.ipynb')
