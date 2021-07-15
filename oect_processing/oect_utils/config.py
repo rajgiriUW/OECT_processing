@@ -5,6 +5,7 @@ def make_config(path):
     If a config file does not exist, this will generate one automatically.
     
     '''
+    
     config = configparser.ConfigParser()
     config.optionxform = str
 
@@ -23,7 +24,8 @@ def make_config(path):
     
     if 'pathlib' in str(type(path)):
 
-        with open(path / 'config.cfg', 'w') as configfile:    
+        path = path / 'config.cfg'
+        with open(path, 'w') as configfile:    
             config.write(configfile)
         return path / 'config.cfg'
 
