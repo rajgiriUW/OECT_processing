@@ -32,4 +32,20 @@ To edit locally:
 ```python setup.py develop```
 
 ## Instructions
-The easiest way to run this is by going through the [OECT Processing Notebook]('\oect_processing\notebooks\OECT Processing.ipynb')
+### Option 1: Jupyter Notebook
+
+The easiest way to run this is by loading Jupyter notebook and going through the [OECT Processing Notebook](https://github.com/rajgiriUW/OECT_processing/tree/master/oect_processing/notebooks/OECT%20Processing.ipynb)
+
+### Option 2: Streamlit App
+
+There is also a fairly simple Streamlit app to use this. To open this:
+
+1) Open a command prompt (e.g. "Anaconda Prompt") and navigate to this repository's directory
+
+2) Type ```streamlit run oect_app.py```
+
+3) The app should open on your browser. Use the instructions in the **GUIDE** dropdown box. Basically, just copy and paste a path to your local data on the left panel. Then, select the devices to use for calculating uC*
+
+![alt text](http://url/to/img.png)
+
+
