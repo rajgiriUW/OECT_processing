@@ -342,7 +342,8 @@ class OECT:
         else:
 
             print('No config file found!')
-            path = pathlib.Path('\\'.join(files[0].parts[:-1]))
+            #path = pathlib.Path('\\'.join(files[0].parts[:-1]))
+            path = pathlib.Path(*files[0].parts[:-1])
             self.config = make_config(path)
             self.make_config = True
 
