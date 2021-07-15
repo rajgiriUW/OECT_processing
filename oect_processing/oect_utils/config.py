@@ -1,4 +1,5 @@
 import configparser
+import pathlib
 
 def make_config(path):
     '''
@@ -24,10 +25,10 @@ def make_config(path):
     
     if 'pathlib' in str(type(path)):
 
-        path = path / 'config.cfg'
+        path = pathlib.Path(path / 'config.cfg')
         with open(path, 'w') as configfile:    
             config.write(configfile)
-        return path / 'config.cfg'
+        return path
 
     with open(path + r'\config.cfg', 'w') as configfile:
         config.write(configfile)
