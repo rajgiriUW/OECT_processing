@@ -11,7 +11,10 @@ import pandas as pd
 from scipy.optimize import curve_fit as cf
 
 import oect_processing as oectp
-from . import oect_plot
+try:
+    from . import oect_plot
+except:
+    from oect_utils import oect_plot
 
 '''
 Wrapper function for generating a uC* plot. This file contains one main function:
