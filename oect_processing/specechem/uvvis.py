@@ -109,6 +109,7 @@ class UVVis(object):
             spectra_path = specfiles[r]
 
             df = self._single_time_spectra(spectra_path, smooth=smooth, digits=round_wl)
+            
             self.spectra_vs_time[v] = df
 
         if droptimes:
