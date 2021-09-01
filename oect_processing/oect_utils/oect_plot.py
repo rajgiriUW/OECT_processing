@@ -41,8 +41,7 @@ The other plotting functions are mostly used in OECT_loading or in OECT itself
 def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None, 
             axlog=None, fit=True, dot_color='r', average=False, **kwargs):
     """
-    dv : dict of parameters needed for plotting
-
+    :param dv: dict of parameters needed for plotting
         This dict needs the following:
             WdL : array
                 W * d /L values for the pixels
@@ -56,33 +55,41 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
                 For generating a y = mx + b line
             uC_0 : 1-element array 
                 For generating a y = mx line
+    :type dv: dict
 
-    pg_graphs: array of PlotItem
-        UI graphs on which to plot.
+    :param pg_graphs: UI graphs on which to plot.
         pg_graphs[0] is linear plot
         pg_graphs[1] is log plot
-
-    dot_color: QColor
-        color to use when plotting on pg_graphs
-
-    label : str, optional
-        For saving files, incldues this in the filename
-
-    savefig : bool, optional
-        Whether to save the figures
+    :type pg_graphs: array of PlotItem
         
-    ax : matplotlib axes object, optional
-        Plot on an existing axis
+    :param dot_color: color to use when plotting on pg_graphs
+    :type dot_color: QColor
         
-    fit : bool, optional
-        Plot the best fit line or not
-      
-    average: bool, optional
-        Plot only the average gms
+    :param label: For saving files, incldues this in the filename
+    :type label: str, optional
         
-    kwargs : dict, optional
-        Standard plotting params, e.g. {'color': 'b'}
+    :param savefig: Whether to save the figures
+    :type savefig: bool, optional
+        
+    :param ax: Plot on an existing axis
+    :type ax: matplotlib axes object, optional
+        
+    :param fit: Plot the best fit line or not
+    :type fit: bool, optional
+        
+    :param average: Plot only the average gms
+    :type average: bool, optional
+        
+    :param kwargs: Standard plotting params, e.g. {'color': 'b'}
         Default is size 10 blue squares 
+    :type kwargs: dict, optional
+    
+    :returns: list [axlin, axlog, fig]
+        WHERE
+        [type] axlin is...
+        [type] axlog is...
+        [type] fig is...
+        
     """
     if isinstance(dv, dict):
         WdL = dv['WdL']
@@ -231,7 +238,18 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
 def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     ''' 
     For plotting transfer and gm on the same plot for one pixel
-            
+    
+    :param dv:
+    :type dv:
+    
+    :param gm_plot:
+    :type gm_plot: bool
+    
+    :param leakage:
+    :type leakage: bool
+    
+    :returns: fig
+    :rtype:
     '''
 
     fig, ax1 = plt.subplots(facecolor='white', figsize=(10, 8))
@@ -297,16 +315,21 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
 
 def plot_outputs(dv, leakage=False, direction='both', sort = False):
     '''
-    dv : OECT class object
+    :param dv:
+    :type dv: OECT class object
     
-    leakage : bool, optional
-        Show the Gate leakage current on right axis
+    :param leakage: Show the Gate leakage current on right axis
+    :type leakage : bool, optional
         
-    direction : 'fwd', 'bwd', or 'both'
-        Plot only the specified direction or both
+    :param direction: Plot only the specified direction or both
+        'fwd', 'bwd', or 'both'
+    :type direction: str
         
-    sort : bool, optional
-        Whether to plot from lowest to highest Vg
+    :param sort: Whether to plot from lowest to highest Vg
+    :type sort: bool, optional
+        
+    :returns:
+    :rtype:
     '''
 
     fig, ax = plt.subplots(facecolor='white', figsize=(12, 8))
@@ -377,7 +400,11 @@ def plot_output_avg(dv):
     '''
     called by OECT_loading functions
     
-    dv = dataFrame
+    :param dv:
+    :type dv: dataFrame
+    
+    :returns:
+    :rtype:
     '''
 
     fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
@@ -412,6 +439,17 @@ def plot_transfer_avg(dv, Wd_L, label=''):
     
     This plots transfer and outputs for multiple datasets on the same pixel
     
+    :param dv:
+    :type dv:
+    
+    :param Wd_L:
+    :type Wd_L:
+    
+    :param label:
+    :type label: str
+    
+    :returns:
+    :rtype:
     '''
     fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
     ax2 = ax.twinx()

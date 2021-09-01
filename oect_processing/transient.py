@@ -16,19 +16,25 @@ def read_time_dep(path, start=0, stop=0, v_limit=None, skipfooter=1):
     Reads in the time-dependent data using Raj's automated version
     Saves all the different current 
     
-    start : int
-        Time index (in ms) to set as t=0 for the data
-    stop : int
-        Time index (in ms) to set as the end point for the data
-    v_limit : float
-        Limits constant current data to when the voltage_compliance limit is reached
+    :param path:
+    :type path: String
+    
+    :param start: Time index (in ms) to set as t=0 for the data
+    :type start: int
+    
+    :param stop: Time index (in ms) to set as the end point for the data
+    :type stop: int
+        
+    :param v_limit: Limits constant current data to when the voltage_compliance limit is reached
         Do not use this for Constant Voltage data
         e.g. -0.9 V is typical
+    :type v_limit: float
+    
+    :param skipfooter:
+    :type skipfooter: int, optional
         
-    Returns:
-        
-    df : DataFrame
-        Single DataFrame with all the indices corrected
+    :returns: Single DataFrame with all the indices corrected
+    :rtype: DataFrame
     
     '''
     df = pd.read_csv(path, sep='\t', skipfooter=skipfooter, engine='python')
@@ -64,17 +70,26 @@ def plot_current(df, ax=None, v_comp=-1, norm=False, plot_voltage=True):
     Plot the current data
     Only plots the current where voltage doesn't saturate  (v_comp)
  
-     ax : matplotlib Axes object, optional   
+    :param df:
+    :type df: DataFrame
+    
+    :param ax:
+    :type ax: matplotlib Axes object, optional   
  
-    v_comp : float
-        The voltage compliance limit during constant_current traces
+    :param v_comp: The voltage compliance limit during constant_current traces
         This has no real effect in a usual constant_voltage case
-        
-    norm : bool, optional
-        Normalize the current
-        
-    plot_voltage : bool, optional
-        Plot the voltage (only useful for constant voltage plotting)
+    :type v_comp: float
+    
+    :param norm: Normalize the current
+    :type norm: bool, optional
+    
+    :param plot_voltage: Plot the voltage (only useful for constant voltage plotting)
+    :type plot_voltage: bool, optional
+    
+    :returns: tuple (fig, ax)
+        WHERE
+        [type] fig is...
+        [type] ax is...
     '''
     if not ax:
         fig, ax = plt.subplots(figsize=(16, 8), facecolor='white')
@@ -106,6 +121,22 @@ def plot_current(df, ax=None, v_comp=-1, norm=False, plot_voltage=True):
 
 
 def expf(t, y0, A, tau):
+    '''
+    :param t:
+    :type t: float
+    
+    :param y0:
+    :type y0: float
+    
+    :param A:
+    :type A: float
+    
+    :param tau:
+    :type tau: float
+    
+    :returns:
+    :rtype: float
+    '''
     return y0 + A * np.exp(-t / tau)
 
 
@@ -114,34 +145,40 @@ def fit_cycles(df, doping_time, dedoping_time, func=expf, norm=False,
     '''
     Simple single exponential fitting of kinetics
     
-    df : Pandas DataFrame
-        The DataFrame containing our kinetics information
+    :param df: The DataFrame containing our kinetics information
+    :type df: Pandas DataFrame
         
-    doping_time : int
-        The time (seconds) the sample is doped
+    :param doping_time: The time (seconds) the sample is doped
+    :type doping_time: int
         
-    dedoping_time : int
-        The time (seconds) the sample is dedoped
-    
-    func : function
-        default = single exponential. The fitting function to use. 
+    :param dedoping_time: The time (seconds) the sample is dedoped
+    :type dedoping_time: int
+        
+    :param func: default = single exponential. The fitting function to use. 
         Currently this is fixed for dopnig and dedoping
-    
-    norm : bool optional
-        If True, normalizes the current data prior to fitting
+    :type func: function
+
+    :param norm: If True, normalizes the current data prior to fitting
         Sometimes needed for very small currents
-    
-    plot : bool, optional
-        Displays the current and then overlays the fit per cycle
+    :type norm: bool, optional
         
-    p_type: bool, optional
-        Assumes doping is a negative voltage
-    
-    dope_tau_p0 : float, optional
-        The initial guess for the doping tau
+    :param plot: Displays the current and then overlays the fit per cycle
+    :type plot: bool, optional
         
-    dedope_tau_p0 : float, optional
-        The initial guess for the dedoping tau
+    :param p_type: Assumes doping is a negative voltage
+    :type p_type: bool, optional
+        
+    :param dope_tau_p0: The initial guess for the doping tau
+    :type dope_tau_p0: float, optional
+        
+    :param dedope_tau_p0: The initial guess for the dedoping tau
+    :type dedope_tau_p0: float, optional
+    
+    :returns: tuple (doping_fits, dedoping_fits)
+        WHERE
+        [type] doping_fits is...
+        [type] dedoping_fits is...
+        
     '''
 
     t = df.index.values / 1000  # in seconds

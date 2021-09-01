@@ -9,19 +9,16 @@ def read_files(path):
     '''
     Takes a folder and finds the potential from all the "Steps" files
         
-    Input
-    -----
-    path : str
-        Folder path to where the data are contained. Assumes are saved as "steps"
-    
-    Returns
-    -------
-    stepfiles : list of strings
-        For the "steps" (current)
-    specfiles : list of string
-        For the list of spectra files
-    potentials : ndarray
-        Numpy array of the potentials in filelist order
+    :param path: Folder path to where the data are contained. Assumes are saved as "steps"
+    :type path: str
+        
+    :returns: tuple where (stepfiles, specfiles, potentials, dedopestepfiles, dedopespecfiles)
+        WHERE
+        string list stepfiles is list of "steps" (current)
+        string list specfiles is list of spectra files
+        ndarray potentials is array of the potentials in filelist order
+        string list dedopestepfiles is list of dedoping "steps" (current)
+        string list dedopespecfiles is list of dedoping spectra files
     '''
     if isinstance(path, str):
         path = Path(path)

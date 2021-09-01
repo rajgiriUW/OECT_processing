@@ -17,69 +17,71 @@ from ..oect_utils import oect_plot
 '''
 load_uC : for loading the four pixels to generate a uC* plot
 load_avg : for loading all the subfolders that are the 4 "averaging" pixels
-	this is somewhat uncommon
+    this is somewhat uncommon
 
 Usage:
-	
-	>> pixels, uC_dv = oect_load.uC_scale(r'path_to_uC_scale', new_geom=False)
-	
+    
+    >> pixels, uC_dv = oect_load.uC_scale(r'path_to_uC_scale', new_geom=False)
+    
 '''
 
 
 def uC_scale(paths, average_devices=False, dimDict={}, thickness=40e-9, plot=[True, False], V_low=False,
              retrace_only=False, verbose=True, options={}, pg_graphs=[None, None], dot_color='r', text_browser=None):
     '''
-    paths: array
-        contains subfolders to plot
-
-    average_devices : boolean
-        whether to average devices of same WdL
-
-    dimDict: dict
-        dictionary in format of {parentfolder1: {subfolder1: w1, l1}, {subfolder2: w2, l2}, parentfolder2...}
-
-    thickness : float
-        approximate film thickness. Standard polymers (for Raj) are ~40 nm
-
-    plot : list of bools, optional
+    :param paths: contains subfolders to plot
+    :type paths: array
+        
+    :param average_devices: whether to average devices of same WdL
+    :type average_devices: boolean
+    
+    :param dimDict: dictionary in format of {parentfolder1: {subfolder1: w1, l1}, {subfolder2: w2, l2}, parentfolder2...}
+    :type dimDict: dict
+        
+    :param thickness: approximate film thickness. Standard polymers (for Raj) are ~40 nm
+    :type thickness: float
+        
+    :param plot: 
         [0]: Plot the uC* data
         [1]: plot the individual plots
         Whether to plot or not. Not plotting is very fast!
+    :type plot: list of bools, optional
+        
+    :param retrace_only: Whether to only do the retrace in case trace isn't saturating
+    :type retrace_only: bool, optional
+        
+    :param V_low: Whether to find erroneous "turnover" points when devices break down
+    :type V_low : bool, optional
+        
+    :param verbose: print to display
+    :type verbose: bool, optional
 
-    retrace_only : bool, optional
-        Whether to only do the retrace in case trace isn't saturating
-
-    V_low : bool, optional
-        Whether to find erroneous "turnover" points when devices break down
-
-    verbose: bool, optional
-        Print to display
 
     #the following two will be passed to plot_uC in oect_plot.py
-    pg_graphs: array of PlotItem
+    :param pg_graphs:
         UI graphs on which to plot.
         pg_graphs[0] is linear plot
         pg_graphs[1] is log plot
-    dot_color: QColor
-        color to use when plotting on pg_graphs
+    :type pg_graphs: array of PlotItem
+       
+    :param dot_color: color to use when plotting on pg_graphs
+    :type dot_color: QColor
+        
+    :param text_browser: UI text browser dispaying information
+    :type text_browser: QTextBrowser
+        
+    :returns: tuple (pixels, uC_dv)
+        WHERE
+        dict pixels contains the various OECT class devices
+        dict uC_dv contains
+            Wd_L : ndarray
+                coefficient for plotting on x-axis
 
-    text_browser: QTextBrowser
-        UI text browser dispaying information
+            gms : ndarray
+                average transconductance for plotting on y-axis
 
-    Returns
-    -------
-    pixels : dict of OECT
-        Contains the various OECT class devices
-
-    uC_dv : dict containing
-        Wd_L : ndarray
-            coefficient for plotting on x-axis
-
-        gms : ndarray
-            average transconductance for plotting on y-axis
-
-        Vg_Vt : ndarray
-            threshold voltage shifts for correcting uC* fit
+            Vg_Vt : ndarray
+                threshold voltage shifts for correcting uC* fit
 
     '''
     pixkeys = [f + '_uC' for f in paths]
@@ -192,10 +194,36 @@ def loadOECT(path, dimDict, params=None, gm_plot=True, plot=True, options={}, ve
     """
     Wrapper function for processing OECT data
 
-    params = {W: , L: , d: } for W, L, d of device
-
     USAGE:
         device1 = loadOECT(folder_name)
+        
+    :param path:
+    :type path: str
+    
+    :param dimDict:
+    :type dimDict: dict
+    
+    :param params: {W: , L: , d: } for W, L, d of device
+    :type params: dict
+    
+    :param gm_plot:
+    :type gm_plot: bool
+    
+    :param plot:
+    :type plot: bool
+
+    :param options:
+    :type options: dict
+    
+    :param verbose:
+    :type verbose: bool
+    
+    :param text_browser:
+    :type text_browser: QTextBrowser
+
+    :returns:
+    :rtype:
+
     """
 
     if not path:
@@ -231,11 +259,11 @@ def loadOECT(path, dimDict, params=None, gm_plot=True, plot=True, options={}, ve
 def file_open(caption='Select folder'):
     '''
     File dialog if path not given in load commands
-    :param
-        caption : str
+    :param caption:
+    :type caption: str
 
     :return:
-        path : str
+    :rtype: str
     '''
 
     from PyQt5 import QtWidgets
@@ -251,8 +279,12 @@ def file_open(caption='Select folder'):
 def average_same_widths(pixels):
     '''
     Decides which pixels need to be averaged, then average them.
-    pixels : dictionary
-        Dictionary of format {folder1: device1, folder2: device2...}
+    
+    :param pixels: Dictionary of format {folder1: device1, folder2: device2...}
+    :type pixels: dictionary
+    
+    :returns:
+        
     '''
     widths = []
 
@@ -307,27 +339,21 @@ def average(dimDict={}, path='', thickness=40e-9, plot=True, text_browser=None):
     '''
     averages data in this particular path (for folders 'avg')
 
-    path: str
-        string path to folder '.../avg'. Note Windows path are of form r'Path_name'
-
-    thickness : float
-        approximate film thickness. Standard polymers (for Raj) are ~40 nm
-
-    plot : bool
-        Whether to plot or not. Not plotting is very fast!
-
-
-    Returns
-    -------
-    pixels : dict of OECT
-        Contains the various OECT class devices
-
-    Id_Vg : pandas dataframe
-        Contains the averaged Id vs Vg (drain current vs gate voltage, transfer)
-
-    Id_Vd : pandas dataframe
-        Contains the averaged Id vs Vg (drain current vs drain voltages, output)
-
+    :param path: string path to folder '.../avg'. Note Windows path are of form r'Path_name'
+    :type path: str
+        
+    :param thickness: approximate film thickness. Standard polymers (for Raj) are ~40 nm
+    :type thickness: float
+        
+    :param plot: Whether to plot or not. Not plotting is very fast!
+    :type plot: bool
+        
+    :returns: tuple (pixels, Id_Vg, Id_Vd, temp_dv.WdL)
+        WHERE
+        dict pixels contains the various OECT class devices
+        DataFrame Id_Vg contains the averaged Id vs Vg (drain current vs gate voltage, transfer)
+        DataFrame Id_Vd contains the averaged Id vs Vg (drain current vs drain voltages, output)
+        [type] temp_dv.WdL is...
     '''
 
     if not path:

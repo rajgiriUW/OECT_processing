@@ -39,14 +39,15 @@ class UVVis(object):
 
     def __init__(self, steps=None, specs=None, potentials=None):
         '''
-        steps : list
-            List of step(current) files
+		:param steps: List of step(current) files
+        :type steps: list
+        
+		:param specs: List of spectra files
+        :type specs: list
             
-        specs : list
-            List of spectra files
-            
-        potentials : list
-            List of voltages applied
+        :param potentials:  List of voltages applied
+        :type potentials: list
+           
             
         Class contains:
         --------------
@@ -87,20 +88,21 @@ class UVVis(object):
         
         This dict is the major component of this Class
         
-        specfiles : list of str
-            Contains paths to the spectra files on the disk somewhere
-        
-        smooth : int, optional
-            For smoothing the spectra via a boxcar filter. None = no smoothing
-            Typical value is 3 (i.e. 3 point smoothing)
-        
-        round_wl : int, optional
-            Digits to round the wavelength values to in the dataFrames
-            None = no rounding
+		:param specfiles: Contains paths to the spectra files on the disk somewhere
+        :type specfiles: list of str
             
-        droptimes : list or array, optional
-            Specific time indices to drop. This functionality is for initial or final
+        :param smooth: For smoothing the spectra via a boxcar filter. None = no smoothing
+            Typical value is 3 (i.e. 3 point smoothing)
+        :type smooth: int, optional
+            
+        :param round_wl: Digits to round the wavelength values to in the dataFrames
+            None = no rounding
+        :type round_wl: int, optional
+            
+        :param droptimes: Specific time indices to drop. This functionality is for initial or final
             errors in spectroelectrochemistry data
+        :type droptimes: list or array, optional
+            
         
         '''
 
@@ -125,17 +127,17 @@ class UVVis(object):
         Generates the time-dependent spectra for a single dataframe.
         This is used internally to generate the dataFrame then passed to time_dep_spectra()
         
-        spectra_path : str
-            Path to a specific spectra file
+		:param spectra_path: Path to a specific spectra file
+        :type spectra_path: str
             
-        smooth : int, optional
-            For smoothing the data via a boxcar filter. None = no smoothing. 
+        :param smooth: For smoothing the data via a boxcar filter. None = no smoothing. 
+        :type smooth: int, optional
+		
+		:param digits: rounds the wavelengths to this number of decimal points
+        :type digits: int
         
-        Returns
-        ---------
-        df : dataFrame
-            dataFrame of index = wavelength, columns = times, data = absorbance
-            
+		:returns: dataFrame of index = wavelength, columns = times, data = absorbance
+        :rtype: dataframe
         '''
 
         pp = pd.read_csv(spectra_path, sep='\t')
@@ -178,15 +180,16 @@ class UVVis(object):
         
         Also extracts the absorbance vs voltage at a particular wavelength
         
-        time : int, optional
-            What time slice to return
-
-        smooth : int
-            simple boxcar smooth of data for plotting/analysis purposes, controls
+		:param time: What time slice to return
+        :type time: int, optional
+            
+		:param smooth: simple boxcar smooth of data for plotting/analysis purposes, controls
             size of filter 
-         
-        digits : int
-            rounds the wavelengths to this number of decimal points
+        :type smooth: int
+            
+        :param digits: rounds the wavelengths to this number of decimal points
+        :type digits: int
+            
             
         Saves:
         ------
@@ -222,6 +225,9 @@ class UVVis(object):
         Sets up the time index by reading from the first working electrode current file
         
         Alternatively, can read from the time-dependent spectra dataframe
+		
+		:param stepfiles:
+		:type stepfiles: str
         '''
         if stepfiles:
             pp = pd.read_csv(stepfiles, sep='\t')
@@ -242,8 +248,9 @@ class UVVis(object):
 
         Saves the integrated charge as well
         
-        stepfiles : str, list
-            List of steps files (containing working electrode current) on disk
+		:param stepfiles: List of steps files (containing working electrode current) on disk
+        :type stepfiles: str, list
+            
         '''
 
         tx = []
@@ -274,12 +281,16 @@ class UVVis(object):
     def single_wl_time(self, potential=0.9, wavelength=800, smooth=3):
         '''
         Extracts the time-dependent data from a single wavelength
+        :param potential:  Find run corresponding to potential. Note in UV-Vis substrate is biased, not gate electrode
+        :type potential: float
+           
+        :param wavelength: Wavelength to extract. This will search for nearest wavelength row
+        :type wavelength: int, float
         
-        potential : float
-            Find run corresponding to potential. Note in UV-Vis substrate is biased, not gate electrode
-            
-        wavelength : int, float
-            Wavelength to extract. This will search for nearest wavelength row
+		:param smooth: simple boxcar smooth of data for plotting/analysis purposes, controls
+            size of filter 
+        :type smooth: int
+		
             
         '''
         df = self.spectra_vs_time[potential].copy(deep=True)
@@ -308,7 +319,13 @@ class UVVis(object):
     def abs_vs_voltage(self, wavelength=800, time=0):
         '''
         Extracts the absorbance vs voltage at a particular wavelength (threshold visualizing)
-        '''
+        
+		:param wavelength:
+		:type wavelength: int, float
+		
+		:param time:
+		:type time: float
+		'''
         tx = self.tx.searchsorted(time)
         if time == -1:
             tx = self.tx[-1]
@@ -328,7 +345,12 @@ class UVVis(object):
     def volt(self, bias):
         '''
         returns voltage from potential list
-        
+		
+		:param bias: voltage bias to search
+		:type bias: float
+		
+		:returns:
+        :rtype:
         '''
         out = np.searchsorted(self.potentials, bias)
 
@@ -338,14 +360,17 @@ class UVVis(object):
         '''
         Returns the fits from a range of spectra_vs_time data for a particular potential
         
-        wl_start : int
-        wl_stop : int
-            The start and stop wavelengths for generating fits
+		:param wl_start: The start wavelength for generating fits
+        :type wl_start: int
+        
+		:param wl_stop: The stop wavelength for generating fits
+		:type wl_stop: int
             
-        voltage : float
-            The potential data to analyze in the spectra_vs_time dataFrame
+        :param voltage: The potential data to analyze in the spectra_vs_time dataFrame
+        :int voltage: float
             
-        fittype: str
+        :param fittype:
+        :type fittype: str
             of 'exp' 'biexp' and 'stretched', the form of the fitting function
             exp = single exponential (fastest)
             biexp = two exponentials
@@ -385,12 +410,69 @@ class UVVis(object):
 
 
 def fit_exp(t, y0, A, tau):
+	'''
+	:param t:
+	:type t: array-like
+	
+	:param y0:
+	:type y0:
+	
+	:param A:
+	:type A:
+	
+	:param tau:
+	:type tau:
+	
+	:returns: exponential fit
+	:rtype: array-like
+	'''
     return y0 + A * np.exp(-t / tau)
 
 
 def fit_biexp(t, y0, A1, tau1, A2, tau2):
+	'''
+	:param t:
+	:type t: array-like
+	
+	:param y0:
+	:type y0:
+	
+	:param A1:
+	:type A1:
+	
+	:param tau1:
+	:type tau:
+	
+	:param A2:
+	:type A2:
+	
+	:param tau2:
+	:type tau2:
+
+	:returns: exponential fit
+	:rtype: array-like
+	'''
     return y0 + A1 * np.exp(-t / tau1) + A2 * np.exp(-t / tau2)
 
 
 def fit_strexp(t, y0, A, tau, beta):
+	'''
+	:param t:
+	:type t: array-like
+	
+	:param y0:
+	:type y0:
+	
+	:param A:
+	:type A:
+	
+	:param tau:
+	:type tau:
+	
+	:param beta:
+	:type beta:
+	
+	:returns: exponential fit
+	:rtype: array-like
+	'''
     return y0 + A * (np.exp(-t / tau)) ** beta
