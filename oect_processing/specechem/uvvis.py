@@ -426,7 +426,7 @@ def fit_exp(t, y0, A, tau):
 	:returns: exponential fit
 	:rtype: array-like
 	'''
-    return y0 + A * np.exp(-t / tau)
+	return y0 + A * np.exp(-t / tau)
 
 
 def fit_biexp(t, y0, A1, tau1, A2, tau2):
