@@ -452,7 +452,7 @@ def fit_biexp(t, y0, A1, tau1, A2, tau2):
 	:returns: exponential fit
 	:rtype: array-like
 	'''
-    return y0 + A1 * np.exp(-t / tau1) + A2 * np.exp(-t / tau2)
+	return y0 + A1 * np.exp(-t / tau1) + A2 * np.exp(-t / tau2)
 
 
 def fit_strexp(t, y0, A, tau, beta):
@@ -475,4 +475,4 @@ def fit_strexp(t, y0, A, tau, beta):
 	:returns: exponential fit
 	:rtype: array-like
 	'''
-    return y0 + A * (np.exp(-t / tau)) ** beta
+	return y0 + A * (np.exp(-t / tau)) ** beta
