@@ -33,7 +33,7 @@ class TestUVVis:
 			
 	@pytest.fixture
 	def read_files(self):
-		steps, specs, volts, dedopesteps, dedopespecs = read_files.read_files(uvvis_inputs.data_folder)
+		steps, specs, volts, dedopesteps, dedopespecs = read_files.read_files(os.path.join(os.getcwd(),, uvvis_inputs.data_folder))
 		return {"steps":steps, "specs":specs, "volts":volts, "dedopesteps":dedopesteps, "dedopespecs":dedopespecs}
 	
 	@pytest.fixture
