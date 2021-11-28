@@ -25,7 +25,7 @@ from oect_processing.specechem import uvvis, read_files, uvvis_h5, uvvis_plot
 from oect_processing.nonoect_utils import cv
 from tests.uvvis_test import uvvis_inputs
 
-expected_values_folder = "uvvis_expected_values"
+expected_values_folder = 'tests/uvvis_test/uvvis_expected_values'
 
 #the below tests take about 6 minutes in total to run
 
