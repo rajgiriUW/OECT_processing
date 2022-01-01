@@ -19,7 +19,7 @@ from deepdiff import DeepDiff
 
 sys.path.insert(0, '../..')
 
-
+from pathlib import Path
 import oect_processing
 from oect_processing.specechem import uvvis, read_files, uvvis_h5, uvvis_plot
 from oect_processing.nonoect_utils import cv

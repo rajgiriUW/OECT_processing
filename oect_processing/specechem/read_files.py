@@ -65,8 +65,11 @@ def read_files(path):
     potentials = np.zeros([len(stepfiles)])
 
     pp = pd.read_csv(stepfiles[0], header=0, sep='\t')
-    pot = [n for n in pp.columns if 'Potential' in n][0]
-
+    try:
+        pot = [n for n in pp.columns if 'Potential' in n][0]
+    except: 
+        pot = [n for n in pp.columns if 'Vf' in n][0]
+        
     for fl, x in zip(stepfiles, np.arange(len(potentials))):
         pp = pd.read_csv(fl, header=0, sep='\t')
         potentials[x] = np.round(pp[pot][0], 2)
