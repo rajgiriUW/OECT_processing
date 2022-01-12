@@ -1,4 +1,9 @@
+scipy
+numpy
+pandas
+pickle
+matplotlib
 seaborn
 h5py
 configparser
-
+deepdiff

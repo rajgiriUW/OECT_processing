@@ -11,7 +11,10 @@ import pandas as pd
 from scipy.optimize import curve_fit as cf
 
 import oect_processing as oectp
-from . import oect_plot
+try:
+    from . import oect_plot
+except:
+    from oect_utils import oect_plot
 
 '''
 Wrapper function for generating a uC* plot. This file contains one main function:
@@ -41,47 +44,58 @@ def uC_scale(path='',
              params = {},
              options={}):
     '''
-    path: str
-        string path to folder '.../avg'. Note Windows path are of form r'Path_name'
-      
-    thickness : float
-        approximate film thickness. Standard polymers (for Raj) are ~40 nm
+    :param path: string path to folder '.../avg'. Note Windows path are of form r'Path_name'
+    :type path: string
         
-    plot : list of bools, optional
+    :param thickness: approximate film thickness. Standard polymers (for Raj) are ~40 nm
+    :type thickness: float
+        
+    :param plot:
         [0]: Plot the uC* data
         [1]: plot the individual plots
-        Whether to plot or not. Not plotting is very fast!    
-    retrace_only : bool, optional
-        Only use the retrace in case trace isn't saturating
-    V_low : bool, optional
-        Whether to find erroneous "turnover" points when devices break down
-    verbose: bool, optional
-        Print to display
-    thickness, d : float, optional
-        The film thickness
+        Whether to plot or not. Not plotting is very fast!
+    :type plot: list of bools, optional
+    
+    :param retrace_only: Only use the retrace in case trace isn't saturating
+    :type retrace_only : bool, optional
+    
+    :param V_low: Whether to find erroneous "turnover" points when devices break down
+    :type V_low : bool, optional
+    
+    :param verbose: print to display
+    :type verbose: bool, optional
+    
+    :param thickness, d: The film thickness
         Both variables are the same and is for ease of use (oect.OECT uses 'd')
-    capacitance: float, optional
-        In Farads
+    :type thickness, d: float, optional
+    
+    :param capacitance: In Farads
         If provided, will calculate the mobility. This should be a sanity check
         against the calculated uC*, since this is somewhat circular logic
-    c_star : float, optional
-        in Farad / cm^3 NOTE THE CENTIMETERS^3 units
+    :type capacitance: float, optional
+        
+    :param c_star: in Farad / cm^3 NOTE THE CENTIMETERS^3 units
         This value is calculated from EIS or so
-
-    Returns
-    -------
-    pixels : dict of OECT
-        Contains the various OECT class devices
-        
-    uC_dv : dict containing
-        Wd_L : ndarray
-            coefficient for plotting on x-axis
-        
-        gms : ndarray
-            average transconductance for plotting on y-axis
-        
-        Vg_Vt : ndarray
-            threshold voltage shifts for correcting uC* fit
+    :type c_star: float, optional
+    
+    :param params:
+    :type params: dict
+    
+    :param options:
+    :type options: dict
+    
+    :returns: tuple (pixels, uC_dv)
+        WHERE
+        dict pixels contains the various OECT class devices
+        dict uC_dv contains
+            Wd_L : ndarray
+                coefficient for plotting on x-axis
+            
+            gms : ndarray
+                average transconductance for plotting on y-axis
+            
+            Vg_Vt : ndarray
+                threshold voltage shifts for correcting uC* fit
     
     '''
     if not path:
@@ -211,9 +225,29 @@ def uC_scale(path='',
 def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=True):
     """
     Wrapper function for processing OECT data
-    params = {W: , L: , d: } for W, L, d of device
     USAGE:
         device1 = loadOECT(folder_name)
+        
+    :param path:
+    :type path: str
+    
+    :param params: params = {W: , L: , d: } for W, L, d of device
+    :type params: dict
+    
+    :param gm_plot:
+    :type gm_plot: bool
+    
+    :param plot:
+    :type plot: bool
+    
+    :param options:
+    :type options: dict
+    
+    :param verbose:
+    :type verbose: bool
+    
+    :returns:
+    :rtype:
     """
 
     if not path:
@@ -247,10 +281,11 @@ def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=Tru
 def file_open(caption='Select folder'):
     '''
     File dialog if path not given in load commands
-    :param
-        caption : str
+    :param caption:
+    :type caption: str
+    
     :return:
-        path : str
+    :rtype: str
     '''
 
     from PyQt5 import QtWidgets
@@ -266,20 +301,21 @@ def file_open(caption='Select folder'):
 def average(path='', thickness=40e-9, plot=True):
     '''
     averages data in this particular path (for folders 'avg')
-    path: str
-        string path to folder '.../avg'. Note Windows path are of form r'Path_name'
-    thickness : float
-        approximate film thickness. Standard polymers (for Raj) are ~40 nm
-    plot : bool
-        Whether to plot or not. Not plotting is very fast!
-    Returns
-    -------
-    pixels : dict of OECT
-        Contains the various OECT class devices
-    Id_Vg : pandas dataframe
-        Contains the averaged Id vs Vg (drain current vs gate voltage, transfer)
-    Id_Vd : pandas dataframe
-        Contains the averaged Id vs Vg (drain current vs drain voltages, output)
+    
+    :param path: string path to folder '.../avg'. Note Windows path are of form r'Path_name'
+    :type path: str
+        
+    :param thickness: approximate film thickness. Standard polymers (for Raj) are ~40 nm    
+    :type thickness: float
+        
+    :param plot: Whether to plot or not. Not plotting is very fast!
+    :type plot: bool
+        
+    :returns: tuple (pixels, Id_Vg, Id_Vd, temp_dv.WdL)
+        WHERE
+        dict pixels: dict of OECT contains the various OECT class devices
+        DataFrame Id_Vg contains the averaged Id vs Vg (drain current vs gate voltage, transfer)
+        DataFrame Id_Vd contains the averaged Id vs Vg (drain current vs drain voltages, output)
     '''
 
     if not path:

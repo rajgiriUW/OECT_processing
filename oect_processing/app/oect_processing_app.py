@@ -243,8 +243,12 @@ class MainWindow(QMainWindow):
     def addPlaceHolder(self, layout, coords=[]):
         '''
         Add a placeholder button.
-        layout: layout to which to add button
-        coords: [row, column] of layout, if needed
+        
+        :param layout: layout to which to add button
+        :type layout: QLayout
+        
+        :param coords: [row, column] of layout, if needed
+        :type coords: array, optional
         '''
         placeholderButton = QPushButton()
         sp = placeholderButton.sizePolicy()

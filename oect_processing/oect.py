@@ -17,13 +17,14 @@ import warnings
 from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
+import pathlib
 
 try:
-	from .oect_utils.config import make_config, config_file
-	from .oect_utils.deriv import gm_deriv
+    from .oect_utils.config import make_config, config_file
+    from .oect_utils.deriv import gm_deriv
 except: # Jupyter
-	from oect_utils.config import make_config, config_file
-	from oect_utils.deriv import gm_deriv
+    from oect_utils.config import make_config, config_file
+    from oect_utils.deriv import gm_deriv
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -47,27 +48,14 @@ class OECT:
         gms : DataFrame of all transconductances
         Vts : Array of all calculated threshold voltages
         
-    Usage
-    --------
-    >>> import oect
-    >>>
-    >>> path = '../device_data/pixel_01'
-    >>>
-    >>> device = oect.OECT(path)
-    >>> device.calc_gms()
-    >>> device.thresh()
-    >>> 
-    >>> from oect.oect_utils import oect_plot
-    >>> oect_plot.plot_transfers_gm(device)
-    >>> oect_plot.plot_outputs(device)
-
-    Parameters
-    ----------
-    folder : string, optional
-        path to data folder on the computer. Default prompts a file dialog
-    dimDict : dict
-        dictionary in format of {parentfolder1: {subfolder1: w1, l1}, {subfolder2: w2, l2}, parentfolder2...}
-    params : dict, optional
+        
+    :param folder: path to data folder on the computer. Default prompts a file dialog
+    :type folder: string, optional
+    
+    :param dimDict: dictionary in format of {parentfolder1: {subfolder1: w1, l1}, {subfolder2: w2, l2}, parentfolder2...}
+    :type dimDict: dict
+    
+    :param params:
         Optionally, can explicitly pass device parameters, typically Width (W), length (L), thickness (d)
         Otherwise thes are read from the .cfg file
         Can also pass c_star (volumetric capacitance) here
@@ -83,11 +71,13 @@ class OECT:
         c_star : float, optional
             in Farad / cm^3 NOTE THE CENTIMETERS^3 units
             This value is calculated from EIS or so
-    options : dict, optional
+    :type params: dict, optional
+    
+    :param options:
         processing optional parameters (for transfer curves only)
 
-		Reverse : bool
-			Whether to use the reverse trace or just the forward trace
+        Reverse : bool
+            Whether to use the reverse trace or just the forward trace
         Average : bool
             Whether instead to average forward and reverse trace
             Reverse XOR Average must be true
@@ -97,10 +87,24 @@ class OECT:
             'raw' = raw derivative
             'poly' = 8th order polynomial fit
         overwrite : bool
-        	Overwrites the associated config file. For debugging
+            Overwrites the associated config file. For debugging
         V_low : bool
-        	Detects if there is a non-monotonic transfer curve (sometimes occurs at very negative voltages)
-
+            Detects if there is a non-monotonic transfer curve (sometimes occurs at very negative voltages)
+    :type options: dict, optional
+        
+    Usage
+    --------
+    >>> import oect_processing as oect
+    >>>
+    >>> path = '../device_data/pixel_01'
+    >>>
+    >>> device = oect.OECT(path)
+    >>> device.calc_gms()
+    >>> device.thresh()
+    >>> 
+    >>> from oect.oect_utils import oect_plot
+    >>> oect_plot.plot_transfers_gm(device)
+    >>> oect_plot.plot_outputs(device)
 
     Attributes
     ----------
@@ -248,8 +252,17 @@ class OECT:
         '''
         Sets the default parameters and reads in passed parameters/options
         
-        par and opt from the config file
-        params is passed from the function call
+        :param par: from config file
+        :type par:
+        
+        :param opt: from config file
+        :type opt:
+        
+        :param params: from function call
+        :type params:
+        
+        :param options: from function call
+        :type options: 
         '''
         # processing and device parameters
         self.params = {}
@@ -293,12 +306,13 @@ class OECT:
 
         for t in self.files:
             print(t)
+            
             self.get_metadata(t)
 
-            if 'transfer' in t:
+            if 'transfer' in t.parts[-1]:
                 self.transfer_curve(t)
 
-            elif 'output' in t:
+            elif 'output' in t.parts[-1]:
                 self.output_curve(t)
 
         self.all_outputs()
@@ -318,21 +332,23 @@ class OECT:
         return
 
     def filelist(self):
-        """ Generates list of files to process and config file"""
+        """
+        Generates list of files to process and config file
+        """
 
         filelist = os.listdir(self.folder)
-        files = [os.path.join(self.folder, name)
+        files = [pathlib.Path(os.path.join(self.folder, name))
                  for name in filelist if name[-3:] == 'txt']
 
         # find config file
-        config = [os.path.join(self.folder, name)
+        config = [pathlib.Path(os.path.join(self.folder, name))
                   for name in filelist if name[-4:] == '.cfg']
 
         if config:
 
             for f in files:
 
-                if 'config' in f:
+                if 'config' in str(f):
                     files.remove(f)
 
             self.config = config
@@ -340,7 +356,8 @@ class OECT:
         else:
 
             print('No config file found!')
-            path = '\\'.join(files[0].split('\\')[:-1])
+            #path = pathlib.Path('\\'.join(files[0].parts[:-1]))
+            path = pathlib.Path(*files[0].parts[:-1])
             self.config = make_config(path)
             self.make_config = True
 
@@ -349,7 +366,12 @@ class OECT:
         return
 
     def get_metadata(self, fl):
-        """ Called in load_data to extract file-specific parameters """
+        """
+        Called in load_data to extract file-specific parameters
+        
+        :param fl:
+        :type fl:
+        """
 
         # search params in first file in this folder for missing params
         h = open(fl)
@@ -371,12 +393,14 @@ class OECT:
 
     def _reverse(self, v, transfer=False):
         """if reverse trace exists, return inflection-point index and flag
+        :param v:
+        :type v:
         
-        transfer : bool, optional
-            We only want to save rev_point and rev_v for the transfer curve
+        :param transfer: We only want to save rev_point and rev_v for the transfer curve
+        :type transfer: bool, optional
             
-        Returns:
-            mx : index where the voltage reverses
+        :returns: index where the voltage reverses
+        :rtype: int
         """
 
         # find inflection point where trace reverses
@@ -485,7 +509,13 @@ class OECT:
         Splits data into "forward" and "backward"
         Assumes curves taken neg to positive Vg
 
-        df = dataframe
+        :param df:
+        :type df: dataframe
+        :returns: tuple (gm_fwd, gm_bwd, gm_peaks)
+            WHERE
+            [type] gm_fwd is...
+            [type] gm_bwd is...
+            [type] gm_peaks is...
         """
 
         v = np.array(df.index)
@@ -537,7 +567,12 @@ class OECT:
         return gm_fwd, gm_bwd, gm_peaks
 
     def output_curve(self, path):
-        """Loads Id-Vd output curves from a folder as Series in a list"""
+        """
+        Loads Id-Vd output curves from a folder as Series in a list
+        
+        :param path: folder from which to load curves
+        :type path: str
+        """
 
         V = self.Vg
 
@@ -589,7 +624,13 @@ class OECT:
         return
 
     def transfer_curve(self, path):
-        """Loads Id-Vg transfer curve from a path"""
+        
+        """
+        Loads Id-Vg transfer curve from a path
+        
+        :param path: folder from which to load transfer curve
+        :type path: str
+        """
         transfer_raw = pd.read_csv(path, delimiter='\t', engine='python')
 
         # Remove junk rows
@@ -681,22 +722,28 @@ class OECT:
         """
         Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
             x-offset
-
-        plot : bool, Optional
-            To show the threshold fit and line
-                   
-        c_star : float, optional
-            Farad / cm^3 volumetric Capacitance
-            This looks for C_star first before using capacitance
             
-        cap : float, optional
-            Capacitance in Farads, manually scaled by W*d*L in this Class to get C*
-
         Id_sat = uC*/2 * Wd/L * (Vgs-Vt)^2 for high Vd > Vg - Vt
         Id_sat^0.5 = sqrt(uC*/2 * Wd/L) * (Vg-Vt)
         Meaning from the fit to find Vt, which fits Id_sat^0.5  = mx + b
         u = (fit[1] / (-Vt * sqrt(C*/2 * Wd/L) ))**2
 
+        :param plot: To show the threshold fit and line
+        :type: bool, Optional
+        
+        :param c_star:
+            Farad / cm^3 volumetric Capacitance
+            This looks for C_star first before using capacitance
+        :type c_star: float, optional
+        
+        :param cap: Capacitance in Farads, manually scaled by W*d*L in this Class to get C*
+        :type cap: float, optional
+        
+        :returns: if plot = True: tuple (fig, ax)
+            WHERE
+            [type] fig is...
+            [type] ax is...
+        
         """
 
         Vts = np.array([])
@@ -777,6 +824,14 @@ class OECT:
         Calculates the best linear fit through the Id_saturation regime by
         iterating through several potential peaks in the second derivative
         
+        :param Id:
+        :type Id:
+        
+        :param V:
+        :type V:
+        
+        :returns:
+        :rtype:
         """
         _residuals = np.array([])
         _fits = np.array([0, 0])
@@ -831,20 +886,18 @@ class OECT:
         Uses spline to find the transition point then return it for fitting Vt
           to sqrt(Id) vs Vg (find second derivative peak)
 
-        Parameters
-        ----------
-        I : array
-            Id vs Vg, currents
-        V : array
-            Id vs Vg, voltages
-        width : int
-            Width to use in CWT peak-finder. 
 
+        :param I: Id vs Vg, currents
+        :type I: array
+        
+        :param V: Id vs Vg, voltages
+        :type V: array
+        
+        :param width: Width to use in CWT peak-finder. 
+        :type width: int
 
-        Returns
-        -------
-        mxd2 : list
-            index of the maximum transition point for threshold voltage calculation
+        :returns: index of the maximum transition point for threshold voltage calculation
+        :rtype: list
         """
 
         # uses second derivative for transition point

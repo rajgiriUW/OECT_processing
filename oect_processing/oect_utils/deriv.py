@@ -8,7 +8,22 @@ Derivative for generating gm from Id-Vg plots
 
 
 def gm_deriv(v, i, method='raw', fit_params={'window': 11, 'polyorder': 2, 'deg': 8}):
-
+    '''
+    :param v:
+	:type v:
+	
+    :param i:
+    :type i:
+	
+	:param method:
+    :type method: str
+	
+	:param fit_params:
+    :type fit_params: dict
+	
+    :returns:
+	:rtype:
+    '''
     if method == 'sg':
         # Savitsky-Golay method
         if not fit_params['window'] & 1:  # is odd

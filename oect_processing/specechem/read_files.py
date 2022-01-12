@@ -9,19 +9,16 @@ def read_files(path):
     '''
     Takes a folder and finds the potential from all the "Steps" files
         
-    Input
-    -----
-    path : str
-        Folder path to where the data are contained. Assumes are saved as "steps"
-    
-    Returns
-    -------
-    stepfiles : list of strings
-        For the "steps" (current)
-    specfiles : list of string
-        For the list of spectra files
-    potentials : ndarray
-        Numpy array of the potentials in filelist order
+    :param path: Folder path to where the data are contained. Assumes are saved as "steps"
+    :type path: str
+        
+    :returns: tuple where (stepfiles, specfiles, potentials, dedopestepfiles, dedopespecfiles)
+        WHERE
+        string list stepfiles is list of "steps" (current)
+        string list specfiles is list of spectra files
+        ndarray potentials is array of the potentials in filelist order
+        string list dedopestepfiles is list of dedoping "steps" (current)
+        string list dedopespecfiles is list of dedoping spectra files
     '''
     if isinstance(path, str):
         path = Path(path)
@@ -68,8 +65,11 @@ def read_files(path):
     potentials = np.zeros([len(stepfiles)])
 
     pp = pd.read_csv(stepfiles[0], header=0, sep='\t')
-    pot = [n for n in pp.columns if 'Potential' in n][0]
-
+    try:
+        pot = [n for n in pp.columns if 'Potential' in n][0]
+    except: 
+        pot = [n for n in pp.columns if 'Vf' in n][0]
+        
     for fl, x in zip(stepfiles, np.arange(len(potentials))):
         pp = pd.read_csv(fl, header=0, sep='\t')
         potentials[x] = np.round(pp[pot][0], 2)

@@ -18,17 +18,39 @@ def friedlein_decay(t, mu, Cd, Cs, L, Vg, Rs, Vt, Vd, Ierr):
     plateau for mobility to account for slow ion uptake (carrier-dependent mobility)
     
     Uses two separate capacitances to fit the Ids response
-        Cd = gate-drain capacitance
-        Cd = gate-source capacitance
-        Rs = electrolyte resistance
-        Vg = gate voltage (should be constant)
-        Vt = threshold voltage (should be constant)
-        Vd = drain voltage (should be constant)
-        L = channel length (should be constant, in cm)
-        mu = mobility (1e-8 to 10 cm^2/V*s is reasonable)
-        Ierr = current error (y-offset)
-        f = percentage scaling for current into Drain vs Source
+        
+    :param Cd: gate-drain capacitance
+    :type Cd: float
     
+    :param Cs: gate-source capacitance
+    :type Cs: float
+    
+    :param Rs: electrolyte resistance
+    :type Rs: float
+    
+    :param Vg: gate voltage (should be constant)
+    :type Vg: float
+    
+    :param Vt: threshold voltage (should be constant)
+    :type Vt: float
+    
+    :param Vd: drain voltage (should be constant)
+    :type Vd: float
+    
+    :param L: channel length (should be constant, in cm)
+    :type L: float
+    
+    :param mu: mobility (1e-8 to 10 cm^2/V*s is reasonable)
+    :type mu: float
+    
+    :param Ierr: current error (y-offset)
+    :type Ierr: float
+    
+    :param f: percentage scaling for current into Drain vs Source
+    :type f: float
+    
+    :returns: [describe return value here]
+    :rtype:
     '''
     f = 0.5
     C = (f * Cd + (1 - f) * Cs) / f
@@ -50,6 +72,23 @@ def friedlein_decay(t, mu, Cd, Cs, L, Vg, Rs, Vt, Vd, Ierr):
 def model_friedlein(device, index=-0.8, multi=True, params=None):
     '''
     Wrapper for generating a friedlein_multi fit
+    
+    :param device:
+    :type device:
+    
+    :param index:
+    :type index: float
+    
+    :param multi:
+    :type multi: bool
+    
+    :param params:
+    :type params:
+    
+    :returns: tuple (fmodel, result)
+        WHERE
+        [type] fmodel is...
+        [type] result is...
     '''
     if multi:
         fmodel = lmfit.Model(friedlein_multi)
@@ -94,16 +133,36 @@ def friedlein_multi(t, mu, Cd, Cs, L, Vg, Rs, Vt, Vd, Ierr):
     from saturation to linear regime during the gate voltage pulse
     
     Uses two separate capacitances to fit the Ids response
-        Cd = gate-drain capacitance
-        Cs = gate-source capacitance
-        Rs = electrolyte resistance
-        Vg = gate voltage (should be constant)
-        Vt = threshold voltage (should be constant)
-        Vd = drain voltage (should be constant)
-        L = channel length (should be constant, in cm)
-        mu = mobility (1e-8 to 10 cm^2/V*s is reasonable)
-        Ierr = current error (y-offset)
     
+    :param Cd: gate-drain capacitance
+    :type Cd: float
+    
+    :param Cs: gate-source capacitance
+    :type Cs: float
+    
+    :param Rs: electrolyte resistance
+    :type Rs: float
+    
+    :param Vg: gate voltage (should be constant)
+    :type Vg: float
+    
+    :param Vt: threshold voltage (should be constant)
+    :type Vt: float
+    
+    :param Vd: drain voltage (should be constant)
+    :type Vd: float
+    
+    :param L: channel length (should be constant, in cm)
+    :type L: float
+    
+    :param mu: mobility (1e-8 to 10 cm^2/V*s is reasonable)
+    :type mu: float
+    
+    :param Ierr: current error (y-offset)
+    :type Ierr: float
+    
+    :returns:
+    :rtype:
     '''
     #    C = Cd + Cs
     C = Cd + Cs
@@ -161,32 +220,50 @@ def friedlein_multi(t, mu, Cd, Cs, L, Vg, Rs, Vt, Vd, Ierr):
 
 
 def vtdiff(Vt, K, Vch, Vd):
+    '''
+    :param Vt:
+    :type Vt:
+    
+    :param K:
+    :type K:
+    
+    :param Vch:
+    :type Vch:
+    
+    :param Vd:
+    :type Vd:
+    
+    :returns:
+    :rtype:
+    '''
+
     return (0.5 * K * (Vch - Vt) ** 2) - (K * (Vch - Vt - Vd / 2) * Vd)
 
 
 def getVt(Vt, K, Vch, Vd):
     '''
     Uses root solver to find minimum of difference between saturation line
-     and linear regime line (when they intersect)
+    and linear regime line (when they intersect)
     Does this for all values of Vch given the slow ionic charging
     The optimal threshold voltage defining the overlap is then extracted
     By default the plateau of Vch should be the right Vt, which is roots[-1]
     
-    Parameters:
-        Vt : float
-            Initial Vt guess
-        K : float
-            K = mu * (Cd + Cs)/L**2
-        Vch : list or array
-            A list of channel-gate voltages (after electrolyte)
-        Vd : float
-            drain voltage, should be fixed
+    :param Vt: Initial Vt guess
+    :type Vt: float
     
-    Returns:
-        roots : list
-            All the roots at each time step 
-        roots[-1] : float
-            The final Vt 
+    :param K: K = mu * (Cd + Cs)/L**2
+    :type K: float
+    
+    :param Vch: A list of channel-gate voltages (after electrolyte)
+    :type Vch: list or array
+    
+    :param Vd: drain voltage, should be fixed
+    :type Vd: float
+
+    :returns: tuple (roots, roots[-1])
+        WHERE
+        list roots is All the roots at each time step 
+        float roots[-1] is the final Vt 
     '''
     roots = []
     for v in Vch:
@@ -197,6 +274,18 @@ def getVt(Vt, K, Vch, Vd):
 
 
 def preVt(params, t):
+    '''
+    :param params:
+    :type params:
+    
+    :param t:
+    :type t: float
+    
+    :returns: tuple (K, Vch)
+        WHERE
+        [type] K is ...
+        [type] Vch is ...
+    '''
     p = params.valuesdict()
 
     C = p['Cd'] + p['Cs']
@@ -208,6 +297,13 @@ def preVt(params, t):
 
 
 def fmParams(model):
+    '''
+    :param model:
+    :type model:
+    
+    :returns:
+    :rtype:
+    '''
     params = model.make_params(mu=1e-5, Cd=1e-2, Cs=1e-2, L=20e-4, Vg=0.85,
                                Vt=0.25, Vd=0.6, Ierr=0, Rs=1000)
 
@@ -230,6 +326,18 @@ FARIA MODEL
 
 
 def fit_faria(device, key=-0.8):
+    '''
+    :param device:
+    :type device:
+    
+    :param key:
+    :type key: float
+    
+    :returns: tuple (famodel, result)
+        WHERE
+        [type] famodel is ...
+        [type] result is ...
+    '''
     famodel = lmfit.Model(faria)
     params = famodel.make_params(I0=0, V0=-0.85, gm=1e-3, Rd=1000, Rs=100,
                                  Cd=1, f=0.5)
@@ -262,6 +370,33 @@ def faria(t, I0, V0, gm, Rd, Rs, Cd, f):
     '''
     Faria Org Elec model
     Organic Electronics 45, pp. 215-221 (2015)
+    
+    :param t:
+    :type t:
+    
+    :param I0:
+    :type I0:
+    
+    :param V0:
+    :type V0:
+    
+    :param gm:
+    :type gm:
+    
+    :param Rd:
+    :type Rd:
+    
+    :param Rs:
+    :type Rs:
+    
+    :param Cd:
+    :type Cd:
+    
+    :param f:
+    :type f:
+    
+    :returns:
+    :rtype:
     '''
 
     Ig = V0 * (gm * Rd - f) / (Rd + Rs)
@@ -273,6 +408,19 @@ def faria(t, I0, V0, gm, Rd, Rs, Cd, f):
 # Fitting functions
 
 def line_f(x, a, b):
+    '''
+    :param x:
+    :type x:
+    
+    :param a:
+    :type a:
+    
+    :param b:
+    :type b:
+    
+    :returns:
+    :rtype:
+    '''
     return a + b * x
 
 
@@ -289,6 +437,26 @@ def bernards_cc(t, Ig, f, tau_e, tau_i, i_ss):
     Note that this is the constant current model, which typically is only
     valid at low gate currents becaues of voltage compliance
     
+    :param t:
+    :type t:
+    
+    :param Ig:
+    :type Ig:
+    
+    :param f:
+    :type f:
+    
+    :param tau_e:
+    :type tau_e:
+    
+    :param tau_i:
+    :type tau_i:
+    
+    :param i_ss:
+    :type i_ss:
+    
+    :returns:
+    :rtype:
     '''
     return i_ss - Ig * (f + t / tau_e)
 
@@ -302,6 +470,26 @@ def bernards_cv(t, del_I, f, tau_e, tau_i, i_ss):
     The constant gate current model is basically a line, which is only valid
      for very low gate currents (because voltage compliance)
     
+    :param t:
+    :type t:
+    
+    :param del_I:
+    :type del_I:
+    
+    :param f:
+    :type f:
+    
+    :param tau_e:
+    :type tau_e:
+    
+    :param tau_i:
+    :type tau_i:
+    
+    :param i_ss:
+    :type i_ss:
+    
+    :returns:
+    :rtype:
     '''
     return i_ss + del_I * (1 - f * tau_e / tau_i) * np.exp(-t / tau_i)
 
@@ -309,9 +497,23 @@ def bernards_cv(t, del_I, f, tau_e, tau_i, i_ss):
 def lmfit_bernards(df, v_d=-0.6, Ig=1e-6):
     '''
     For Bernards fitting of constant CURRENT data
-    df : pandas DataFrame
-    v_d : float, optional
-        The drain voltage used during this run
+    
+    :param df:
+    :type df: pandas DataFrame
+    
+    :param v_d: The drain voltage used during this run
+    :type v_d: float
+    
+    :param Ig:
+    :type Ig: float
+    
+    :returns: tuple (bmod, result, mob, slope)
+        WHERE
+        [type] bmod is...
+        [type] result is...
+        [type] mob is...
+        [type] slope is...
+        
     '''
     xx = (df.index.values - df.index.values[0]) / 1000.0
     yy = df['I_DS(A)'].values * 1e6  # to get into uA instead of A
@@ -362,6 +564,33 @@ def friedlein(t, mu, Cg, L, Vg, Rg, Vt, Vd):
     Assumes constant voltage step, not current
     
     In linear regime for Ids
+    
+    :param t:
+    :type t:
+    
+    :param mu:
+    :type mu:
+    
+    :param Cg:
+    :type Cg:
+    
+    :param L:
+    :type L:
+    
+    :param Vg:
+    :type Vg:
+    
+    :param Rg:
+    :type Rg:
+    
+    :param Vt:
+    :type Vt:
+    
+    :param Vd:
+    :type Vd:
+    
+    :returns:
+    :rtype:
     '''
 
     return (mu * Cg / L ** 2) * (Vt - Vg * -np.expm1(-t / (Rg * Cg)) - Vd / 2) * Vd
@@ -375,12 +604,52 @@ def friedlein_sat(t, mu, Cg, L, Vg, Rg, Vt, Ierr):
     Assumes constant voltage step, not current
     
     In saturation regime for Ids
+    
+    :param t:
+    :type t:
+    
+    :param mu:
+    :type mu:
+    
+    :param Cg:
+    :type Cg:
+    
+    :param L:
+    :type L:
+    
+    :param Vg:
+    :type Vg:
+    
+    :param Rg:
+    :type Rg:
+    
+    :param Vt:
+    :type Vt:
+    
+    :param Ierr:
+    :type Ierr:
+    
+    :returns:
+    :rtype:
     '''
 
     return (mu * Cg / L ** 2) * (Vg * -np.expm1(-t / (Rg * Cg)) - Vt) ** 2 + Ierr
 
 
 def fit_time(df, func='bernards', plot=True):
+    '''
+    :param df:
+    :type df:
+    
+    :param func:
+    :type func: str
+    
+    :param plot:
+    :type plot: bool
+    
+    :returns:
+    :rtype:
+    '''
     xx = df.index.values / 1000.0
 
     yy = df['I_DS(A)'].values
@@ -432,6 +701,18 @@ def fit_time(df, func='bernards', plot=True):
 # older data manipulation analysis
 
 def find_turnon(df, current=-1e-7):
+    '''
+    :param df:
+    :type df:
+    
+    :param current:
+    :type current: float
+    
+    :returns: tuple (mx, npts)
+        WHERE
+        [type] mx is...
+        [type] npts is...
+    '''
     npts = len(df.loc[df['Setpoint'] == current])
     tx = df.index.values[:npts]
 
@@ -447,15 +728,17 @@ def find_turnon(df, current=-1e-7):
 
 def crop_prepulse(df):
     '''
-    df_total, device = timedep.crop_prepulse(df)
-    
-    df = dataframe from read_time_dep
-    
     Crops all the data before the initial turn-on event. Manually shifts to 
     nearest 10000 ms point (assumes I set at an even second mark)
+    df_total, device = timedep.crop_prepulse(df)
     
-    df_total = big dataframe with all the data (doesn't standardize times)
-    device = dictionary of currents
+    :param df: dataframe from read_time_dep
+    :type df: dataframe
+    
+    :returns: tuple (df_total, device)
+        WHERE
+        DataFrame df_total is the big dataframe with all the data (doesn't standardize times)
+        dict device is the dictionary of currents
     '''
 
     df_total = pd.DataFrame()
@@ -482,15 +765,20 @@ def crop_prepulse(df):
 
 def crop_fixed(df, timeon=10000):
     '''
-    df_total, device = timedep.crop_prepulse(df)
-    
-    df = dataframe from read_time_dep
-    
     Crops all the data before the initial turn-on event. Manually shifts to 
     nearest 10000 ms point (assumes I set at an even second mark)
+    df_total, device = timedep.crop_prepulse(df)
     
-    df_total = big dataframe with all the data (doesn't standardize times)
-    device = dictionary of currents
+    :param df: dataframe from read_time_dep
+    :type df: dataframe
+    
+    :param timeon:
+    :type timeon: float
+    
+    :returns: tuple (df_total, device)
+        WHERE
+        DataFrame df_total is the big dataframe with all the data (doesn't standardize times)
+        dict device is the dictionary of currents
     '''
 
     df_total = pd.DataFrame()

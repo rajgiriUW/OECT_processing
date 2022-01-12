@@ -28,27 +28,27 @@ class OECTDevice:
     >>>
     >>> device = oect.OECTDevice(path)
 
-    Parameters
-    -------
-    path : string
-        Path to folder containing pixels in folders '01', '02', etc.
+    :param path: Path to folder containing pixels in folders '01', '02', etc.
         A config file will be auto-generated if not in that folder
+    :type path: string
+    
+    :param thickness: The device layer thickness, assuming it is fixed for all dimensions
+    :type thickness: float
+        
+    :param pixels: If passing an existing set of data from a previous run
+    :type pixels: dict of oect.OECTDevice, optional
+        
 
-    thickness : float
-        The device layer thickness, assuming it is fixed for all dimensions
-
-    pixels : dict of oect.OECTDevice, optional
-        If passing an existing set of data from a previous run
-
-    params : dict, optional
+    :param params: 
         For passing specific device parameters. Currently, this only supports
         d : float
             Film thickness (cm)
         thickness : float
             Film thickness (cm)
         Both variables are the same and for ease of use (oect.OECT uses 'd')
-
-    options : dict, optional
+    :type params: dict, optional
+    
+    :param options:
         V_low : bool, optional
             Whether to find erroneous "turnover" points when devices break down
         retrace_only : bool, optional
@@ -59,6 +59,7 @@ class OECTDevice:
             [0]: Plot the uC* data
             [1]: plot the individual plots
             Whether to plot or not. Plotting can be very fast if both are turned on!
+    :type options: dict, optional
 
     Attributes
     ----------
@@ -221,7 +222,10 @@ class OECTDevice:
         return
 
     def plot_uc(self, save=False):
-
+        '''
+        :param save:
+        :type save: bool
+        '''
         fig = oect_plot.plot_uC(self.params, savefig=save)
 
         return
@@ -230,14 +234,8 @@ class OECTDevice:
         '''
         Averages data for the same voltages together.
 
-        Parameters
-        ----------
-        overwrite : bool, optional
-            If true, does not save a backup version to the class
-
-        Returns
-        -------
-
+        :param overwrite: If true, does not save a backup version to the class
+        :type overwrite: bool, optional
         '''
 
         df = pd.DataFrame(index=self.WdL)
@@ -257,6 +255,13 @@ class OECTDevice:
         return
 
 def save(dv, append=''):
+    '''
+    :param dv:
+    :type dv:
+    
+    :param append: data label
+    :type append: str
+    '''
     with open(dv.path + r'\uC_data_' + append + '.pkl', 'wb') as output:
         pickle.dump(dv, output, pickle.HIGHEST_PROTOCOL)
 

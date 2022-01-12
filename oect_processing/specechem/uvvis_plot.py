@@ -5,6 +5,25 @@ from matplotlib import pyplot as plt
 
 
 def plot_time(uv, ax=None, norm=True, smooth=False, **kwargs):
+    '''
+    :param uv:
+    :type uv: uvvis class object
+    
+    :param ax:
+    :type ax:
+    
+    :param norm:
+    :type norm: bool
+    
+    :param smooth:
+    :type smooth: bool
+    
+    :param kwargs: matplotlib kwargs
+    :type kwargs: dict
+    
+    :returns:
+    :rtype:
+    '''
     if ax == None:
         fig, ax = plt.subplots(nrows=1, figsize=(12, 6))
 
@@ -30,21 +49,28 @@ def plot_time(uv, ax=None, norm=True, smooth=False, **kwargs):
 
 def plot_spectra(uv, ax=None, smooth=False, crange=[0.2, 0.75], title=None, **kwargs):
     '''
-    Parameters
-    ----------
-    uv: UVVis Class object
-    ax: Axes object
-        if None, creates Figure
-    smooth: bool
-        Whether to use the smoothed or raw spectra
-    crange: 2-size array
-        Controls the color-range for generating the colormap
-    title: str
-        Image title
-    kwargs: dict
-        matplotlib kwargs
-
     The time slice printed is dependent on how the data are processed (default is t=0 s)
+    
+    :param uv:
+    :type uv: UVVis Class object
+    
+    :param ax: if None, creates Figure
+    :type ax: Axes object
+    
+    :param smooth: Whether to use the smoothed or raw spectra
+    :type smooth: bool
+    
+    :param crange: Controls the color-range for generating the colormap
+    :type crange: 2-size array
+     
+    :param title: Image title
+    :type title: str
+    
+    :param kwargs: matplotlib kwargs
+    :type kwargs: dict
+    
+    :returns:
+    :rtype:
     '''
 
     cm = np.linspace(crange[0], crange[1], len(uv.spectra_sm.columns))
@@ -69,17 +95,24 @@ def plot_spectra(uv, ax=None, smooth=False, crange=[0.2, 0.75], title=None, **kw
 
 def plot_spectra_vs_time(uv, ax=None, crange=[0.2, 0.75], potential=0.7, **kwargs):
     '''
-    Parameters
-    ----------
-    uv: UVVis Class object
-    ax: Axes object
-        if None, creates Figure
-    crange: 2-size array
-        Controls the color-range for generating the colormap
-    potential: float
-        Valid column in the UVVis object, chooses which potential to plot
-    kwargs: dict
-        matplotlib kwargs
+    :param uv:
+    :type uv: UVVis Class object
+    
+    :param ax: if None, creates Figure
+    :type ax: Axes object
+    
+    :param crange:  Controls the color-range for generating the colormap
+    :type crange: 2-size array
+    
+    :param potential: Valid column in the UVVis object, chooses which potential to plot
+    :type potential: float
+        
+    :param kwargs: matplotlib kwargs
+    :type kwargs: dict
+    
+    :returns:
+    :rtype:
+        
     '''
     endtime = uv.spectra_vs_time[potential].columns[-1]
     cm = np.linspace(crange[0], crange[1], len(uv.spectra_vs_time[potential].columns))
@@ -101,14 +134,27 @@ def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1,
                  flip_x=False, **kwargs):
     '''
     Plots the "threshold" from the absorbance.
-    norm = normalize the threshold UV-Vis data
 
-    Parameters
-    ----------
-    wavelength : float
-    t : float
-        The time slice to plot, in seconds. -1 is the final time
+    :param uv:
+    :type uv: UVVis Class object
+    
+    :param norm: normalize the threshold UV-Vis data
+    :type norm:
 
+    :param wavelength:
+    :type wavelength: float
+    
+    :param time: The time slice to plot, in seconds. -1 is the final time
+    :type time: float
+    
+    :param flip_x:
+    :type flip_x: bool
+    
+    :param kwargs: matplotlib kwargs
+    :type kwargs: dict
+    
+    :returns:
+    :rtype:
     '''
     if ax == None:
         fig, ax = plt.subplots(nrows=1, figsize=(12, 6), facecolor='white')
@@ -133,6 +179,16 @@ def plot_voltage(uv, ax=None, norm=None, wavelength=800, time=-1,
 
 
 def spectrogram(uv, potential=0.8, **kwargs):
+    '''
+    :param uv:
+    :type uv: UVVis Class object
+    
+    :param potential: Valid column in the UVVis object, chooses which potential to plot
+    :type potential: float
+    
+    :param kwargs: matplotlib kwargs
+    :type kwargs: dict
+    '''
     fig, ax = plt.subplots(nrows=2, figsize=(12, 18))
 
     if 'cmap' not in kwargs:

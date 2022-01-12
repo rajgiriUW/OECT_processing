@@ -1,10 +1,15 @@
 import configparser
+import pathlib
 
 def make_config(path):
     '''
     If a config file does not exist, this will generate one automatically.
     
+    :param path: path at which to load or generate config file
+    :type path: str
+    
     '''
+    
     config = configparser.ConfigParser()
     config.optionxform = str
 
@@ -20,15 +25,30 @@ def make_config(path):
                         'Vgs (V) 1': -0.3,
                         'Vgs (V) 2': -0.5,
                         'Vgs (V) 3': -0.9}
+    
+    if 'pathlib' in str(type(path)):
+
+        path = pathlib.Path(path / 'config.cfg')
+        with open(path, 'w') as configfile:    
+            config.write(configfile)
+        return path
 
     with open(path + r'\config.cfg', 'w') as configfile:
         config.write(configfile)
-
     return path + r'\config.cfg'
+    
 
 def config_file(cfg):
     """
     Generates parameters from supplied config file
+    
+    :param config:
+    :type config:
+    
+    :returns: tuple (params, options)
+        WHERE
+        dict params is...
+        dict options is...
     """
     config = configparser.ConfigParser()
     config.read(cfg)

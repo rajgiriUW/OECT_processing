@@ -9,6 +9,12 @@ from .uvvis import UVVis
 def save_h5(data, filename):
     '''
     Saves the to two HDF5 files (.h5)
+    
+    :param data: data to save to h5
+    :type data: dataframe
+    
+    :param filename: file path to save to
+    :type filename: str
     '''
 
     if isinstance(filename, str):
@@ -42,6 +48,12 @@ def convert_h5(h5file):
     axis0 = time
     axis1 = wavelength
     block0_items
+    
+    :param h5file:
+    :type h5file: str
+    
+    :returns: h5file in uvvis class format
+    :rtype: uvvis class object
     '''
     data = UVVis(None, None, None)
     file = h5py.File(h5file, 'r')
