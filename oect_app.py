@@ -93,7 +93,7 @@ if len(selected_pixels) < 2:
 
 else:
     pixels = create_pixel_dict(selected_pixels, pixel_paths, thickness)
-    device = oectp.OECTDevice(pixels=pixels, params={'thickness': thickness, 'L': 20e-6},
+    device = oectp.OECTDevice(pixels=pixels, params={'thickness': thickness, 'L': 10e-6},
                               options={'plot': [False, False], 'verbose': False})
 
     # Update sidebar display
@@ -104,7 +104,10 @@ else:
     df['VgVts'] = device.Vg_Vt
     df['Wd/L (nm)'] = np.round(device.WdL * 1e9, 0)
     st.sidebar.write(df)
+    st.sidebar.write('Without y-offset fit:')
     st.sidebar.write('$\mu C^*$ = ', '$' + str(np.round(device.uC_0) * 1e-2)[1:-1] + '$', ' $Fcm^{-1}V^{-1}s^{-1}$')
+    st.sidebar.write('With y-offset fit:')
+    st.sidebar.write('$\mu C^*$ = ', '$' + str(np.round(device.uC[1]) * 1e-2) + '$', ' $Fcm^{-1}V^{-1}s^{-1}$')
 
 dv = oectp.OECT(pixel_folder, params={'d': thickness})
 st.write('Width = `%s`' % dv.W)
