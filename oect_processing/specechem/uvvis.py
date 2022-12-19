@@ -272,7 +272,7 @@ class UVVis(object):
         charge.columns.name = 'Potential (V)'
         tx = self.current.index.values
         for p in self.current:
-            charge[p] = spint.trapz(self.current.index.values, self.current[p].values) * 1e3
+            charge[p] = spint.trapz(self.current[p].values, x = self.current.index.values) * 1e3
 
         self.charge = charge
 
