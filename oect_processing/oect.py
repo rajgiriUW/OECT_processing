@@ -125,7 +125,7 @@ class OECT:
         c_star : float
             Volumetric capacitance in F/cm^3. Manually provided by the user
         capacitance : float
-            In Farads. Manually provided, then scaled itnernally to F/cm^3
+            In Farads. Manually provided, then scaled internally to F/cm^3
 
     Other attributes:
         
@@ -488,7 +488,10 @@ class OECT:
 
                 df = pd.Series(data=gm, index=idx)
                 # df.sort_index(inplace=True)
-                self.gms[nm] = df
+                try:
+                    self.gms[nm] = df
+                except:
+                    continue
 
         self.peak_gm = self.gm_peaks['peak gm (S)'].values
 
