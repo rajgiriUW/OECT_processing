@@ -102,7 +102,7 @@ class OECT:
     >>> device.calc_gms()
     >>> device.thresh()
     >>> 
-    >>> from oect.oect_utils import oect_plot
+    >>> from oect_processing.oect_utils import oect_plot
     >>> oect_plot.plot_transfers_gm(device)
     >>> oect_plot.plot_outputs(device)
 
@@ -409,23 +409,18 @@ class OECT:
         # two ways to do this
 
         # a) find reverse sweep using np.allclose
-        midpoint = len(v) // 2 + 1
-        if len(v) % 2 == 1:
-            x = v[:len(v) // 2]
-            y = np.flip(v[midpoint:])
+        mx = np.where(np.diff(np.sign(np.diff(v))) != 0)[0]
+        if not any(mx):
+            reverse = False
         else:
-            x = v[1:len(v) // 2]
-            y = np.flip(v[midpoint:])
-        reverse = np.allclose(x, y)
-
-        # # b) find reverse sweep using Counter        
-        # counts = Counter(v).most_common()
-        # reverse = counts[0][1] > 1
-
-        # Then, find where the voltage range reverses (gradient = 0)
+            if len(mx) == 2:
+                mx = mx[-1] + 1
+            else:
+                mx = mx[-1] + 2
+            reverse = True
+            
+        
         if reverse:
-
-            mx = midpoint - 1
 
             if transfer:
                 self.rev_point = mx  # find inflection
@@ -746,6 +741,9 @@ class OECT:
         
         """
 
+        if not hasattr(self, 'gm_peaks'):
+            raise AttributeError('gm_peaks not found. Did you run calc_gms()?')
+
         Vts = np.array([])
         VgVts = np.array([])
         mobilities = np.array([])
@@ -774,8 +772,8 @@ class OECT:
             # Check for nans
             _ix = np.where(np.isnan(Id_lo) == False)
             if any(_ix[0]):
-                Id_lo = Id_lo[_ix[0][0]:]
-                v_lo = v_lo[_ix[0][0]:]
+                Id_lo = Id_lo[_ix[0]]
+                v_lo = v_lo[_ix[0]]
 
             # minimize residuals by finding right peak
             fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
@@ -907,10 +905,10 @@ class OECT:
 
         peaks = sps.find_peaks_cwt(d2, np.arange(1, width))
         peaks = peaks[peaks > 5]  # edge errors
-
+        
         # find splined index in original array
         mx_d2 = [np.searchsorted(V, V_spl[p]) for p in peaks]
-
+            
         return mx_d2
 
     def update_config(self):
