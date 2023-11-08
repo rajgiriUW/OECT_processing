@@ -11,6 +11,7 @@ import pandas as pd
 from scipy.optimize import curve_fit as cf
 
 import oect_processing as oectp
+
 try:
     from . import oect_plot
 except:
@@ -38,10 +39,10 @@ def uC_scale(path='',
              retrace_only=False,
              verbose=True,
              thickness=None,
-             d = None,
+             d=None,
              capacitance=None,
              c_star=None,
-             params = {},
+             params={},
              options={}):
     '''
     :param path: string path to folder '.../avg'. Note Windows path are of form r'Path_name'

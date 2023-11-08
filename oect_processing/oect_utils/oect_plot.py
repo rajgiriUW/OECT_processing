@@ -15,7 +15,10 @@ from itertools import cycle
 from matplotlib import pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 
-warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
+try:  # old matplotlib deprecation errors
+    warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
+except:
+    pass
 import pandas as pd
 
 '''
@@ -38,7 +41,7 @@ The other plotting functions are mostly used in OECT_loading or in OECT itself
 '''
 
 
-def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None, 
+def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
             axlog=None, fit=True, dot_color='r', average=False, **kwargs):
     """
     :param dv: dict of parameters needed for plotting
@@ -103,7 +106,7 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
         uC = dv.uC
         uC_0 = dv.uC_0
         gms = dv.gms
-        
+
     if average:
         df = pd.DataFrame(index=WdL)
         df['gms'] = gms
@@ -112,9 +115,9 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
         WdL = df.index.values
         gms = df['gms'].values.flatten()
         Vg_Vt = df['Vg_Vt'].values
-        
+
     if savefig:
-        
+
         if isinstance(dv, dict):
             if 'folder' in dv:
                 path = dv['folder']
@@ -218,7 +221,7 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
                       bottom='on', left='on', right='on', top='on')
 
     plt.tight_layout()
-    
+
     if savefig:
         fig.savefig(path + r'\scaling_uC_loglog' + label + '.tif', format='tiff')
 
@@ -313,7 +316,7 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     return fig
 
 
-def plot_outputs(dv, leakage=False, direction='both', sort = False):
+def plot_outputs(dv, leakage=False, direction='both', sort=False):
     '''
     :param dv:
     :type dv: OECT class object
@@ -359,26 +362,25 @@ def plot_outputs(dv, leakage=False, direction='both', sort = False):
                 nms.append(float(c[:-4]))
         nms = np.sort(nms)
         for n in nms:
-            
             ax.plot(dv.outputs.index, nm[n] * 1000,
-                    linewidth=2, marker=next(mk), markersize=8)     
-        
+                    linewidth=2, marker=next(mk), markersize=8)
+
         ax.legend(labels=nms, frameon=False,
-              fontsize=16, loc=4)
-    
+                  fontsize=16, loc=4)
+
     else:
         for k in dv.outputs.columns:
-            
+
             if direction == 'both' or direction in k:
                 ax.plot(dv.outputs.index, dv.outputs[k] * 1000,
                         linewidth=2, marker=next(mk), markersize=8)
-    
+
                 if leakage:
                     ax2.plot(dv.outputs.index, dv.output_raw[k]['I_G (A)'] * 1000,
-                                 linewidth=1, linestyle='--')
+                             linewidth=1, linestyle='--')
 
         ax.legend(labels=dv.Vg_labels, frameon=False,
-              fontsize=16, loc=4)
+                  fontsize=16, loc=4)
     ax.set_ylabel('$I_{ds} (mA)$', fontweight='bold', fontname='Arial', fontsize=24)
     ax.set_xlabel('$V_{ds}  (V)$', fontweight='bold', fontname='Arial', fontsize=24)
 
