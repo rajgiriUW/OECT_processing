@@ -575,7 +575,6 @@ class OECT:
         V = self.Vg
 
         op = pd.read_csv(path, delimiter='\t', engine='python')
-
         # Remove junk rows
         _junk = pd.to_numeric(op['V_DS'], errors='coerce')
         _junk = _junk.notnull()
@@ -584,19 +583,19 @@ class OECT:
         op = op.set_index(pd.to_numeric(op.index.values))
 
         mx, reverse = self._reverse(op.index.values, transfer=False)
-        idx = op.index.values[mx]
+        # idx = op.index.values[mx]
 
         self.Vg_array.append(V)
         Vfwd = str(V) + '_fwd'
-        self.output[Vfwd] = op[:idx]
-        self.output_raw[Vfwd] = op[:idx]
+        self.output[Vfwd] = op.iloc[:mx]
+        self.output_raw[Vfwd] = op.iloc[:mx]
         self.output[Vfwd] = self.output[Vfwd].drop(['I_DS Error (A)',
                                                     'I_G (A)',
                                                     'I_G Error (A)'], 1)
         if reverse:
             Vbwd = str(V) + '_bwd'
-            self.output[Vbwd] = op[idx:]
-            self.output_raw[Vbwd] = op[idx:]
+            self.output[Vbwd] = op.iloc[mx:]
+            self.output_raw[Vbwd] = op.iloc[mx:]
             self.output[Vbwd] = self.output[Vbwd].drop(['I_DS Error (A)',
                                                         'I_G (A)',
                                                         'I_G Error (A)'], 1)

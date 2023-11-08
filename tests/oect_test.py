@@ -287,7 +287,6 @@ class TestOECT:
             params, opts = config_file('tests/dummy_file.py')
 
 
-
 class TestTransient:
 
     # test just loading the data
