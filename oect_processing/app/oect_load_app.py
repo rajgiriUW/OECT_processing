@@ -5,10 +5,11 @@ Created on Thu Aug 23 11:04:47 2018
 @author: Raj
 """
 
-import numpy as np
 import os
-import pandas as pd
 from collections import Counter
+
+import numpy as np
+import pandas as pd
 from scipy.optimize import curve_fit as cf
 
 from .. import oect

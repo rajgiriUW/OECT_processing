@@ -10,22 +10,22 @@ __email__ = "rgiri@uw.edu"
 """
 
 import configparser
-import numpy as np
 import os
-import pandas as pd
+import pathlib
 import warnings
+
+import numpy as np
+import pandas as pd
 from scipy import interpolate as spi
 from scipy import signal as sps
 from scipy.optimize import curve_fit as cf
-import pathlib
 
 try:
     from .oect_utils.config import make_config, config_file
     from .oect_utils.deriv import gm_deriv
-except: # Jupyter
+except:  # Jupyter
     from oect_utils.config import make_config, config_file
     from oect_utils.deriv import gm_deriv
-
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -306,7 +306,7 @@ class OECT:
 
         for t in self.files:
             print(t)
-            
+
             self.get_metadata(t)
 
             if 'transfer' in t.parts[-1]:
@@ -356,7 +356,7 @@ class OECT:
         else:
 
             print('No config file found!')
-            #path = pathlib.Path('\\'.join(files[0].parts[:-1]))
+            # path = pathlib.Path('\\'.join(files[0].parts[:-1]))
             path = pathlib.Path(*files[0].parts[:-1])
             self.config = make_config(path)
             self.make_config = True
@@ -418,8 +418,7 @@ class OECT:
             else:
                 mx = mx[-1] + 2
             reverse = True
-            
-        
+
         if reverse:
 
             if transfer:
@@ -590,15 +589,15 @@ class OECT:
         self.output[Vfwd] = op.iloc[:mx]
         self.output_raw[Vfwd] = op.iloc[:mx]
         self.output[Vfwd] = self.output[Vfwd].drop(labels=['I_DS Error (A)',
-                                                    'I_G (A)',
-                                                    'I_G Error (A)'], axis=1)
+                                                           'I_G (A)',
+                                                           'I_G Error (A)'], axis=1)
         if reverse:
             Vbwd = str(V) + '_bwd'
             self.output[Vbwd] = op.iloc[mx:]
             self.output_raw[Vbwd] = op.iloc[mx:]
             self.output[Vbwd] = self.output[Vbwd].drop(labels=['I_DS Error (A)',
-                                                        'I_G (A)',
-                                                        'I_G Error (A)'], axis=1)
+                                                               'I_G (A)',
+                                                               'I_G Error (A)'], axis=1)
 
     def all_outputs(self):
         """
@@ -621,7 +620,7 @@ class OECT:
         return
 
     def transfer_curve(self, path):
-        
+
         """
         Loads Id-Vg transfer curve from a path
         
@@ -649,9 +648,9 @@ class OECT:
 
         self.transfer[transfer_Vd] = transfer_raw
         self.transfer_raw[transfer_Vd] = transfer_raw
-        self.transfer[transfer_Vd] = self.transfer[transfer_Vd].drop(labels=['I_DS Error (A)', 
+        self.transfer[transfer_Vd] = self.transfer[transfer_Vd].drop(labels=['I_DS Error (A)',
                                                                              'I_G (A)',
-                                                                             'I_G Error (A)'], 
+                                                                             'I_G Error (A)'],
                                                                      axis=1)
 
         return
@@ -755,7 +754,7 @@ class OECT:
         if plot:
             from matplotlib import pyplot as plt
             fig, ax = plt.subplots(facecolor='white')
-            #plt.figure()
+            # plt.figure()
             ax.set_xlabel('$V_{GS}$ $Voltage (V)$')
             ax.set_ylabel('|$I_{DS}$$^{0.5}$| ($A^{0.5}$)')
             labels = []
@@ -817,7 +816,7 @@ class OECT:
 
         if plot:
             return fig, ax
-        
+
         return
 
     # find minimum residual through fitting a line to several found peaks
@@ -909,10 +908,10 @@ class OECT:
 
         peaks = sps.find_peaks_cwt(d2, np.arange(1, width))
         peaks = peaks[peaks > 5]  # edge errors
-        
+
         # find splined index in original array
         mx_d2 = [np.searchsorted(V, V_spl[p]) for p in peaks]
-            
+
         return mx_d2
 
     def update_config(self):

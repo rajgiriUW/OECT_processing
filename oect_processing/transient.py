@@ -199,7 +199,7 @@ def fit_cycles(df, doping_time, dedoping_time, func=expf, norm=False,
         _, ax = plot_current(df, norm=norm, plot_voltage=(False))
 
     for n, _ in enumerate(doping_idx):
-        
+
         _dope = range(doping_idx[n], dedoping_idx[n] + 1)
 
         try:
@@ -228,10 +228,10 @@ def fit_cycles(df, doping_time, dedoping_time, func=expf, norm=False,
                                            -(yy_dedope.max() - yy_dedope.min()),
                                            dedope_tau_p0])
         except:
-            print ('Error when curve fitting cycle #', n)
+            print('Error when curve fitting cycle #', n)
             popt_dope = [0, 0, 0]
             popt_dedope = [0, 0, 0]
-            
+
         doping_fits.append(popt_dope)
         dedoping_fits.append(popt_dedope)
 
