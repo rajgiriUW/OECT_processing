@@ -20,11 +20,11 @@ setup(
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     test_suite='pytest',
     install_requires=['numpy >=1.18',
-                      'pandas >=1.1.3',
+                      'pandas >=2.0.1',
                       'scipy >=1.5.2',
-                      'matplotlib',
+                      'matplotlib >=3.4.0',
                       'seaborn',
-                      'h5py',
+                      'h5py >= 3.2.0',
                       'configparser'
                       ],
 

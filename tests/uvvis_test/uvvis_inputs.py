@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 
 # class variables
-data_folder = 'tests/uvvis_test/test_specechem_with_dedoping'
+data_folder = r'tests/uvvis_test/test_specechem_with_dedoping'
 wavelength = 500
 potential = 0.6
 droptimes = []

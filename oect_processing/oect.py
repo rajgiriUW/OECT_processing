@@ -589,16 +589,16 @@ class OECT:
         Vfwd = str(V) + '_fwd'
         self.output[Vfwd] = op.iloc[:mx]
         self.output_raw[Vfwd] = op.iloc[:mx]
-        self.output[Vfwd] = self.output[Vfwd].drop(['I_DS Error (A)',
+        self.output[Vfwd] = self.output[Vfwd].drop(labels=['I_DS Error (A)',
                                                     'I_G (A)',
-                                                    'I_G Error (A)'], 1)
+                                                    'I_G Error (A)'], axis=1)
         if reverse:
             Vbwd = str(V) + '_bwd'
             self.output[Vbwd] = op.iloc[mx:]
             self.output_raw[Vbwd] = op.iloc[mx:]
-            self.output[Vbwd] = self.output[Vbwd].drop(['I_DS Error (A)',
+            self.output[Vbwd] = self.output[Vbwd].drop(labels=['I_DS Error (A)',
                                                         'I_G (A)',
-                                                        'I_G Error (A)'], 1)
+                                                        'I_G Error (A)'], axis=1)
 
     def all_outputs(self):
         """
@@ -649,8 +649,10 @@ class OECT:
 
         self.transfer[transfer_Vd] = transfer_raw
         self.transfer_raw[transfer_Vd] = transfer_raw
-        self.transfer[transfer_Vd] = self.transfer[transfer_Vd].drop(['I_DS Error (A)', 'I_G (A)',
-                                                                      'I_G Error (A)'], 1)
+        self.transfer[transfer_Vd] = self.transfer[transfer_Vd].drop(labels=['I_DS Error (A)', 
+                                                                             'I_G (A)',
+                                                                             'I_G Error (A)'], 
+                                                                     axis=1)
 
         return
 

@@ -35,7 +35,7 @@ class TestUVVis:
     @pytest.fixture
     def read_files(self):
         steps, specs, volts, dedopesteps, dedopespecs = read_files.read_files(
-            os.path.join(os.getcwd(), uvvis_inputs.data_folder))
+            Path(os.path.join(os.getcwd(), uvvis_inputs.data_folder)))
         return {"steps": steps, "specs": specs, "volts": volts, "dedopesteps": dedopesteps, "dedopespecs": dedopespecs}
 
     @pytest.fixture
@@ -50,6 +50,7 @@ class TestUVVis:
                                os.path.join(expected_values_folder, "expected_data_single_time_spectra.pkl")), \
                               ("dedoping", "specs",
                                os.path.join(expected_values_folder, "expected_dedata_single_time_spectra.pkl"))])
+
     def test_single_time_spectra(self, read_files, data_load, dataset, specs, expected_values_folder):
         try:
             expected_single_time_spectra = np.load(expected_values_folder, allow_pickle=True)
