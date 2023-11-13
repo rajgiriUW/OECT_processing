@@ -5,13 +5,13 @@ Created on Sun Nov 19 18:17:40 2017
 @author: Raj
 """
 
-import matplotlib.cbook
-import numpy as np
-import oect_processing as oectp
 # import pyqtgraph as pg
 import os
 import warnings
 from itertools import cycle
+
+import matplotlib.cbook
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 

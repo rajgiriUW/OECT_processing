@@ -1,13 +1,11 @@
-import numpy as np
 import os
+
+import numpy as np
 import pandas as pd
 import streamlit as st
-import sys
-from matplotlib import pyplot as plt
 
 import oect_processing as oect
 from oect_utils import oect_plot
-from oect_utils.oect_load import uC_scale
 
 # sys.path.insert(0, os.path.abspath('..'))
 # os.chdir('..')
@@ -25,6 +23,7 @@ def file_selector(folder_path=r'notebooks/test_data_manufactured'):
     st.sidebar.write('Number of devices is `%s`' % len(filenames))
 
     return os.path.join(folder_path, selected_filename)
+
 
 if device_folder:
     pixel_folder = file_selector(device_folder)
@@ -81,12 +80,12 @@ _, _, fig = oect_plot.plot_uC(device, savefig=False)
 st.pyplot(fig)
 
 # Update sidebar display
-df = pd.DataFrame(index= device.W)
+df = pd.DataFrame(index=device.W)
 df['gms'] = device.gms
 df['Vt'] = device.Vt
 df['VgVts'] = device.Vg_Vt
 df['Wd/L (nm)'] = np.round(device.WdL * 1e9, 0)
 st.sidebar.write(df)
-st.sidebar.write('$\mu C^*$ = ', '$'+str(np.round(device.uC_0)*1e-2)[1:-1]+'$', ' $Fcm^{-1}V^{-1}s^{-1}$')
+st.sidebar.write('$\mu C^*$ = ', '$' + str(np.round(device.uC_0) * 1e-2)[1:-1] + '$', ' $Fcm^{-1}V^{-1}s^{-1}$')
 
-#st.multiselect('Multiselect', [1,2,3])
+# st.multiselect('Multiselect', [1,2,3])

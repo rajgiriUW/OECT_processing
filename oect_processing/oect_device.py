@@ -5,9 +5,10 @@ Created on Wed Apr 24 10:16:43 2019
 @author: Raj
 """
 
+import pickle
+
 import numpy as np
 import pandas as pd
-import pickle
 from scipy.optimize import curve_fit as cf
 
 from .oect_utils import oect_load
@@ -109,7 +110,7 @@ class OECTDevice:
         for m in params:
             self.params[m] = params[m]
 
-        self.options = {'V_low': False, 'retrace_only': False,'verbose': False, 'plot': [True, False]}
+        self.options = {'V_low': False, 'retrace_only': False, 'verbose': False, 'plot': [True, False]}
         self.options.update(options)
 
         # if device has not been processed
@@ -161,7 +162,6 @@ class OECTDevice:
         for pixel in self.pixels:
 
             if self.pixels[pixel].gms.empty:
-
                 self.pixels[pixel].calc_gms()
                 self.pixels[pixel].thresh()
 
@@ -230,7 +230,7 @@ class OECTDevice:
 
         return
 
-    def average(self, overwrite = False):
+    def average(self, overwrite=False):
         '''
         Averages data for the same voltages together.
 
@@ -248,11 +248,12 @@ class OECTDevice:
             self.Vg_Vt = df['Vg_Vt'].values
         else:
             self.average = {}
-            self.average['WdL']  = df.index.values
+            self.average['WdL'] = df.index.values
             self.average['gms'] = df['gms'].values.flatten()
             self.average['Vg_Vt'] = df['Vg_Vt'].values
 
         return
+
 
 def save(dv, append=''):
     '''

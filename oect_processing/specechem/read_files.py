@@ -1,8 +1,9 @@
-import numpy as np
 import os
-import pandas as pd
 import re
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 
 def read_files(path):
@@ -67,9 +68,9 @@ def read_files(path):
     pp = pd.read_csv(stepfiles[0], header=0, sep='\t')
     try:
         pot = [n for n in pp.columns if 'Potential' in n][0]
-    except: 
+    except:
         pot = [n for n in pp.columns if 'Vf' in n][0]
-        
+
     for fl, x in zip(stepfiles, np.arange(len(potentials))):
         pp = pd.read_csv(fl, header=0, sep='\t')
         potentials[x] = np.round(pp[pot][0], 2)

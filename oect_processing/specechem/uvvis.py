@@ -5,19 +5,11 @@ Created on Tue Jul  3 13:36:20 2018
 @author: Raj
 """
 
-import h5py
 import numpy as np
-import os
 import pandas as pd
-import re
-import seaborn as sns
-from matplotlib import pyplot as plt
-from pathlib import Path
 from scipy import integrate as spint
 from scipy import signal as sg
 from scipy.optimize import curve_fit
-
-from . import read_files
 
 '''
 UV Vis spec-echem processing
@@ -111,7 +103,7 @@ class UVVis(object):
             spectra_path = specfiles[r]
 
             df = self._single_time_spectra(spectra_path, smooth=smooth, digits=round_wl)
-            
+
             self.spectra_vs_time[v] = df
 
         if droptimes:
@@ -272,7 +264,7 @@ class UVVis(object):
         charge.columns.name = 'Potential (V)'
         tx = self.current.index.values
         for p in self.current:
-            charge[p] = spint.trapz(self.current[p].values, x = self.current.index.values) * 1e3
+            charge[p] = spint.trapz(self.current[p].values, x=self.current.index.values) * 1e3
 
         self.charge = charge
 
@@ -410,69 +402,69 @@ class UVVis(object):
 
 
 def fit_exp(t, y0, A, tau):
-	'''
-	:param t:
-	:type t: array-like
-	
-	:param y0:
-	:type y0:
-	
-	:param A:
-	:type A:
-	
-	:param tau:
-	:type tau:
-	
-	:returns: exponential fit
-	:rtype: array-like
-	'''
-	return y0 + A * np.exp(-t / tau)
+    '''
+    :param t:
+    :type t: array-like
+
+    :param y0:
+    :type y0:
+
+    :param A:
+    :type A:
+
+    :param tau:
+    :type tau:
+
+    :returns: exponential fit
+    :rtype: array-like
+    '''
+    return y0 + A * np.exp(-t / tau)
 
 
 def fit_biexp(t, y0, A1, tau1, A2, tau2):
-	'''
-	:param t:
-	:type t: array-like
-	
-	:param y0:
-	:type y0:
-	
-	:param A1:
-	:type A1:
-	
-	:param tau1:
-	:type tau:
-	
-	:param A2:
-	:type A2:
-	
-	:param tau2:
-	:type tau2:
+    '''
+    :param t:
+    :type t: array-like
 
-	:returns: exponential fit
-	:rtype: array-like
-	'''
-	return y0 + A1 * np.exp(-t / tau1) + A2 * np.exp(-t / tau2)
+    :param y0:
+    :type y0:
+
+    :param A1:
+    :type A1:
+
+    :param tau1:
+    :type tau:
+
+    :param A2:
+    :type A2:
+
+    :param tau2:
+    :type tau2:
+
+    :returns: exponential fit
+    :rtype: array-like
+    '''
+    return y0 + A1 * np.exp(-t / tau1) + A2 * np.exp(-t / tau2)
 
 
 def fit_strexp(t, y0, A, tau, beta):
-	'''
-	:param t:
-	:type t: array-like
-	
-	:param y0:
-	:type y0:
-	
-	:param A:
-	:type A:
-	
-	:param tau:
-	:type tau:
-	
-	:param beta:
-	:type beta:
-	
-	:returns: exponential fit
-	:rtype: array-like
-	'''
-	return y0 + A * (np.exp(-t / tau)) ** beta
+    '''
+    :param t:
+    :type t: array-like
+
+    :param y0:
+    :type y0:
+
+    :param A:
+    :type A:
+
+    :param tau:
+    :type tau:
+
+    :param beta:
+    :type beta:
+
+    :returns: exponential fit
+    :rtype: array-like
+    '''
+    return y0 + A * (np.exp(-t / tau)) ** beta
