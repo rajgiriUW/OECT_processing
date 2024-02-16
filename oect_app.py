@@ -20,7 +20,7 @@ st.title('OECT processing')
 st.header('Rajiv Giridharagopal, Ph.D.')
 st.subheader('University of Washington, rgiri@uw.edu')
 
-with st.beta_expander('Quick Guide'):
+with st.expander('Quick Guide'):
     st.write('''
     On the sidebar, input the windows path (copy-paste from Explorer) into "Device Folder". 
     The drop-down menu processes individual folders of data. In the third box, select the pixels you want to use for calculating $\mu_C*$. 
