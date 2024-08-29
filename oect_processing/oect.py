@@ -779,7 +779,10 @@ class OECT:
                 v_lo = v_lo[_ix[0]]
 
             # minimize residuals by finding right peak
-            fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
+            #fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
+            
+            _pk_ix = self.gms.index.get_loc(pk)
+            fit = self._min_fit(Id_lo[:_pk_ix] - np.min(Id_lo[:_pk_ix]), v_lo[:_pk_ix])
 
             if plot:
                 plt.plot(np.sqrt(np.abs(self.transfers[tf])), 'bo-')
