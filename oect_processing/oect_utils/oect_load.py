@@ -38,6 +38,7 @@ def uC_scale(path='',
              plot=[True, False],
              V_low=False,
              retrace_only=False,
+             spline=False,
              verbose=True,
              thickness=None,
              d=None,
@@ -63,6 +64,9 @@ def uC_scale(path='',
     
     :param V_low: Whether to find erroneous "turnover" points when devices break down
     :type V_low : bool, optional
+    
+    :param spline: Whether to use the spline fit values for gm or actual data
+    :type spline: bool, optional
     
     :param verbose: print to display
     :type verbose: bool, optional
@@ -128,7 +132,7 @@ def uC_scale(path='',
     if any(options):
         for o in options:
             opts[o] = options[o]
-    if thickness:
+    if thickness: #backwards compatibility
         d = thickness
     for k, v in {'d': d, 'capacitance': capacitance, 'c_star': c_star}.items():
         if v:
@@ -169,8 +173,13 @@ def uC_scale(path='',
 
             ix = len(pixels[pixel].VgVts)
             Vt = np.append(Vt, pixels[pixel].Vts)
-            Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts)
-            gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
+            if spline:
+                Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts_spl)
+                gms = np.append(gms, pixels[pixel].gm_peaks_spl['peak gm spline (S)'].values)
+            
+            else:    
+                Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts)
+                gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
             W = np.append(W, pixels[pixel].W)
             mobility = np.append(mobility, pixels[pixel].mobility)
 

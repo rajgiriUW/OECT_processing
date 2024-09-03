@@ -2,13 +2,18 @@ import warnings
 
 import numpy as np
 from scipy import signal as sps
+from scipy import interpolate as spi
+
 
 """
 Derivative for generating gm from Id-Vg plots
 """
 
 
-def gm_deriv(v, i, method='raw', fit_params={'window': 11, 'polyorder': 2, 'deg': 8}):
+def gm_deriv(v, i, method='raw', fit_params={'window': 11, 
+                                             'polyorder': 2, 
+                                             'deg': 8,
+                                             'k': 5}):
     '''
     :param v:
 	:type v:
@@ -31,7 +36,10 @@ def gm_deriv(v, i, method='raw', fit_params={'window': 11, 'polyorder': 2, 'deg'
             fit_params['window'] += 1
         gml = sps.savgol_filter(i.T, window_length=fit_params['window'],
                                 polyorder=fit_params['polyorder'], deriv=1,
-                                delta=v[2] - v[1])[0, :]
+                                delta=v[2] - v[1])
+        if len(gml.shape) > 1:
+            gml = gml[0, :]
+
     elif method == 'raw':
         # raw derivative
         gml = np.gradient(i.flatten(), v[2] - v[1])
