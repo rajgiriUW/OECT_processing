@@ -238,7 +238,7 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
     return [axlin, axlog, fig]
 
 
-def plot_transfers_gm(dv, gm_plot=True, leakage=False):
+def plot_transfers_gm(dv, gm_plot=True, leakage=False, usemarkers=True, spline=False):
     ''' 
     For plotting transfer and gm on the same plot for one pixel
     
@@ -270,33 +270,45 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False):
     ax1.tick_params(axis='y', labelsize=18)
     ax2.tick_params(axis='y', labelsize=18)
 
-    markers = ['o', 's', '^', 'd', 'x']
-    mk = cycle(markers)
+    colors = np.linspace(0.4, 1, len(dv.transfers.columns) )
+    colorsg = np.linspace(0.4, 1, len(dv.gms.columns) )
+    
+    markers = ['o', 's', '^', 'd', 'x', 'X']
+    if usemarkers:    
+        markersize = 7
+    else:
+        markersize = 0
 
-    for k in dv.transfers.columns:
-
+    for n, k in enumerate(dv.transfers.columns):
         if dv.reverse:
             ax1.plot(dv.transfers[k][:dv.rev_point] * 1000,
-                     linewidth=2, marker=next(mk), markersize=7, color='b')
+                      linewidth=3, marker=markers[n], markersize=markersize, 
+                      color=plt.cm.Reds(colors[n]))
             ax1.plot(dv.transfers[k][dv.rev_point:] * 1000,
-                     linewidth=2, marker=next(mk), markersize=7, color='r')
+                      linewidth=3, marker=markers[n], markersize=markersize, 
+                      color=plt.cm.Reds(colors[n]))
 
         else:
             ax1.plot(dv.transfers[k][:] * 1000,
-                     linewidth=2, marker=next(mk), markersize=7, color='b')
+                     linewidth=3, marker=markers[n], markersize=7, 
+                     color=plt.cm.bone(colors[n]))
 
     if leakage:
         for k in dv.transfer_raw:
             ax1.plot(dv.transfer_raw[k].index, dv.transfer_raw[k]['I_G (A)'] * 1000,
-                     linewidth=1, linestyle='--')
+                     linewidth=3, linestyle='--')
 
     markers = ['o', 's', '^', 'd', 'x']
-    mk = cycle(markers)
 
     if gm_plot:
-        for k in dv.gms:
-            ax2.plot(dv.gms[k].index, dv.gms[k] * 1000, 'b--', linewidth=2)
-
+        if not spline:
+            for n, k in enumerate(dv.gms):
+                ax2.plot(dv.gms[k].index, dv.gms[k] * 1000, linestyle='--',
+                         linewidth=2, color = plt.cm.Blues(colorsg[n]))
+        else:
+            for n, k in enumerate(dv.gms_spl):
+                ax2.plot(dv.gms_spl[k].index, dv.gms_spl[k] * 1000, linestyle='--',
+                         linewidth=2, color = plt.cm.Blues(colorsg[n]))
     ax1.set_ylabel('$I_{ds}  (mA)$', fontweight='bold',
                    fontsize=18, fontname='Arial')
     ax2.set_ylabel('$g_m (mS)$', rotation=-90, labelpad=20,
@@ -349,6 +361,7 @@ def plot_outputs(dv, leakage=False, direction='both', sort=False):
     plt.rcParams.update({'font.size': 24, 'font.weight': 'bold',
                          'font.sans-serif': 'Arial'})
 
+    colors = np.linspace(0.4, 1, len(dv.outputs.columns) )
     markers = ['o', 's', '^', 'd', 'x']
     mk = cycle(markers)
 
@@ -361,19 +374,21 @@ def plot_outputs(dv, leakage=False, direction='both', sort=False):
                 nm[float(c[:-4])] = dv.outputs[c].values
                 nms.append(float(c[:-4]))
         nms = np.sort(nms)
-        for n in nms:
-            ax.plot(dv.outputs.index, nm[n] * 1000,
-                    linewidth=2, marker=next(mk), markersize=8)
+        for n, k in enumerate(nms):
+            ax.plot(dv.outputs.index, nm[k] * 1000,
+                    linewidth=2, marker=next(mk), markersize=8, 
+                    color=plt.cm.Greens(colors[n]))
 
         ax.legend(labels=nms, frameon=False,
                   fontsize=16, loc=4)
 
     else:
-        for k in dv.outputs.columns:
+        for n, k in enumerate(dv.outputs.columns):
 
             if direction == 'both' or direction in k:
                 ax.plot(dv.outputs.index, dv.outputs[k] * 1000,
-                        linewidth=2, marker=next(mk), markersize=8)
+                        linewidth=2, marker=next(mk), markersize=8, 
+                        color=plt.cm.Greens(colors[n]))
 
                 if leakage:
                     ax2.plot(dv.outputs.index, dv.output_raw[k]['I_G (A)'] * 1000,

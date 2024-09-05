@@ -2,8 +2,6 @@ import warnings
 
 import numpy as np
 from scipy import signal as sps
-from scipy import interpolate as spi
-
 
 """
 Derivative for generating gm from Id-Vg plots

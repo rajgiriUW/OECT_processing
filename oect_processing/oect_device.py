@@ -41,7 +41,6 @@ class OECTDevice:
         
     :param pixels: If passing an existing set of data from a previous run
     :type pixels: dict of oect.OECTDevice, optional
-        
 
     :param params: 
         For passing specific device parameters. Currently, this only supports

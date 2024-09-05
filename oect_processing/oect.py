@@ -197,7 +197,10 @@ class OECT:
         self.Vd_labels = []
         self.gm_fwd = {}
         self.gm_bwd = {}
+        self.gm_fwd_spl = {}
+        self.gm_bwd_spl = {}
         self.gms = pd.DataFrame()
+        self.gms_spl = pd.DataFrame()
         self.peak_gm = None
 
         # Data descriptors
@@ -375,56 +378,49 @@ class OECT:
         self.gm_peaks = pd.DataFrame(columns=['peak gm (S)'])
         self.gm_peaks_spl = pd.DataFrame(columns=['peak gm spline (S)'])
         for i in self.transfer:
-            self.gm_fwd[i], self.gm_bwd[i], gm_peaks, gm_peaks_spl = self._calc_gm(self.transfer[i])
+            data = self._calc_gm(self.transfer[i])
+            self.gm_fwd[i], self.gm_bwd[i] = data[0], data[1]
+            self.gm_fwd_spl[i], self.gm_bwd_spl[i] = data[3], data[4]
+            gm_peaks, gm_peaks_spl = data[2], data[5]
+           
             if self.gm_peaks.empty:
                 self.gm_peaks = gm_peaks
                 self.gm_peaks_spl = gm_peaks_spl
+           
             else:
                 self.gm_peaks = pd.concat([self.gm_peaks, gm_peaks])
                 self.gm_peaks_spl = pd.concat([self.gm_peaks_spl, gm_peaks_spl])
+        
         self.gm_peaks.index.name = 'Voltage (V)'
         self.gm_peaks_spl.index.name = 'Voltage (V)'
         
         # combine all the gm_fwd and gm_bwd into a single dataframe
-        labels = 0
-
-        for g in self.gm_fwd:
-
-            if not self.gm_fwd[g].empty:
-
-                gm = self.gm_fwd[g].values.flatten()
-                idx = self.gm_fwd[g].index.values
-
-                nm = 'gm_' + g
-
-                while nm in self.gms:
-                    labels += 1
-                    nm = 'gm_' + g[:-1] + str(labels)
-
-                df = pd.Series(data=gm, index=idx)
-                # df.sort_index(inplace=True)
-                self.gms[nm] = df
-
-        for g in self.gm_bwd:
-
-            if not self.gm_bwd[g].empty:
-
-                gm = self.gm_bwd[g].values.flatten()
-                idx = self.gm_bwd[g].index.values
-
-                nm = 'gm_' + g
-
-                while nm in self.gms:
-                    labels += 1
-                    nm = 'gm_' + g[:-1] + str(labels)
-
-                df = pd.Series(data=gm, index=idx)
-                # df.sort_index(inplace=True)
-                try:
-                    self.gms[nm] = df
-                except:
-                    continue
+        def store_gm(gm_arr, gms, labels=0):
+            for g in gm_arr:
+                
+                if not gm_arr[g].empty:
+                    gm = gm_arr[g].values.flatten()
+                    ix = gm_arr[g].index.values
+                    
+                    nm = 'gm_' + g
+                    while nm in gms:
+                        labels += 1
+                        nm = 'gm_' + g[:-1] + str(labels)
+                        
+                    df = pd.Series(data = gm, index = ix)
+                    try:
+                        gms[nm] = df
+                    except:
+                        print('gm assignment error')
+                        continue
         
+            return gms, labels
+        
+        _, labels = store_gm(self.gm_fwd, self.gms, 0)
+        _, _ = store_gm(self.gm_bwd, self.gms, labels)
+        _, labels = store_gm(self.gm_fwd_spl, self.gms_spl, 0)
+        _, _ = store_gm(self.gm_bwd_spl, self.gms_spl, labels)
+
         # Store and average gm values
         self.peak_gm = self.gm_peaks['peak gm (S)'].values
         self.peak_gm_spl = self.gm_peaks_spl['peak gm spline (S)'].values
@@ -488,8 +484,9 @@ class OECT:
             spl = spi.UnivariateSpline(v, i, k=k, s=s)
             _v = np.arange(v[0], v[-1], 0.001)
             gml = np.gradient(spl(_v))/(_v[1]- _v[0])
+            gml_df = pd.DataFrame(data=gml, index = _v, columns=['gm'])
             
-            return spl, gml, _v
+            return spl, gml_df, _v
             
         # Get gm
         gm_fwd = get_gm(vl_lo, i[0:mx], self.options['gm_method'], self.gm_options)
@@ -497,9 +494,9 @@ class OECT:
         gm_args = np.append(gm_args, gm_fwd.index[np.argmax(gm_fwd.values)])
 
         # Using spline to smooth derivative
-        spl, gml, v_spl = get_gm_spline(vl_lo, i[0:mx], self.gm_options['k'])
-        gm_peaks_spl = np.append(gm_peaks_spl, np.max(gml))
-        gm_args_spl = np.append(gm_args_spl, v_spl[np.argmax(gml)])
+        spl, gm_fwd_spl, v_spl = get_gm_spline(vl_lo, i[0:mx], self.gm_options['k'])
+        gm_peaks_spl = np.append(gm_peaks_spl, np.max(gm_fwd_spl))
+        gm_args_spl = np.append(gm_args_spl, v_spl[np.argmax(gm_fwd_spl)])
 
         # if reverse trace exists and we want to process it
         if reverse:
@@ -511,9 +508,9 @@ class OECT:
             gm_peaks = np.append(gm_peaks, np.max(gm_bwd.values))
             gm_args = np.append(gm_args, gm_bwd.index[np.argmax(gm_bwd.values)])
             
-            spl, gml, v_spl = get_gm_spline(vl_hi, i_hi, self.gm_options['k'])
-            gm_peaks_spl = np.append(gm_peaks_spl, np.max(gml))
-            gm_args_spl = np.append(gm_args_spl, v_spl[np.argmax(gml)])
+            spl, gm_bwd_spl, v_spl = get_gm_spline(vl_hi, i_hi, self.gm_options['k'])
+            gm_peaks_spl = np.append(gm_peaks_spl, np.max(gm_bwd_spl))
+            gm_args_spl = np.append(gm_args_spl, v_spl[np.argmax(gm_bwd_spl)])
 
         else:
 
@@ -523,7 +520,7 @@ class OECT:
         gm_peaks_spl = pd.DataFrame(data=gm_peaks_spl, index=gm_args_spl, columns=['peak gm spline (S)'])
         print(gm_peaks)
         print(gm_peaks_spl)
-        return gm_fwd, gm_bwd, gm_peaks, gm_peaks_spl
+        return gm_fwd, gm_bwd, gm_peaks, gm_fwd_spl, gm_bwd_spl, gm_peaks_spl
 
     def quadrant(self):
 

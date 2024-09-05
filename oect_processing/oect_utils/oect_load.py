@@ -108,12 +108,12 @@ def uC_scale(path='',
         path = file_open(caption='Select uC subfolder')
         print('Loading from', path)
 
+    # Process files, ignore non-numeric folders (e.g. '01_bad')
     filelist = os.listdir(path)
-
     f = filelist[:]
     for k in filelist:
         try:
-            sub_num = int(k)
+            _ = int(k)
         except:
             if verbose:
                 print('Ignoring', k)
@@ -128,6 +128,8 @@ def uC_scale(path='',
             paths.remove(p)
 
     pixels = {}
+    
+    # Options is mostly for future-proofing
     opts = {'V_low': V_low}
     if any(options):
         for o in options:
@@ -205,7 +207,7 @@ def uC_scale(path='',
         'no y-offset --> better log-log fits'
         return b * x
 
-    # * 1e2 to get into right mobility units (cm)
+    # * 1e-2 to get into right mobility units (cm)
     uC_0, _ = cf(line_0, Wd_L * Vg_Vt, gms)
     uC, _ = cf(line_f, Wd_L * Vg_Vt, gms)
 
