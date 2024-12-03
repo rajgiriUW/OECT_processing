@@ -38,6 +38,7 @@ def uC_scale(path='',
              plot=[True, False],
              V_low=False,
              retrace_only=False,
+             spline=False,
              verbose=True,
              thickness=None,
              d=None,
@@ -63,6 +64,9 @@ def uC_scale(path='',
     
     :param V_low: Whether to find erroneous "turnover" points when devices break down
     :type V_low : bool, optional
+    
+    :param spline: Whether to use the spline fit values for gm or actual data
+    :type spline: bool, optional
     
     :param verbose: print to display
     :type verbose: bool, optional
@@ -104,12 +108,12 @@ def uC_scale(path='',
         path = file_open(caption='Select uC subfolder')
         print('Loading from', path)
 
+    # Process files, ignore non-numeric folders (e.g. '01_bad')
     filelist = os.listdir(path)
-
     f = filelist[:]
     for k in filelist:
         try:
-            sub_num = int(k)
+            _ = int(k)
         except:
             if verbose:
                 print('Ignoring', k)
@@ -124,11 +128,13 @@ def uC_scale(path='',
             paths.remove(p)
 
     pixels = {}
+    
+    # Options is mostly for future-proofing
     opts = {'V_low': V_low}
     if any(options):
         for o in options:
             opts[o] = options[o]
-    if thickness:
+    if thickness: #backwards compatibility
         d = thickness
     for k, v in {'d': d, 'capacitance': capacitance, 'c_star': c_star}.items():
         if v:
@@ -169,8 +175,13 @@ def uC_scale(path='',
 
             ix = len(pixels[pixel].VgVts)
             Vt = np.append(Vt, pixels[pixel].Vts)
-            Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts)
-            gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
+            if spline:
+                Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts_spl)
+                gms = np.append(gms, pixels[pixel].gm_peaks_spl['peak gm spline (S)'].values)
+            
+            else:    
+                Vg_Vt = np.append(Vg_Vt, pixels[pixel].VgVts)
+                gms = np.append(gms, pixels[pixel].gm_peaks['peak gm (S)'].values)
             W = np.append(W, pixels[pixel].W)
             mobility = np.append(mobility, pixels[pixel].mobility)
 
@@ -196,7 +207,7 @@ def uC_scale(path='',
         'no y-offset --> better log-log fits'
         return b * x
 
-    # * 1e2 to get into right mobility units (cm)
+    # * 1e-2 to get into right mobility units (cm)
     uC_0, _ = cf(line_0, Wd_L * Vg_Vt, gms)
     uC, _ = cf(line_f, Wd_L * Vg_Vt, gms)
 

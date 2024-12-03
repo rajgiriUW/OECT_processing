@@ -60,9 +60,9 @@ class OECT:
         Otherwise thes are read from the .cfg file
         Can also pass c_star (volumetric capacitance) here
 
-        W : float
-        L : float
-        d : float
+        W : float (in microns)
+        L : float (in microns)
+        d : float (in nanometers, converted to meters)
             Width, length, thickness
         capacitance: float, optional
             In Farads
@@ -120,13 +120,17 @@ class OECT:
         Vts : ndarray
             Threshold voltage for forward and reverse trace
             Element 0: forward, 1: reverse
+        VgVts : ndarray
+            The Vg for peak gm minus the Threshold, used in uC* calculation
         WdL : float
             The value of W*d/L, d=thickness, W=width, L=length of the device
         c_star : float
             Volumetric capacitance in F/cm^3. Manually provided by the user
         capacitance : float
             In Farads. Manually provided, then scaled internally to F/cm^3
-
+        VgVts_spl : ndarray
+            Same as VgVts above, but uses values acquired via spline fitting
+            
     Other attributes:
         
         output : dict
@@ -161,6 +165,10 @@ class OECT:
             Peak gms calculated by taking simple peak
         peak_gm : ndarray
             Peak gm values
+        gm_peaks_spl : ndarray
+            Peak gms calculated by using spline
+        peak_gm_spl : ndarray
+            Peak gm values from spline averages
         Vt : float
             Threshold voltage calculated from sqrt(Id) fit
     
@@ -189,7 +197,10 @@ class OECT:
         self.Vd_labels = []
         self.gm_fwd = {}
         self.gm_bwd = {}
+        self.gm_fwd_spl = {}
+        self.gm_bwd_spl = {}
         self.gms = pd.DataFrame()
+        self.gms_spl = pd.DataFrame()
         self.peak_gm = None
 
         # Data descriptors
@@ -200,6 +211,14 @@ class OECT:
         self.num_transfers = 0
         self.reverse = False
         self.rev_point = np.nan
+
+        # Transconductance params
+        # window/polyorder/degree are for Savitsky-Golay
+        # k is for spline method
+        self.gm_options = {'window': 11, 
+                           'polyorder': 2, 
+                           'deg': 8,
+                           'k': 5}
 
         # Threshold
         self.Vt = np.nan
@@ -295,6 +314,434 @@ class OECT:
 
         return
 
+    def _reverse(self, v, transfer=False):
+        """if reverse trace exists, return inflection-point index and flag
+        :param v:
+        :type v:
+        
+        :param transfer: We only want to save rev_point and rev_v for the transfer curve
+        :type transfer: bool, optional
+            
+        :returns: index where the voltage reverses
+        :rtype: int
+        """
+
+        # find inflection point where trace reverses
+
+        # First, check if any voltages repeated (indicates both a fwd/rev sweep)
+        # two ways to do this
+
+        # a) find reverse sweep using np.allclose
+        mx = np.where(np.diff(np.sign(np.diff(v))) != 0)[0]
+        if not any(mx):
+            reverse = False
+        else:
+            if len(mx) == 2:
+                mx = mx[-1] + 1
+            else:
+                mx = mx[-1] + 2
+            reverse = True
+
+        if reverse:
+
+            if transfer:
+                self.rev_point = mx  # find inflection
+                self.rev_v = v[mx]
+                self.options['Reverse'] = True
+                self.reverse = True
+
+            return mx, True
+
+        else:
+
+            mx = len(v) - 1
+
+            if transfer:
+                self.rev_point = mx
+                self.rev_v = v[mx]
+                self.options['Reverse'] = False
+                self.reverse = False
+
+            return mx, False
+
+    def calc_gms(self):
+        """
+        Calculates all the gms in the set of data.
+        Assigns each one to gm_fwd (forward) and gm_bwd (reverse) as a dict
+
+        Creates a single dataFrame gms_fwd and another gms_bwd
+        Creates a dataFrame for gm_peaks (peak transconductance)
+        Creates a dataFrame for gm_peaks_spl (peak transconductance via splines)
+        """
+        
+        # Calculates the gm and gm_peak values/voltages for all transfers
+        self.gm_peaks = pd.DataFrame(columns=['peak gm (S)'])
+        self.gm_peaks_spl = pd.DataFrame(columns=['peak gm spline (S)'])
+        for i in self.transfer:
+            data = self._calc_gm(self.transfer[i])
+            self.gm_fwd[i], self.gm_bwd[i] = data[0], data[1]
+            self.gm_fwd_spl[i], self.gm_bwd_spl[i] = data[3], data[4]
+            gm_peaks, gm_peaks_spl = data[2], data[5]
+           
+            if self.gm_peaks.empty:
+                self.gm_peaks = gm_peaks
+                self.gm_peaks_spl = gm_peaks_spl
+           
+            else:
+                self.gm_peaks = pd.concat([self.gm_peaks, gm_peaks])
+                self.gm_peaks_spl = pd.concat([self.gm_peaks_spl, gm_peaks_spl])
+        
+        self.gm_peaks.index.name = 'Voltage (V)'
+        self.gm_peaks_spl.index.name = 'Voltage (V)'
+        
+        # combine all the gm_fwd and gm_bwd into a single dataframe
+        def store_gm(gm_arr, gms, labels=0):
+            for g in gm_arr:
+                
+                if not gm_arr[g].empty:
+                    gm = gm_arr[g].values.flatten()
+                    ix = gm_arr[g].index.values
+                    
+                    nm = 'gm_' + g
+                    while nm in gms:
+                        labels += 1
+                        nm = 'gm_' + g[:-1] + str(labels)
+                        
+                    df = pd.Series(data = gm, index = ix)
+                    try:
+                        gms[nm] = df
+                    except:
+                        print('gm assignment error')
+                        continue
+        
+            return gms, labels
+        
+        _, labels = store_gm(self.gm_fwd, self.gms, 0)
+        _, _ = store_gm(self.gm_bwd, self.gms, labels)
+        _, labels = store_gm(self.gm_fwd_spl, self.gms_spl, 0)
+        _, _ = store_gm(self.gm_bwd_spl, self.gms_spl, labels)
+
+        # Store and average gm values
+        self.peak_gm = self.gm_peaks['peak gm (S)'].values
+        self.peak_gm_spl = self.gm_peaks_spl['peak gm spline (S)'].values
+
+        if 'Average' in self.options and self.options['Average']:
+            self.gms = pd.DataFrame(self.gms.mean(1), columns=['gm_avg'])
+            self.peak_gm = self.gm_peaks['peak gm (S)'].values.mean()
+            self.peak_gm_spl = self.gm_peaks_spl['peak gm spline (S)'].values.mean()
+
+        return
+
+    def _calc_gm(self, df):
+        """
+        Calculates single gm curve in Siemens
+        Splits data into "forward" and "backward"
+        Assumes curves taken neg to positive Vg
+
+        :param df:
+        :type df: dataframe
+        :returns: tuple (gm_fwd, gm_bwd, gm_peaks, gm_peaks_spl)
+            WHERE
+            [pandas DataFrame] gm_fwd is the transconductance in forward sweep
+            [pandas DataFrame] gm_bwd is the transconductance in reverse sweep
+            [pandas DataFrame] gm_peaks is a list of voltages and peak transconductances
+            [pandas DataFrame] gm_peaks_spl is the same using a smoothed spline to interpolate
+        """
+
+        v = np.array(df.index)
+        i = np.array(df.values).flatten()
+
+        mx, reverse = self.rev_point, self.reverse
+
+        vl_lo = v[:mx]
+
+        gm_peaks = np.array([])
+        gm_args = np.array([])
+        gm_peaks_spl = np.array([])
+        gm_args_spl = np.array([])
+
+        # sg parameters
+        self.gm_options['window'] = np.max([int(0.04 * self.transfers.shape[0]), 3])
+        # polyorder = 2
+        # deg = 8
+        # fitparams = {'window': window, 'polyorder': polyorder, 'deg': deg}
+
+        # Uses derivative in deriv.py file
+        def get_gm(v, i, fit, options):
+
+            gml = gm_deriv(v, i, fit, options)
+            gm = pd.DataFrame(data=gml, index=v, columns=['gm'])
+            gm.index.name = 'Voltage (V)'
+
+            return gm
+        
+        # Gets spline for smoothed Vg and gm values
+        def get_gm_spline(v, i, k=5, s=1e-7):
+            
+            if not all([x < y for x, y in zip(v[:], v[1:])]):
+                v = v[::-1]
+                i = i[::-1]
+            spl = spi.UnivariateSpline(v, i, k=k, s=s)
+            _v = np.arange(v[0], v[-1], 0.001)
+            gml = np.gradient(spl(_v))/(_v[1]- _v[0])
+            gml_df = pd.DataFrame(data=gml, index = _v, columns=['gm'])
+            
+            return spl, gml_df, _v
+            
+        # Get gm
+        gm_fwd = get_gm(vl_lo, i[0:mx], self.options['gm_method'], self.gm_options)
+        gm_peaks = np.append(gm_peaks, np.max(gm_fwd.values))
+        gm_args = np.append(gm_args, gm_fwd.index[np.argmax(gm_fwd.values)])
+
+        # Using spline to smooth derivative
+        spl, gm_fwd_spl, v_spl = get_gm_spline(vl_lo, i[0:mx], self.gm_options['k'])
+        gm_peaks_spl = np.append(gm_peaks_spl, np.max(gm_fwd_spl))
+        gm_args_spl = np.append(gm_args_spl, v_spl[np.argmax(gm_fwd_spl)])
+
+        # if reverse trace exists and we want to process it
+        if reverse:
+            vl_hi = np.flip(v[mx:])
+            i_hi = np.flip(i[mx:])
+
+            gm_bwd = get_gm(vl_hi, i_hi, self.options['gm_method'], self.gm_options)
+
+            gm_peaks = np.append(gm_peaks, np.max(gm_bwd.values))
+            gm_args = np.append(gm_args, gm_bwd.index[np.argmax(gm_bwd.values)])
+            
+            spl, gm_bwd_spl, v_spl = get_gm_spline(vl_hi, i_hi, self.gm_options['k'])
+            gm_peaks_spl = np.append(gm_peaks_spl, np.max(gm_bwd_spl))
+            gm_args_spl = np.append(gm_args_spl, v_spl[np.argmax(gm_bwd_spl)])
+
+        else:
+
+            gm_bwd = pd.DataFrame()  # empty dataframe
+
+        gm_peaks = pd.DataFrame(data=gm_peaks, index=gm_args, columns=['peak gm (S)'])
+        gm_peaks_spl = pd.DataFrame(data=gm_peaks_spl, index=gm_args_spl, columns=['peak gm spline (S)'])
+        print(gm_peaks)
+        print(gm_peaks_spl)
+        return gm_fwd, gm_bwd, gm_peaks, gm_fwd_spl, gm_bwd_spl, gm_peaks_spl
+
+    def quadrant(self):
+
+        if np.any(self.gm_peaks.index < 0):
+
+            self.quad = 'III'  # positive voltage, positive current
+
+        elif np.any(self.gm_peaks.index > 0):
+
+            self.quad = 'I'  # negative voltage, negative curret=nt
+
+        return
+
+    def thresh(self, plot=False, c_star=None, cap=None):
+        """
+        Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
+            x-offset
+            
+        Id_sat = uC*/2 * Wd/L * (Vgs-Vt)^2 for high Vd > Vg - Vt
+        Id_sat^0.5 = sqrt(uC*/2 * Wd/L) * (Vg-Vt)
+        Meaning from the fit to find Vt, which fits Id_sat^0.5  = mx + b
+        u = (fit[1] / (-Vt * sqrt(C*/2 * Wd/L) ))**2
+
+        :param plot: To show the threshold fit and line
+        :type: bool, Optional
+        
+        :param c_star:
+            Farad / cm^3 volumetric Capacitance
+            This looks for C_star first before using capacitance
+        :type c_star: float, optional
+        
+        :param cap: Capacitance in Farads, manually scaled by W*d*L in this Class to get C*
+        :type cap: float, optional
+        
+        :returns: if plot = True: tuple (fig, ax)
+            WHERE
+            [type] fig is...
+            [type] ax is...
+        
+        """
+
+        if not hasattr(self, 'gm_peaks'):
+            raise AttributeError('gm_peaks not found. Did you run calc_gms()?')
+
+        Vts = np.array([])
+        VgVts = np.array([])
+        VgVts_spl = np.array([])
+        mobilities = np.array([])
+
+        if plot:
+            from matplotlib import pyplot as plt
+            fig, ax = plt.subplots(facecolor='white')
+            # plt.figure()
+            ax.set_xlabel('$V_{GS}$ $Voltage (V)$')
+            ax.set_ylabel('|$I_{DS}$$^{0.5}$| ($A^{0.5}$)')
+            labels = []
+
+        if c_star:
+            self.c_star = c_star
+
+        elif cap:
+            vol = self.W * 1e-4 * self.L * 1e-4 * self.d  # assumes W, L in um
+            self.c_star = cap / vol  # in F/cm^3
+
+        # Find and fit at inflection between regimes
+        for tf, pk, pk_spl in zip(self.transfers, self.gm_peaks.index, self.gm_peaks_spl.index):
+            # use second derivative to find inflection, then fit line to get Vt
+            v_lo = self.transfers[tf].index.values
+            Id_lo = np.sqrt(np.abs(self.transfers[tf]).values)
+
+            # Check for nans
+            _ix = np.where(np.isnan(Id_lo) == False)
+            if any(_ix[0]):
+                Id_lo = Id_lo[_ix[0]]
+                v_lo = v_lo[_ix[0]]
+
+            # minimize residuals by finding right peak
+            #fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
+            
+            _pk_ix = self.gms.index.get_loc(pk)
+            fit = self._min_fit(Id_lo[:_pk_ix] - np.min(Id_lo[:_pk_ix]), v_lo[:_pk_ix])
+
+            if plot:
+                plt.plot(np.sqrt(np.abs(self.transfers[tf])), 'bo-')
+                v = self.transfers[tf].index.values
+                tx = np.arange(np.min(v), -fit[1] / fit[0] + 0.1, 0.01)
+
+                if self.quad == 'I':
+                    tx = np.arange(-fit[1] / fit[0] - 0.1, np.max(v), 0.01)
+
+                plt.plot(tx, self.line_f(tx, *fit), 'r--')
+                labels.append('{:.4f}'.format(-fit[1] / fit[0]))
+
+            # fits line, finds threshold from x-intercept
+            Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
+            VgVts = np.append(VgVts, np.abs(pk + fit[1] / fit[0]))  # Vg - Vt, + sign from -fit[1]/fit[0]
+            VgVts_spl = np.append(VgVts_spl, np.abs(pk_spl + fit[1] / fit[0]))
+
+            if self.c_star:
+                mu = (-Vts[-1] * np.sqrt(0.5 * self.c_star * self.WdL * 1e2))  # 1e2 for scaling Wd/L to cm
+                mu = (fit[1] / mu) ** 2
+                mobilities = np.append(mobilities, mu)
+
+        if plot:
+            ax.legend(labels=labels)
+            ax.axhline(0, color='k', linestyle='--')
+            for v in Vts:
+                ax.axvline(v, color='k', linestyle='--')
+
+        self.Vt = np.mean(Vts)
+        self.Vts = Vts
+        self.VgVt = np.mean(VgVts)
+        self.VgVts = VgVts
+        self.VgVts_spl = VgVts_spl
+        self.mobilities = mobilities
+        self.mobility = np.mean(mobilities)
+
+        if plot:
+            return fig, ax
+
+        return
+
+    # find minimum residual through fitting a line to several found peaks
+    def _min_fit(self, Id, V):
+        """
+        Calculates the best linear fit through the Id_saturation regime by
+        iterating through several potential peaks in the second derivative
+        
+        :param Id:
+        :type Id:
+        
+        :param V:
+        :type V:
+        
+        :returns:
+        :rtype:
+        """
+        _residuals = np.array([])
+        _fits = np.array([0, 0])
+
+        # splines needs to be ascending
+        if V[2] < V[1]:
+            V = np.flip(V)
+            Id = np.flip(Id)
+
+        self.quadrant()
+
+        if self.quad == 'I':  # top right
+
+            Id = np.flip(Id)
+            V = np.flip(-V)
+
+        mx_d2 = self._find_peak(Id * 1000, V)  # *1000 improves numerical spline accuracy
+
+        # sometimes for very small currents run into numerical issues
+        if not mx_d2:
+            mx_d2 = self._find_peak(Id * 1000, V, width=15)
+
+        # for each peak found, fits a line. Uses that to determine Vt, then residual up to that found Vt
+        for m in mx_d2:
+            # Id = Id - np.min(Id) # 0-offset
+
+            fit, _ = cf(self.line_f, V[:m], Id[:m],
+                        bounds=([-np.inf, -np.inf], [0, np.inf]))
+
+            v_x = np.searchsorted(V, -fit[1] / fit[0])  # finds the Vt from this fit to determine residual
+            _res = np.sum(np.array((Id[:v_x] - self.line_f(V[:v_x], fit[0], fit[1])) ** 2))
+            _fits = np.vstack((_fits, fit))
+            _residuals = np.append(_residuals, _res)
+
+        _fits = _fits[1:, :]
+        fit = _fits[np.argmin(_residuals), :]
+
+        if self.quad == 'I':
+            fit[0] *= -1
+
+        return fit
+
+    # linear curve-fitting
+    @staticmethod
+    def line_f(x, f0, f1):
+
+        return f1 + f0 * x
+
+    @staticmethod
+    def _find_peak(I, V, width=15):
+        """
+        Uses spline to find the transition point then return it for fitting Vt
+          to sqrt(Id) vs Vg (find second derivative peak)
+
+
+        :param I: Id vs Vg, currents
+        :type I: array
+        
+        :param V: Id vs Vg, voltages
+        :type V: array
+        
+        :param width: Width to use in CWT peak-finder. 
+        :type width: int
+
+        :returns: index of the maximum transition point for threshold voltage calculation
+        :rtype: list
+        """
+
+        # uses second derivative for transition point
+        Id_spl = spi.UnivariateSpline(V, I, k=5, s=1e-7)
+        V_spl = np.arange(V[0], V[-1], 0.005)
+        d2 = np.gradient(np.gradient(Id_spl(V_spl)))
+
+        peaks = sps.find_peaks_cwt(d2, np.arange(1, width))
+        peaks = peaks[peaks > 5]  # edge errors
+
+        # find splined index in original array
+        mx_d2 = [np.searchsorted(V, V_spl[p]) for p in peaks]
+
+        return mx_d2
+
+    '''
+    File loading and processing
+    '''
+
     def loaddata(self):
         """
         3 Steps to loading a folder of data:
@@ -316,7 +763,6 @@ class OECT:
                 self.output_curve(t)
 
         self.all_outputs()
-
         self.all_transfers()
 
         self.num_transfers = len(self.transfers.columns)
@@ -390,178 +836,6 @@ class OECT:
         h.close()
 
         return
-
-    def _reverse(self, v, transfer=False):
-        """if reverse trace exists, return inflection-point index and flag
-        :param v:
-        :type v:
-        
-        :param transfer: We only want to save rev_point and rev_v for the transfer curve
-        :type transfer: bool, optional
-            
-        :returns: index where the voltage reverses
-        :rtype: int
-        """
-
-        # find inflection point where trace reverses
-
-        # First, check if any voltages repeated (indicates both a fwd/rev sweep)
-        # two ways to do this
-
-        # a) find reverse sweep using np.allclose
-        mx = np.where(np.diff(np.sign(np.diff(v))) != 0)[0]
-        if not any(mx):
-            reverse = False
-        else:
-            if len(mx) == 2:
-                mx = mx[-1] + 1
-            else:
-                mx = mx[-1] + 2
-            reverse = True
-
-        if reverse:
-
-            if transfer:
-                self.rev_point = mx  # find inflection
-                self.rev_v = v[mx]
-                self.options['Reverse'] = True
-                self.reverse = True
-
-            return mx, True
-
-        else:
-
-            mx = len(v) - 1
-
-            if transfer:
-                self.rev_point = mx
-                self.rev_v = v[mx]
-                self.options['Reverse'] = False
-                self.reverse = False
-
-            return mx, False
-
-    def calc_gms(self):
-        """
-        Calculates all the gms in the set of data.
-        Assigns each one to gm_fwd (forward) and gm_bwd (reverse) as a dict
-
-        Creates a single dataFrame gms_fwd and another gms_bwd
-        """
-
-        for i in self.transfer:
-            self.gm_fwd[i], self.gm_bwd[i], self.gm_peaks = self._calc_gm(self.transfer[i])
-
-        # combine all the gm_fwd and gm_bwd into a single dataframe
-        labels = 0
-
-        for g in self.gm_fwd:
-
-            if not self.gm_fwd[g].empty:
-
-                gm = self.gm_fwd[g].values.flatten()
-                idx = self.gm_fwd[g].index.values
-
-                nm = 'gm_' + g
-
-                while nm in self.gms:
-                    labels += 1
-                    nm = 'gm_' + g[:-1] + str(labels)
-
-                df = pd.Series(data=gm, index=idx)
-                # df.sort_index(inplace=True)
-                self.gms[nm] = df
-
-        for g in self.gm_bwd:
-
-            if not self.gm_bwd[g].empty:
-
-                gm = self.gm_bwd[g].values.flatten()
-                idx = self.gm_bwd[g].index.values
-
-                nm = 'gm_' + g
-
-                while nm in self.gms:
-                    labels += 1
-                    nm = 'gm_' + g[:-1] + str(labels)
-
-                df = pd.Series(data=gm, index=idx)
-                # df.sort_index(inplace=True)
-                try:
-                    self.gms[nm] = df
-                except:
-                    continue
-
-        self.peak_gm = self.gm_peaks['peak gm (S)'].values
-
-        if 'Average' in self.options and self.options['Average']:
-            self.gms = pd.DataFrame(self.gms.mean(1), columns=['gm_avg'])
-            self.peak_gm = self.gm_peaks['peak gm (S)'].values.mean()
-
-        return
-
-    def _calc_gm(self, df):
-        """
-        Calculates single gm curve in milli-Siemens
-        Splits data into "forward" and "backward"
-        Assumes curves taken neg to positive Vg
-
-        :param df:
-        :type df: dataframe
-        :returns: tuple (gm_fwd, gm_bwd, gm_peaks)
-            WHERE
-            [type] gm_fwd is...
-            [type] gm_bwd is...
-            [type] gm_peaks is...
-        """
-
-        v = np.array(df.index)
-        i = np.array(df.values)
-
-        mx, reverse = self.rev_point, self.reverse
-
-        vl_lo = np.arange(v[0], v[mx], 0.01)
-        vl_lo = v[:mx]
-
-        gm_peaks = np.array([])
-        gm_args = np.array([])
-
-        # sg parameters
-        window = np.max([int(0.04 * self.transfers.shape[0]), 3])
-        polyorder = 2
-        deg = 8
-        fitparams = {'window': window, 'polyorder': polyorder, 'deg': deg}
-
-        def get_gm(v, i, fit, options):
-
-            gml = gm_deriv(v, i, fit, options)
-            gm = pd.DataFrame(data=gml, index=v, columns=['gm'])
-            gm.index.name = 'Voltage (V)'
-
-            return gm
-
-        # Get gm
-        gm_fwd = get_gm(vl_lo, i[0:mx], self.options['gm_method'], fitparams)
-        gm_peaks = np.append(gm_peaks, np.max(gm_fwd.values))
-        gm_args = np.append(gm_args, gm_fwd.index[np.argmax(gm_fwd.values)])
-
-        # if reverse trace exists and we want to process it
-        if reverse:
-            vl_hi = np.flip(v[mx:])
-            i_hi = np.flip(i[mx:])
-
-            gm_bwd = get_gm(vl_hi, i_hi, self.options['gm_method'], fitparams)
-
-            gm_peaks = np.append(gm_peaks, np.max(gm_bwd.values))
-            gm_args = np.append(gm_args, gm_bwd.index[np.argmax(gm_bwd.values)])
-
-        else:
-
-            gm_bwd = pd.DataFrame()  # empty dataframe
-
-        gm_peaks = pd.DataFrame(data=gm_peaks, index=gm_args, columns=['peak gm (S)'])
-        print(gm_peaks)
-        return gm_fwd, gm_bwd, gm_peaks
 
     def output_curve(self, path):
         """
@@ -703,216 +977,6 @@ class OECT:
                 self.transfers[e] = self.transfers.iloc[cut:][e]
 
         return
-
-    def quadrant(self):
-
-        if np.any(self.gm_peaks.index < 0):
-
-            self.quad = 'III'  # positive voltage, positive current
-
-        elif np.any(self.gm_peaks.index > 0):
-
-            self.quad = 'I'  # negative voltage, negative curret=nt
-
-        return
-
-    def thresh(self, plot=False, c_star=None, cap=None):
-        """
-        Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
-            x-offset
-            
-        Id_sat = uC*/2 * Wd/L * (Vgs-Vt)^2 for high Vd > Vg - Vt
-        Id_sat^0.5 = sqrt(uC*/2 * Wd/L) * (Vg-Vt)
-        Meaning from the fit to find Vt, which fits Id_sat^0.5  = mx + b
-        u = (fit[1] / (-Vt * sqrt(C*/2 * Wd/L) ))**2
-
-        :param plot: To show the threshold fit and line
-        :type: bool, Optional
-        
-        :param c_star:
-            Farad / cm^3 volumetric Capacitance
-            This looks for C_star first before using capacitance
-        :type c_star: float, optional
-        
-        :param cap: Capacitance in Farads, manually scaled by W*d*L in this Class to get C*
-        :type cap: float, optional
-        
-        :returns: if plot = True: tuple (fig, ax)
-            WHERE
-            [type] fig is...
-            [type] ax is...
-        
-        """
-
-        if not hasattr(self, 'gm_peaks'):
-            raise AttributeError('gm_peaks not found. Did you run calc_gms()?')
-
-        Vts = np.array([])
-        VgVts = np.array([])
-        mobilities = np.array([])
-
-        if plot:
-            from matplotlib import pyplot as plt
-            fig, ax = plt.subplots(facecolor='white')
-            # plt.figure()
-            ax.set_xlabel('$V_{GS}$ $Voltage (V)$')
-            ax.set_ylabel('|$I_{DS}$$^{0.5}$| ($A^{0.5}$)')
-            labels = []
-
-        if c_star:
-            self.c_star = c_star
-
-        elif cap:
-            vol = self.W * 1e-4 * self.L * 1e-4 * self.d  # assumes W, L in um
-            self.c_star = cap / vol  # in F/cm^3
-
-        # Find and fit at inflection between regimes
-        for tf, pk in zip(self.transfers, self.gm_peaks.index):
-            # use second derivative to find inflection, then fit line to get Vt
-            v_lo = self.transfers[tf].index.values
-            Id_lo = np.sqrt(np.abs(self.transfers[tf]).values)
-
-            # Check for nans
-            _ix = np.where(np.isnan(Id_lo) == False)
-            if any(_ix[0]):
-                Id_lo = Id_lo[_ix[0]]
-                v_lo = v_lo[_ix[0]]
-
-            # minimize residuals by finding right peak
-            fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
-
-            if plot:
-                plt.plot(np.sqrt(np.abs(self.transfers[tf])), 'bo-')
-                v = self.transfers[tf].index.values
-                tx = np.arange(np.min(v), -fit[1] / fit[0] + 0.1, 0.01)
-
-                if self.quad == 'I':
-                    tx = np.arange(-fit[1] / fit[0] - 0.1, np.max(v), 0.01)
-
-                plt.plot(tx, self.line_f(tx, *fit), 'r--')
-                labels.append('{:.4f}'.format(-fit[1] / fit[0]))
-
-            # fits line, finds threshold from x-intercept
-            Vts = np.append(Vts, -fit[1] / fit[0])  # x-intercept
-            VgVts = np.append(VgVts, np.abs(pk + fit[1] / fit[0]))  # Vg - Vt, + sign from -fit[1]/fit[0]
-
-            if self.c_star:
-                mu = (-Vts[-1] * np.sqrt(0.5 * self.c_star * self.WdL * 1e2))  # 1e2 for scaling Wd/L to cm
-                mu = (fit[1] / mu) ** 2
-                mobilities = np.append(mobilities, mu)
-
-        if plot:
-            ax.legend(labels=labels)
-            ax.axhline(0, color='k', linestyle='--')
-            for v in Vts:
-                ax.axvline(v, color='k', linestyle='--')
-
-        self.Vt = np.mean(Vts)
-        self.Vts = Vts
-        self.VgVt = np.mean(VgVts)
-        self.VgVts = VgVts
-        self.mobilities = mobilities
-        self.mobility = np.mean(mobilities)
-
-        if plot:
-            return fig, ax
-
-        return
-
-    # find minimum residual through fitting a line to several found peaks
-    def _min_fit(self, Id, V):
-        """
-        Calculates the best linear fit through the Id_saturation regime by
-        iterating through several potential peaks in the second derivative
-        
-        :param Id:
-        :type Id:
-        
-        :param V:
-        :type V:
-        
-        :returns:
-        :rtype:
-        """
-        _residuals = np.array([])
-        _fits = np.array([0, 0])
-
-        # splines needs to be ascending
-        if V[2] < V[1]:
-            V = np.flip(V)
-            Id = np.flip(Id)
-
-        self.quadrant()
-
-        if self.quad == 'I':  # top right
-
-            Id = np.flip(Id)
-            V = np.flip(-V)
-
-        mx_d2 = self._find_peak(Id * 1000, V)  # *1000 improves numerical spline accuracy
-
-        # sometimes for very small currents run into numerical issues
-        if not mx_d2:
-            mx_d2 = self._find_peak(Id * 1000, V, width=15)
-
-        # for each peak found, fits a line. Uses that to determine Vt, then residual up to that found Vt
-        for m in mx_d2:
-            # Id = Id - np.min(Id) # 0-offset
-
-            fit, _ = cf(self.line_f, V[:m], Id[:m],
-                        bounds=([-np.inf, -np.inf], [0, np.inf]))
-
-            v_x = np.searchsorted(V, -fit[1] / fit[0])  # finds the Vt from this fit to determine residual
-            _res = np.sum(np.array((Id[:v_x] - self.line_f(V[:v_x], fit[0], fit[1])) ** 2))
-            _fits = np.vstack((_fits, fit))
-            _residuals = np.append(_residuals, _res)
-
-        _fits = _fits[1:, :]
-        fit = _fits[np.argmin(_residuals), :]
-
-        if self.quad == 'I':
-            fit[0] *= -1
-
-        return fit
-
-    # linear curve-fitting
-    @staticmethod
-    def line_f(x, f0, f1):
-
-        return f1 + f0 * x
-
-    @staticmethod
-    def _find_peak(I, V, width=15):
-        """
-        Uses spline to find the transition point then return it for fitting Vt
-          to sqrt(Id) vs Vg (find second derivative peak)
-
-
-        :param I: Id vs Vg, currents
-        :type I: array
-        
-        :param V: Id vs Vg, voltages
-        :type V: array
-        
-        :param width: Width to use in CWT peak-finder. 
-        :type width: int
-
-        :returns: index of the maximum transition point for threshold voltage calculation
-        :rtype: list
-        """
-
-        # uses second derivative for transition point
-        Id_spl = spi.UnivariateSpline(V, I, k=5, s=1e-7)
-        V_spl = np.arange(V[0], V[-1], 0.005)
-        d2 = np.gradient(np.gradient(Id_spl(V_spl)))
-
-        peaks = sps.find_peaks_cwt(d2, np.arange(1, width))
-        peaks = peaks[peaks > 5]  # edge errors
-
-        # find splined index in original array
-        mx_d2 = [np.searchsorted(V, V_spl[p]) for p in peaks]
-
-        return mx_d2
 
     def update_config(self):
 

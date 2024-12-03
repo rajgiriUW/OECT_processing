@@ -19,17 +19,20 @@ class OECTDevice:
     '''
     Class containing the processed pixels for a single device
     This simplifies comparing and plotting various uC* datasets together.
+    See oect_utils.oect_load for more description on uC_scale processing
     
-
     Usage
     --------
-    >>> import oect
+    >>> import oect_processing as oectp
     >>>
     >>> path = '../device_data'
-    >>>
-    >>> device = oect.OECTDevice(path)
+        To process the folder and not save any data (faster)
+    >>> device = oectp.OECTDevice(path)
+        To process the folder and save all the images
+    >>> device = oectp.OECTDevice(path, options={'plot': [True, True]}) 
+    where options['plot'] is defined below
 
-    :param path: Path to folder containing pixels in folders '01', '02', etc.
+    :param path: Path to parent folder containing pixels in subfolders '01', '02', etc.
         A config file will be auto-generated if not in that folder
     :type path: string
     
@@ -38,18 +41,20 @@ class OECTDevice:
         
     :param pixels: If passing an existing set of data from a previous run
     :type pixels: dict of oect.OECTDevice, optional
-        
 
     :param params: 
         For passing specific device parameters. Currently, this only supports
         d : float
-            Film thickness (cm)
+            Film thickness (nanometers)
         thickness : float
-            Film thickness (cm)
+            Film thickness (nanometers)
         Both variables are the same and for ease of use (oect.OECT uses 'd')
     :type params: dict, optional
     
     :param options:
+        spline: bool, optional
+            Use gm splines instead of the smoothed derivative from actual data 
+            This is a little experimental and interpolates voltages
         V_low : bool, optional
             Whether to find erroneous "turnover" points when devices break down
         retrace_only : bool, optional
@@ -65,13 +70,13 @@ class OECTDevice:
     Attributes
     ----------
     L : float
-        Device channel length
+        Device channel lengths in MICRONS
     W : float
-        Device channel width
+        Device channel widths in MICRONS
     d : float
-        Device thickness
+        Device thickness in METERS
     WdL : array
-        W*d/L (prefactor in gm equation) for each device
+        W*d/L (prefactor in gm equation) for each device, in METERS
     Vg_Vt : array
         Vg - Vt value for each device (gate voltage of peak gm minus threshold votlage)
     Vt : array
@@ -110,7 +115,8 @@ class OECTDevice:
         for m in params:
             self.params[m] = params[m]
 
-        self.options = {'V_low': False, 'retrace_only': False, 'verbose': False, 'plot': [True, False]}
+        self.options = {'V_low': False, 'retrace_only': False, 
+                        'verbose': False, 'plot': [True, False], 'spline': False}
         self.options.update(options)
 
         # if device has not been processed
