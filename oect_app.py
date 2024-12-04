@@ -88,13 +88,16 @@ except:
 selected_pixels = st.sidebar.multiselect('Select pixels for device calculation', folders,
                                          help='Choose which pixels to use in finding $\mu C^*$')
 
+use_spl = st.sidebar.toggle('Use spline values?')
+
 if len(selected_pixels) < 2:
     st.sidebar.markdown('**Must select at least two pixels to generate uC* curve**')
 
 else:
     pixels = create_pixel_dict(selected_pixels, pixel_paths, thickness)
     device = oectp.OECTDevice(pixels=pixels, params={'thickness': thickness, 'L': 10e-6},
-                              options={'plot': [False, False], 'verbose': False})
+                              options={'plot': [False, False], 'verbose': False,
+                                       'spline': use_spl})
 
     # Update sidebar display
     df = pd.DataFrame(index=selected_pixels)
@@ -121,17 +124,22 @@ st.write('Threshold Voltage $V_t$ (V)')
 dv.Vts
 st.write('Peak $g_m$ (S)')
 dv.gm_peaks
+st.write('Peak $g_m$ (S), spline')
+dv.gm_peaks_spl
 
 st.header('Plots')
-fig = oect_plot.plot_transfers_gm(dv)
+use_gm_spl = st.toggle('Use Spline?')
+fig = oect_plot.plot_transfers_gm(dv, spline=use_gm_spl)
 st.pyplot(fig)
 
-fig = oect_plot.plot_outputs(dv, sort=True, direction='bwd')
+#fig = oect_plot.plot_outputs(dv, sort=True, direction='bwd')
+fig = oect_plot.plot_outputs(dv)
+
 st.pyplot(fig)
 
 st.pyplot(vt_plot)
 
 # Run device analysis
 
-_, _, fig = oect_plot.plot_uC(device, savefig=False)
+_, _, fig = oect_plot.plot_uC(device, savefig=False, average=False)
 st.pyplot(fig)

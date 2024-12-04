@@ -373,7 +373,6 @@ class OECT:
         Creates a dataFrame for gm_peaks (peak transconductance)
         Creates a dataFrame for gm_peaks_spl (peak transconductance via splines)
         """
-        
         # Calculates the gm and gm_peak values/voltages for all transfers
         self.gm_peaks = pd.DataFrame(columns=['peak gm (S)'])
         self.gm_peaks_spl = pd.DataFrame(columns=['peak gm spline (S)'])
@@ -476,7 +475,7 @@ class OECT:
             return gm
         
         # Gets spline for smoothed Vg and gm values
-        def get_gm_spline(v, i, k=5, s=1e-7):
+        def get_gm_spline(v, i, k=3, s=1e-7):
             
             if not all([x < y for x, y in zip(v[:], v[1:])]):
                 v = v[::-1]
@@ -515,6 +514,7 @@ class OECT:
         else:
 
             gm_bwd = pd.DataFrame()  # empty dataframe
+            gm_bwd_spl = pd.DataFrame()
 
         gm_peaks = pd.DataFrame(data=gm_peaks, index=gm_args, columns=['peak gm (S)'])
         gm_peaks_spl = pd.DataFrame(data=gm_peaks_spl, index=gm_args_spl, columns=['peak gm spline (S)'])
@@ -601,15 +601,18 @@ class OECT:
             #fit = self._min_fit(Id_lo - np.min(Id_lo), v_lo)
             
             _pk_ix = self.gms.index.get_loc(pk)
+            if _pk_ix == 0:
+                _pk_ix = -1 #for non-reversed cases
             fit = self._min_fit(Id_lo[:_pk_ix] - np.min(Id_lo[:_pk_ix]), v_lo[:_pk_ix])
 
             if plot:
                 plt.plot(np.sqrt(np.abs(self.transfers[tf])), 'bo-')
                 v = self.transfers[tf].index.values
-                tx = np.arange(np.min(v), -fit[1] / fit[0] + 0.1, 0.01)
+                v = v_lo[:_pk_ix]
+                tx = np.arange(np.min(v), -fit[1] / fit[0] + 0.025, 0.0025)
 
                 if self.quad == 'I':
-                    tx = np.arange(-fit[1] / fit[0] - 0.1, np.max(v), 0.01)
+                    tx = np.arange(-fit[1] / fit[0] - 0.1, np.max(v), 0.0025)
 
                 plt.plot(tx, self.line_f(tx, *fit), 'r--')
                 labels.append('{:.4f}'.format(-fit[1] / fit[0]))
@@ -628,7 +631,8 @@ class OECT:
             ax.legend(labels=labels)
             ax.axhline(0, color='k', linestyle='--')
             for v in Vts:
-                ax.axvline(v, color='k', linestyle='--')
+                ax.axvline(v, color='xkcd:periwinkle', linestyle='--')
+                ax.axvline(0, color='k', linestyle='--')
 
         self.Vt = np.mean(Vts)
         self.Vts = Vts

@@ -116,7 +116,8 @@ class OECTDevice:
             self.params[m] = params[m]
 
         self.options = {'V_low': False, 'retrace_only': False, 
-                        'verbose': False, 'plot': [True, False], 'spline': False}
+                        'verbose': False, 'plot': [True, False], 
+                        'spline': False}
         self.options.update(options)
 
         # if device has not been processed
@@ -174,7 +175,10 @@ class OECTDevice:
             ix = len(self.pixels[pixel].VgVts)
             Vt = np.append(Vt, self.pixels[pixel].Vts)
             Vg_Vt = np.append(Vg_Vt, self.pixels[pixel].VgVts)
-            gms = np.append(gms, self.pixels[pixel].peak_gm)
+            if self.options['spline'] == True:
+                gms = np.append(gms, self.pixels[pixel].peak_gm_spl)
+            else:
+                gms = np.append(gms, self.pixels[pixel].peak_gm)
             W = np.append(W, self.pixels[pixel].W)
 
             # appends WdL as many times as there are transfer curves
