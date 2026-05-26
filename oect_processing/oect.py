@@ -734,7 +734,7 @@ class OECT:
         V_spl = np.arange(V[0], V[-1], 0.005)
         d2 = np.gradient(np.gradient(Id_spl(V_spl)))
 
-        peaks = sps.find_peaks_cwt(d2, np.arange(1, width))
+        peaks, _ = sps.find_peaks(d2, width=width)
         peaks = peaks[peaks > 5]  # edge errors
 
         # find splined index in original array

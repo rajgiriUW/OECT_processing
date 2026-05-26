@@ -21,7 +21,7 @@ setup(
     test_suite='pytest',
     install_requires=['numpy >=1.18',
                       'pandas >=2.0.1',
-                      'scipy >=1.5.2',
+                      'scipy >=1.14',
                       'matplotlib >=3.6.0',
                       'seaborn',
                       'h5py >= 3.2.0',

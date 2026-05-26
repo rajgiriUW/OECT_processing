@@ -8,7 +8,7 @@ Created on Wed Feb 20 13:23:47 2019
 import numpy as np
 import pandas as pd
 from scipy import signal as sps
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 
 '''
 To add:
@@ -65,8 +65,8 @@ class cv:
         p = int(self.period / 2)
 
         for c in self.df_time.columns:
-            cvc = np.append(cvc, [trapz(self.df_time[c].iloc[:p], self.t[:p]),
-                                  trapz(self.df_time[c].iloc[p:], self.t[:p])])
+            cvc = np.append(cvc, [trapezoid(self.df_time[c].iloc[:p], self.t[:p]),
+                                  trapezoid(self.df_time[c].iloc[p:], self.t[:p])])
 
         cvc = np.reshape(cvc, [self.cycles, 2])
 
