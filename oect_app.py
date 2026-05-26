@@ -71,7 +71,7 @@ for p in paths:
     if not os.path.isdir(p):
         paths.remove(p)
     else:
-        k = p.split('\\')[-1]
+        k = os.path.basename(p)
         folders.append(k)
         pixel_paths[k] = p
 
@@ -108,7 +108,7 @@ else:
     df['Wd/L (nm)'] = np.round(device.WdL * 1e9, 0)
     st.sidebar.write(df)
     st.sidebar.write('Without y-offset fit:')
-    st.sidebar.write('$\mu C^*$ = ', '$' + str(np.round(device.uC_0) * 1e-2)[1:-1] + '$', ' $Fcm^{-1}V^{-1}s^{-1}$')
+    st.sidebar.write('$\mu C^*$ = ', '$' + str(np.round(device.uC_0 * 1e-2, 4))[1:-1] + '$', ' $Fcm^{-1}V^{-1}s^{-1}$')
     st.sidebar.write('With y-offset fit:')
     st.sidebar.write('$\mu C^*$ = ', '$' + str(np.round(device.uC[1]) * 1e-2) + '$', ' $Fcm^{-1}V^{-1}s^{-1}$')
 
