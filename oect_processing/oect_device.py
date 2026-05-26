@@ -17,80 +17,61 @@ from .oect_utils import oect_plot
 
 class OECTDevice:
     '''
-    Class containing the processed pixels for a single device
-    This simplifies comparing and plotting various uC* datasets together.
-    See oect_utils.oect_load for more description on uC_scale processing
-    
+    Aggregates processed OECT pixels for a single device and computes uC*.
+
+    See oect_utils.oect_load for more on uC_scale processing.
+
     Usage
-    --------
+    -----
     >>> import oect_processing as oectp
-    >>>
-    >>> path = '../device_data'
-        To process the folder and not save any data (faster)
-    >>> device = oectp.OECTDevice(path)
-        To process the folder and save all the images
-    >>> device = oectp.OECTDevice(path, options={'plot': [True, True]}) 
-    where options['plot'] is defined below
+    >>> device = oectp.OECTDevice('../device_data')
+    >>> device = oectp.OECTDevice('../device_data', options={'plot': [True, True]})
 
-    :param path: Path to parent folder containing pixels in subfolders '01', '02', etc.
-        A config file will be auto-generated if not in that folder
-    :type path: string
-    
-    :param thickness: The device layer thickness, assuming it is fixed for all dimensions
-    :type thickness: float
-        
-    :param pixels: If passing an existing set of data from a previous run
-    :type pixels: dict of oect.OECTDevice, optional
-
-    :param params: 
-        For passing specific device parameters. Currently, this only supports
-        d : float
-            Film thickness (nanometers)
-        thickness : float
-            Film thickness (nanometers)
-        Both variables are the same and for ease of use (oect.OECT uses 'd')
-    :type params: dict, optional
-    
-    :param options:
-        spline: bool, optional
-            Use gm splines instead of the smoothed derivative from actual data 
-            This is a little experimental and interpolates voltages
-        V_low : bool, optional
-            Whether to find erroneous "turnover" points when devices break down
-        retrace_only : bool, optional
-            Only use the retrace in case trace isn't saturating
-        verbose: bool, optional
-            Print to display
-        plot : list of bools, optional
-            [0]: Plot the uC* data
-            [1]: plot the individual plots
-            Whether to plot or not. Plotting can be very fast if both are turned on!
-    :type options: dict, optional
+    Parameters
+    ----------
+    path : str
+        Path to parent folder containing pixel subfolders '01', '02', etc.
+        A config file will be auto-generated if not present.
+    pixels : dict, optional
+        Pre-processed pixel dict from a previous run.
+    params : dict, optional
+        Device parameters: d (float, film thickness in nm) or thickness (float, same).
+    options : dict, optional
+        spline : bool
+            Use gm splines instead of the smoothed derivative.
+        V_low : bool
+            Detect erroneous turnover points when devices break down.
+        retrace_only : bool
+            Use only the retrace sweep.
+        verbose : bool
+            Print progress to display.
+        plot : list of bool
+            [0] Plot the uC* graph; [1] plot individual pixel plots.
 
     Attributes
     ----------
     L : float
-        Device channel lengths in MICRONS
+        Channel length in microns.
     W : float
-        Device channel widths in MICRONS
+        Channel width in microns.
     d : float
-        Device thickness in METERS
-    WdL : array
-        W*d/L (prefactor in gm equation) for each device, in METERS
-    Vg_Vt : array
-        Vg - Vt value for each device (gate voltage of peak gm minus threshold votlage)
-    Vt : array
-        Threshold voltage
-    uC : float
-        uC* extracted from the gm vs WdL * Vg_Vt plot
-    uC_0 : float
-        uC* forced to go through 0,0 
-    gms : array
-        peak transconductances for each device
-    pix_paths : array
-        Folder paths for the pixels
-    pixels : dictionary
-        Dictionary of the generated pixels using OECT class for each folder
+        Film thickness in metres.
+    WdL : ndarray
+        W*d/L prefactor for each pixel (metres).
+    Vg_Vt : ndarray
+        Vg - Vt (gate voltage at peak gm minus threshold voltage) for each pixel.
+    Vt : ndarray
+        Threshold voltages.
+    uC : ndarray
+        uC* fit coefficients [intercept, slope] from gm vs WdL*Vg_Vt.
+    uC_0 : ndarray
+        uC* fit forced through the origin.
+    gms : ndarray
+        Peak transconductances for each pixel.
+    pix_paths : list
+        Folder paths for each pixel.
+    pixels : dict
+        OECT objects keyed by pixel folder name.
     '''
 
     def __init__(self,
@@ -154,8 +135,7 @@ class OECTDevice:
 
     def get_params(self):
         '''
-        Generates the parameters from the pixel data and calculates uC*
-        By default this averages forward and backward curves together
+        Generates uC* parameters from pixel data, averaging forward and backward sweeps.
         '''
         Wd_L = np.array([])
         W = np.array([])
@@ -233,8 +213,12 @@ class OECTDevice:
 
     def plot_uc(self, save=False):
         '''
-        :param save:
-        :type save: bool
+        Plots the uC* scaling graph.
+
+        Parameters
+        ----------
+        save : bool, optional
+            If True, saves the figure to disk.
         '''
         fig = oect_plot.plot_uC(self.params, savefig=save)
 
@@ -242,10 +226,12 @@ class OECTDevice:
 
     def average(self, overwrite=False):
         '''
-        Averages data for the same voltages together.
+        Averages gm and Vg_Vt values across pixels at the same WdL.
 
-        :param overwrite: If true, does not save a backup version to the class
-        :type overwrite: bool, optional
+        Parameters
+        ----------
+        overwrite : bool, optional
+            If True, replaces WdL/gms/Vg_Vt in-place. Otherwise stores under self.average.
         '''
 
         df = pd.DataFrame(index=self.WdL)
@@ -267,11 +253,14 @@ class OECTDevice:
 
 def save(dv, append=''):
     '''
-    :param dv:
-    :type dv:
-    
-    :param append: data label
-    :type append: str
+    Pickles an OECTDevice object to the device's path.
+
+    Parameters
+    ----------
+    dv : OECTDevice
+        Device to save.
+    append : str, optional
+        Label appended to the output filename.
     '''
     with open(dv.path + r'\uC_data_' + append + '.pkl', 'wb') as output:
         pickle.dump(dv, output, pickle.HIGHEST_PROTOCOL)

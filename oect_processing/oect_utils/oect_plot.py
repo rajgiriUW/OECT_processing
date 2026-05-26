@@ -44,55 +44,36 @@ The other plotting functions are mostly used in OECT_loading or in OECT itself
 def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
             axlog=None, fit=True, dot_color='r', average=False, **kwargs):
     """
-    :param dv: dict of parameters needed for plotting
-        This dict needs the following:
-            WdL : array
-                W * d /L values for the pixels
-            Vg_Vt : array
-                Vg-Vt (gate - threshold) for the pixels
-            gms : array
-                transconductances for the pixels
-            path : string
-                for saving the resulting graph
-            uC : 2-element array 
-                For generating a y = mx + b line
-            uC_0 : 1-element array 
-                For generating a y = mx line
-    :type dv: dict
+    Plots the uC* scaling graph (linear and log-log) from pixel data.
 
-    :param pg_graphs: UI graphs on which to plot.
-        pg_graphs[0] is linear plot
-        pg_graphs[1] is log plot
-    :type pg_graphs: array of PlotItem
-        
-    :param dot_color: color to use when plotting on pg_graphs
-    :type dot_color: QColor
-        
-    :param label: For saving files, incldues this in the filename
-    :type label: str, optional
-        
-    :param savefig: Whether to save the figures
-    :type savefig: bool, optional
-        
-    :param ax: Plot on an existing axis
-    :type ax: matplotlib axes object, optional
-        
-    :param fit: Plot the best fit line or not
-    :type fit: bool, optional
-        
-    :param average: Plot only the average gms
-    :type average: bool, optional
-        
-    :param kwargs: Standard plotting params, e.g. {'color': 'b'}
-        Default is size 10 blue squares 
-    :type kwargs: dict, optional
-    
-    :returns: list [axlin, axlog, fig]
-        WHERE
-        [type] axlin is...
-        [type] axlog is...
-        [type] fig is...
-        
+    Parameters
+    ----------
+    dv : dict or OECTDevice
+        Must contain: WdL (array), Vg_Vt (array), gms (array), uC (2-element array),
+        uC_0 (1-element array), and optionally 'folder' for saving.
+    pg_graphs : list of PlotItem, optional
+        PyQtGraph UI axes; pg_graphs[0] is linear, pg_graphs[1] is log-log.
+    label : str, optional
+        Appended to saved filenames.
+    savefig : bool, optional
+        Whether to save figures to disk.
+    axlin : matplotlib Axes, optional
+        Existing axis for the linear plot.
+    axlog : matplotlib Axes, optional
+        Existing axis for the log-log plot.
+    fit : bool, optional
+        Whether to overlay the best-fit line.
+    dot_color : color, optional
+        Marker color for pg_graphs plots.
+    average : bool, optional
+        If True, plot only the averaged gms per WdL value.
+    **kwargs
+        Additional matplotlib plot kwargs (e.g. color, markersize).
+
+    Returns
+    -------
+    list
+        [axlin, axlog, fig]
     """
     if isinstance(dv, dict):
         WdL = dv['WdL']
@@ -239,20 +220,25 @@ def plot_uC(dv, pg_graphs=[None, None], label='', savefig=True, axlin=None,
 
 
 def plot_transfers_gm(dv, gm_plot=True, leakage=False, usemarkers=True, spline=False):
-    ''' 
-    For plotting transfer and gm on the same plot for one pixel
-    
-    :param dv:
-    :type dv:
-    
-    :param gm_plot:
-    :type gm_plot: bool
-    
-    :param leakage:
-    :type leakage: bool
-    
-    :returns: fig
-    :rtype:
+    '''
+    Plots transfer curve (Id-Vg) and transconductance (gm-Vg) on a twin-axis figure.
+
+    Parameters
+    ----------
+    dv : OECT
+        Processed OECT pixel object.
+    gm_plot : bool, optional
+        Whether to overlay transconductance on the right axis.
+    leakage : bool, optional
+        Whether to overlay gate leakage current.
+    usemarkers : bool, optional
+        Whether to show data point markers.
+    spline : bool, optional
+        If True, plot spline-derived gm instead of smoothed derivative gm.
+
+    Returns
+    -------
+    fig : matplotlib Figure
     '''
 
     fig, ax1 = plt.subplots(facecolor='white', figsize=(10, 8))
@@ -330,21 +316,22 @@ def plot_transfers_gm(dv, gm_plot=True, leakage=False, usemarkers=True, spline=F
 
 def plot_outputs(dv, leakage=False, direction='both', sort=False):
     '''
-    :param dv:
-    :type dv: OECT class object
-    
-    :param leakage: Show the Gate leakage current on right axis
-    :type leakage : bool, optional
-        
-    :param direction: Plot only the specified direction or both
-        'fwd', 'bwd', or 'both'
-    :type direction: str
-        
-    :param sort: Whether to plot from lowest to highest Vg
-    :type sort: bool, optional
-        
-    :returns:
-    :rtype:
+    Plots Id-Vd output curves for all gate voltages in a pixel.
+
+    Parameters
+    ----------
+    dv : OECT
+        Processed OECT pixel object.
+    leakage : bool, optional
+        Whether to show gate leakage current on a right axis.
+    direction : str, optional
+        Which sweep direction to plot: 'fwd', 'bwd', or 'both'.
+    sort : bool, optional
+        If True, plots curves sorted from lowest to highest Vg.
+
+    Returns
+    -------
+    fig : matplotlib Figure
     '''
 
     fig, ax = plt.subplots(facecolor='white', figsize=(12, 8))
@@ -415,13 +402,16 @@ def plot_outputs(dv, leakage=False, direction='both', sort=False):
 
 def plot_output_avg(dv):
     '''
-    called by OECT_loading functions
-    
-    :param dv:
-    :type dv: dataFrame
-    
-    :returns:
-    :rtype:
+    Plots an averaged Id-Vd output curve.
+
+    Parameters
+    ----------
+    dv : DataFrame
+        Averaged output curve data.
+
+    Returns
+    -------
+    fig : matplotlib Figure
     '''
 
     fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
@@ -451,22 +441,21 @@ def plot_output_avg(dv):
 
 
 def plot_transfer_avg(dv, Wd_L, label=''):
-    ''' 
-    For plotting averaged data
-    
-    This plots transfer and outputs for multiple datasets on the same pixel
-    
-    :param dv:
-    :type dv:
-    
-    :param Wd_L:
-    :type Wd_L:
-    
-    :param label:
-    :type label: str
-    
-    :returns:
-    :rtype:
+    '''
+    Plots averaged transfer curve and normalised transconductance on twin axes.
+
+    Parameters
+    ----------
+    dv : DataFrame
+        Averaged transfer curve, must contain 'Id average', 'gm_fwd', 'gm_bwd'.
+    Wd_L : float
+        W*d/L prefactor used to normalise gm.
+    label : str, optional
+        Title label for the plot.
+
+    Returns
+    -------
+    fig : matplotlib Figure
     '''
     fig, ax = plt.subplots(facecolor='white', figsize=(10, 8))
     ax2 = ax.twinx()

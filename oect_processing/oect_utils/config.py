@@ -4,11 +4,12 @@ import pathlib
 
 def make_config(path):
     '''
-    If a config file does not exist, this will generate one automatically.
-    
-    :param path: path at which to load or generate config file
-    :type path: str
-    
+    Generates a default config file if one does not exist.
+
+    Parameters
+    ----------
+    path : str or Path
+        Directory in which to create the config file.
     '''
 
     config = configparser.ConfigParser()
@@ -40,15 +41,19 @@ def make_config(path):
 
 def config_file(cfg):
     """
-    Generates parameters from supplied config file
-    
-    :param config:
-    :type config:
-    
-    :returns: tuple (params, options)
-        WHERE
-        dict params is...
-        dict options is...
+    Reads a config file and returns device parameters and processing options.
+
+    Parameters
+    ----------
+    cfg : str or Path
+        Path to the .cfg config file.
+
+    Returns
+    -------
+    params : dict
+        Device parameters (W, L, d, Vgs, etc.).
+    options : dict
+        Processing options (Reverse, Average, gm_method, etc.).
     """
     config = configparser.ConfigParser()
     config.read(cfg)

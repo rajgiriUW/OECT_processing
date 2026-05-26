@@ -11,16 +11,21 @@ from matplotlib import pyplot as plt
 
 def read_eis(path):
     '''
-    Note that you probably need to recast this as a float
-    
-    Some notes on the data:
-        As saved, these are saving BOTH the measurement and the simulation fit
-        Columns 3-9 are the measured data
-        Columns 10+ are the fit data (appended with a .1, e.g. Phase.1)
-        
-    Returns:
-        edv : Dict
-            Dict with each voltage as a key (e.g. edv[0.7] is the 0.7 V run)
+    Reads an EIS data file and returns a dict of DataFrames keyed by voltage.
+
+    Each file contains both measured data (columns 3-9) and simulation fit data
+    (columns 10+, suffixed with .1, e.g. Phase.1). Index values may need
+    recasting to float after loading.
+
+    Parameters
+    ----------
+    path : str
+        Path to the tab-delimited EIS data file.
+
+    Returns
+    -------
+    edv : dict
+        Dict of DataFrames keyed by voltage (e.g. edv[0.7] is the 0.7 V run).
     '''
 
     edv = {}

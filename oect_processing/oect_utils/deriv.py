@@ -8,25 +8,28 @@ Derivative for generating gm from Id-Vg plots
 """
 
 
-def gm_deriv(v, i, method='raw', fit_params={'window': 11, 
-                                             'polyorder': 2, 
+def gm_deriv(v, i, method='raw', fit_params={'window': 11,
+                                             'polyorder': 2,
                                              'deg': 8,
                                              'k': 5}):
     '''
-    :param v:
-	:type v:
-	
-    :param i:
-    :type i:
-	
-	:param method:
-    :type method: str
-	
-	:param fit_params:
-    :type fit_params: dict
-	
-    :returns:
-	:rtype:
+    Computes the transconductance (dI/dV) from an Id-Vg curve.
+
+    Parameters
+    ----------
+    v : array-like
+        Gate voltage array.
+    i : array-like
+        Drain current array.
+    method : str, optional
+        Derivative method: 'sg' (Savitzky-Golay), 'raw' (np.gradient), or 'poly' (polynomial fit).
+    fit_params : dict, optional
+        Parameters for the chosen method: window, polyorder (sg); deg (poly); k (spline).
+
+    Returns
+    -------
+    ndarray
+        Transconductance values at each voltage point.
     '''
     if method == 'sg':
         # Savitsky-Golay method

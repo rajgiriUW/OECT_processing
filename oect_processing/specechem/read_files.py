@@ -8,18 +8,25 @@ import pandas as pd
 
 def read_files(path):
     '''
-    Takes a folder and finds the potential from all the "Steps" files
-        
-    :param path: Folder path to where the data are contained. Assumes are saved as "steps"
-    :type path: str
-        
-    :returns: tuple where (stepfiles, specfiles, potentials, dedopestepfiles, dedopespecfiles)
-        WHERE
-        string list stepfiles is list of "steps" (current)
-        string list specfiles is list of spectra files
-        ndarray potentials is array of the potentials in filelist order
-        string list dedopestepfiles is list of dedoping "steps" (current)
-        string list dedopespecfiles is list of dedoping spectra files
+    Finds and sorts all step and spectra files in a folder, and extracts potentials.
+
+    Parameters
+    ----------
+    path : str or Path
+        Folder containing the data files, saved as "steps" and "spectra".
+
+    Returns
+    -------
+    stepfiles : list of str
+        Sorted list of doping step (current) file paths.
+    specfiles : list of str
+        Sorted list of doping spectra file paths.
+    potentials : ndarray
+        Applied potentials in filelist order.
+    dedopestepfiles : list of str
+        Sorted list of dedoping step file paths.
+    dedopespecfiles : list of str
+        Sorted list of dedoping spectra file paths.
     '''
     if isinstance(path, str):
         path = Path(path)

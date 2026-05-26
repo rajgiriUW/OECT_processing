@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 import oect_processing as oect
-from oect_utils import oect_plot
+from oect_processing.oect_utils import oect_plot
 
 # sys.path.insert(0, os.path.abspath('..'))
 # os.chdir('..')

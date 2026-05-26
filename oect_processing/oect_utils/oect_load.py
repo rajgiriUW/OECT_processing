@@ -47,62 +47,41 @@ def uC_scale(path='',
              params={},
              options={}):
     '''
-    :param path: string path to folder '.../avg'. Note Windows path are of form r'Path_name'
-    :type path: string
-        
-    :param thickness: approximate film thickness. Standard polymers (for Raj) are ~40 nm
-    :type thickness: float
-        
-    :param plot:
-        [0]: Plot the uC* data
-        [1]: plot the individual plots
-        Whether to plot or not. Not plotting is very fast!
-    :type plot: list of bools, optional
-    
-    :param retrace_only: Only use the retrace in case trace isn't saturating
-    :type retrace_only : bool, optional
-    
-    :param V_low: Whether to find erroneous "turnover" points when devices break down
-    :type V_low : bool, optional
-    
-    :param spline: Whether to use the spline fit values for gm or actual data
-    :type spline: bool, optional
-    
-    :param verbose: print to display
-    :type verbose: bool, optional
-    
-    :param thickness, d: The film thickness
-        Both variables are the same and is for ease of use (oect.OECT uses 'd')
-    :type thickness, d: float, optional
-    
-    :param capacitance: In Farads
-        If provided, will calculate the mobility. This should be a sanity check
-        against the calculated uC*, since this is somewhat circular logic
-    :type capacitance: float, optional
-        
-    :param c_star: in Farad / cm^3 NOTE THE CENTIMETERS^3 units
-        This value is calculated from EIS or so
-    :type c_star: float, optional
-    
-    :param params:
-    :type params: dict
-    
-    :param options:
-    :type options: dict
-    
-    :returns: tuple (pixels, uC_dv)
-        WHERE
-        dict pixels contains the various OECT class devices
-        dict uC_dv contains
-            Wd_L : ndarray
-                coefficient for plotting on x-axis
-            
-            gms : ndarray
-                average transconductance for plotting on y-axis
-            
-            Vg_Vt : ndarray
-                threshold voltage shifts for correcting uC* fit
-    
+    Loads all pixel subfolders, processes each OECT, and computes uC*.
+
+    Parameters
+    ----------
+    path : str
+        Path to the folder containing numbered pixel subfolders (e.g. '01', '02').
+    plot : list of bool, optional
+        [0] Plot the uC* graph; [1] plot individual pixel transfer/output curves.
+    V_low : bool, optional
+        Detect erroneous turnover points when devices break down.
+    retrace_only : bool, optional
+        Use only the retrace sweep for each pixel.
+    spline : bool, optional
+        Use spline-derived gm values instead of the smoothed derivative.
+    verbose : bool, optional
+        Print progress to display.
+    thickness : float, optional
+        Film thickness (m). Alias for d; kept for backwards compatibility.
+    d : float, optional
+        Film thickness (m).
+    capacitance : float, optional
+        Total capacitance (F). Used as a sanity check against uC*.
+    c_star : float, optional
+        Volumetric capacitance (F/cm^3) from EIS.
+    params : dict, optional
+        Additional device parameters passed to each OECT.
+    options : dict, optional
+        Additional processing options passed to each OECT.
+
+    Returns
+    -------
+    pixels : dict
+        OECT objects keyed by pixel subfolder name.
+    uC_dv : dict
+        Aggregated results: WdL, W, Vg_Vt, Vt, uC, uC_0, gms, folder, mobility.
     '''
     if not path:
         path = file_open(caption='Select uC subfolder')
@@ -237,30 +216,27 @@ def uC_scale(path='',
 
 def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=True):
     """
-    Wrapper function for processing OECT data
-    USAGE:
-        device1 = loadOECT(folder_name)
-        
-    :param path:
-    :type path: str
-    
-    :param params: params = {W: , L: , d: } for W, L, d of device
-    :type params: dict
-    
-    :param gm_plot:
-    :type gm_plot: bool
-    
-    :param plot:
-    :type plot: bool
-    
-    :param options:
-    :type options: dict
-    
-    :param verbose:
-    :type verbose: bool
-    
-    :returns:
-    :rtype:
+    Loads and processes a single OECT pixel folder.
+
+    Parameters
+    ----------
+    path : str
+        Path to the pixel data folder.
+    params : dict, optional
+        Device parameters, e.g. {'W': 100, 'L': 20, 'd': 40e-9}.
+    gm_plot : bool or list of bool, optional
+        Passed to plot_transfers_gm as the gm_plot argument.
+    plot : bool, optional
+        If True, generates and saves transfer and output figures.
+    options : dict, optional
+        Processing options passed to OECT.
+    verbose : bool, optional
+        If True, prints peak gm values to display.
+
+    Returns
+    -------
+    OECT
+        Processed pixel object with gms and threshold computed.
     """
 
     if not path:
@@ -293,12 +269,17 @@ def loadOECT(path, params=None, gm_plot=True, plot=True, options={}, verbose=Tru
 
 def file_open(caption='Select folder'):
     '''
-    File dialog if path not given in load commands
-    :param caption:
-    :type caption: str
-    
-    :return:
-    :rtype: str
+    Opens a PyQt5 folder dialog and returns the selected path.
+
+    Parameters
+    ----------
+    caption : str, optional
+        Dialog window title.
+
+    Returns
+    -------
+    str
+        Selected folder path.
     '''
 
     from PyQt5 import QtWidgets
@@ -313,22 +294,27 @@ def file_open(caption='Select folder'):
 
 def average(path='', thickness=40e-9, plot=True):
     '''
-    averages data in this particular path (for folders 'avg')
-    
-    :param path: string path to folder '.../avg'. Note Windows path are of form r'Path_name'
-    :type path: str
-        
-    :param thickness: approximate film thickness. Standard polymers (for Raj) are ~40 nm    
-    :type thickness: float
-        
-    :param plot: Whether to plot or not. Not plotting is very fast!
-    :type plot: bool
-        
-    :returns: tuple (pixels, Id_Vg, Id_Vd, temp_dv.WdL)
-        WHERE
-        dict pixels: dict of OECT contains the various OECT class devices
-        DataFrame Id_Vg contains the averaged Id vs Vg (drain current vs gate voltage, transfer)
-        DataFrame Id_Vd contains the averaged Id vs Vg (drain current vs drain voltages, output)
+    Averages transfer and output curves across pixels in an 'avg' folder.
+
+    Parameters
+    ----------
+    path : str
+        Path to the folder containing numbered pixel subfolders.
+    thickness : float, optional
+        Film thickness (m). Default is 40 nm.
+    plot : bool, optional
+        If True, generates and saves averaged transfer and output figures.
+
+    Returns
+    -------
+    pixels : dict
+        OECT objects for each pixel subfolder.
+    Id_Vg : DataFrame
+        Averaged Id-Vg transfer curve, includes gm_fwd and gm_bwd columns.
+    Id_Vd : DataFrame
+        Averaged Id-Vd output curve at the most negative Vd.
+    WdL : float
+        W*d/L prefactor from the first pixel.
     '''
 
     if not path:

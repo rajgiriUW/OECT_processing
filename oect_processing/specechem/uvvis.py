@@ -31,38 +31,36 @@ class UVVis(object):
 
     def __init__(self, steps=None, specs=None, potentials=None):
         '''
-		:param steps: List of step(current) files
-        :type steps: list
-        
-		:param specs: List of spectra files
-        :type specs: list
-            
-        :param potentials:  List of voltages applied
-        :type potentials: list
-           
-            
-        Class contains:
-        --------------
-        spectra : pandas Dataframe
-            The spectra at each voltage in a large dataframe
-        spectra_sm : pandas DataFrame
-            The smoothed spectra at each voltage in a large dataFrame
+        Parameters
+        ----------
+        steps : list of str
+            Paths to step (working electrode current) files.
+        specs : list of str
+            Paths to spectra files.
+        potentials : list of float
+            Applied voltages corresponding to each step/spectra file.
+
+        Attributes
+        ----------
+        spectra : DataFrame
+            Time-zero spectra at each voltage.
+        spectra_sm : DataFrame
+            Smoothed time-zero spectra at each voltage.
         spectra_vs_time : dict
-            Dict of spectra vs time correspondign to each voltage.
-            i.e. uv_viss.spectra_vs_time[1] is all the time-dependent spectra at 1 V
-        current : pandas DataFrame
-            The time-resolved current at each voltage step in a single dataFrame
-        time_spectra : pandas Series
-            Time spectra at a given wavelength and potential over time
-        time_spectra_norm : pandas Series
-            Normalized Time spectra at a given wavelength and potential over time
-            
-        vt : pandas Series
-            The voltage spectra at a particular wavelength (for threshold measurement)
-        tx : ndArray
-            The time-axis used for plotting and fitting time
-        fits : ndArray
-            The fits generated from banded_fits (exponential fits to time-slices)
+            Time-dependent spectra at each voltage; e.g. spectra_vs_time[0.9]
+            is a DataFrame with wavelength as index and time as columns.
+        current : DataFrame
+            Time-resolved current at each voltage step.
+        time_spectra : Series
+            Absorbance vs time at a chosen wavelength and potential.
+        time_spectra_norm : Series
+            Normalised version of time_spectra.
+        vt : Series
+            Absorbance vs voltage at a particular wavelength (threshold visualisation).
+        tx : ndarray
+            Time axis used for plotting and fitting.
+        fits : ndarray
+            Exponential fit results from banded_fits.
         '''
         self.steps = steps
         self.specs = specs
@@ -72,30 +70,21 @@ class UVVis(object):
 
     def time_dep_spectra(self, specfiles, smooth=None, round_wl=2, droptimes=None):
         '''
-        Generates all the time-dependent spectra. This yields a dictionary where
-        each voltage key contains the time-dependent spectra dataframe 
-        
-        e.g. at spectra_vs_time[0.9] you have the spectra for potential of 0.9 V
-        in a dataFrame where wavelength is the index and each column is time-slice
-        
-        This dict is the major component of this Class
-        
-		:param specfiles: Contains paths to the spectra files on the disk somewhere
-        :type specfiles: list of str
-            
-        :param smooth: For smoothing the spectra via a boxcar filter. None = no smoothing
-            Typical value is 3 (i.e. 3 point smoothing)
-        :type smooth: int, optional
-            
-        :param round_wl: Digits to round the wavelength values to in the dataFrames
-            None = no rounding
-        :type round_wl: int, optional
-            
-        :param droptimes: Specific time indices to drop. This functionality is for initial or final
-            errors in spectroelectrochemistry data
-        :type droptimes: list or array, optional
-            
-        
+        Builds spectra_vs_time: a dict of time-dependent spectra DataFrames per voltage.
+
+        e.g. spectra_vs_time[0.9] has wavelength as index and time slices as columns.
+        This dict is the primary data structure of the class.
+
+        Parameters
+        ----------
+        specfiles : list of str
+            Paths to spectra files on disk.
+        smooth : int, optional
+            Boxcar filter width for smoothing. None = no smoothing. Typical value: 3.
+        round_wl : int, optional
+            Number of decimal places to round wavelength values. None = no rounding.
+        droptimes : list or array, optional
+            Time indices to drop (e.g. to remove artefacts at start or end of a run).
         '''
 
         self.spectra_vs_time = {}
@@ -116,20 +105,21 @@ class UVVis(object):
 
     def _single_time_spectra(self, spectra_path, smooth=3, digits=None):
         '''
-        Generates the time-dependent spectra for a single dataframe.
-        This is used internally to generate the dataFrame then passed to time_dep_spectra()
-        
-		:param spectra_path: Path to a specific spectra file
-        :type spectra_path: str
-            
-        :param smooth: For smoothing the data via a boxcar filter. None = no smoothing. 
-        :type smooth: int, optional
-		
-		:param digits: rounds the wavelengths to this number of decimal points
-        :type digits: int
-        
-		:returns: dataFrame of index = wavelength, columns = times, data = absorbance
-        :rtype: dataframe
+        Builds a single time-dependent spectra DataFrame from one file.
+
+        Parameters
+        ----------
+        spectra_path : str
+            Path to a spectra file.
+        smooth : int, optional
+            Boxcar filter width. None = no smoothing.
+        digits : int, optional
+            Rounds wavelength index to this many decimal places.
+
+        Returns
+        -------
+        DataFrame
+            Index = wavelength (nm), columns = time (s), values = absorbance.
         '''
 
         pp = pd.read_csv(spectra_path, sep='\t')
@@ -167,27 +157,20 @@ class UVVis(object):
 
     def spec_echem_voltage(self, time=0, smooth=3, digits=None):
         '''
-        Takes the list of spectra files specfiles, then extracts the time-slice of 
-        spectra from each file and returns as a single dataframe
-        
-        Also extracts the absorbance vs voltage at a particular wavelength
-        
-		:param time: What time slice to return
-        :type time: int, optional
-            
-		:param smooth: simple boxcar smooth of data for plotting/analysis purposes, controls
-            size of filter 
-        :type smooth: int
-            
-        :param digits: rounds the wavelengths to this number of decimal points
-        :type digits: int
-            
-            
-        Saves:
-        ------
-        spectra : time=0 spectra at each voltage
-        spectra_sm : time=0 spectra (smoothed) at each voltage
-            
+        Extracts a single time slice from each voltage's spectra and builds spectra/spectra_sm.
+
+        Parameters
+        ----------
+        time : int, optional
+            Time slice (s) to extract from each voltage's spectra.
+        smooth : int, optional
+            Boxcar filter width for spectra_sm.
+        digits : int, optional
+            Rounds wavelength index to this many decimal places.
+
+        Notes
+        -----
+        Saves results to self.spectra (unsmoothed) and self.spectra_sm (smoothed).
         '''
 
         wl = self.spectra_vs_time[self.potentials[0]].index.values
@@ -210,12 +193,12 @@ class UVVis(object):
 
     def time_index(self, stepfiles=None):
         '''
-        Sets up the time index by reading from the first working electrode current file
-        
-        Alternatively, can read from the time-dependent spectra dataframe
-		
-		:param stepfiles:
-		:type stepfiles: str
+        Sets self.tx (the time axis) from a step file or from spectra_vs_time.
+
+        Parameters
+        ----------
+        stepfiles : str, optional
+            Path to a step file. If None, reads time axis from spectra_vs_time.
         '''
         if stepfiles:
             pp = pd.read_csv(stepfiles, sep='\t')
@@ -232,13 +215,12 @@ class UVVis(object):
 
     def current_vs_time(self, stepfiles):
         '''
-        Processes "step" files to generate the current vs time at each voltage
+        Loads step files to build self.current (current vs time) and self.charge (integrated).
 
-        Saves the integrated charge as well
-        
-		:param stepfiles: List of steps files (containing working electrode current) on disk
-        :type stepfiles: str, list
-            
+        Parameters
+        ----------
+        stepfiles : list of str
+            Paths to working electrode current files, one per voltage step.
         '''
 
         tx = []
@@ -267,18 +249,16 @@ class UVVis(object):
 
     def single_wl_time(self, potential=0.9, wavelength=800, smooth=3):
         '''
-        Extracts the time-dependent data from a single wavelength
-        :param potential:  Find run corresponding to potential. Note in UV-Vis substrate is biased, not gate electrode
-        :type potential: float
-           
-        :param wavelength: Wavelength to extract. This will search for nearest wavelength row
-        :type wavelength: int, float
-        
-		:param smooth: simple boxcar smooth of data for plotting/analysis purposes, controls
-            size of filter 
-        :type smooth: int
-		
-            
+        Extracts normalised absorbance vs time at a single wavelength and potential.
+
+        Parameters
+        ----------
+        potential : float, optional
+            Voltage key in spectra_vs_time. Note: substrate is biased in UV-Vis, not gate.
+        wavelength : int or float, optional
+            Wavelength (nm) to extract; nearest available row is used.
+        smooth : int, optional
+            Boxcar filter width for smoothed output.
         '''
         df = self.spectra_vs_time[potential].copy(deep=True)
 
@@ -305,14 +285,15 @@ class UVVis(object):
 
     def abs_vs_voltage(self, wavelength=800, time=0):
         '''
-        Extracts the absorbance vs voltage at a particular wavelength (threshold visualizing)
-        
-		:param wavelength:
-		:type wavelength: int, float
-		
-		:param time:
-		:type time: float
-		'''
+        Extracts absorbance vs voltage at a fixed wavelength and time slice.
+
+        Parameters
+        ----------
+        wavelength : int or float, optional
+            Wavelength (nm) to extract; nearest available row is used.
+        time : float, optional
+            Time slice (s) to use. -1 uses the final time point.
+        '''
         tx = self.tx.searchsorted(time)
         if time == -1:
             tx = self.tx[-1]
@@ -331,13 +312,17 @@ class UVVis(object):
 
     def volt(self, bias):
         '''
-        returns voltage from potential list
-		
-		:param bias: voltage bias to search
-		:type bias: float
-		
-		:returns:
-        :rtype:
+        Returns the index of a voltage in self.potentials.
+
+        Parameters
+        ----------
+        bias : float
+            Voltage to search for.
+
+        Returns
+        -------
+        int
+            Index of the nearest voltage in self.potentials.
         '''
         out = np.searchsorted(self.potentials, bias)
 
@@ -345,30 +330,24 @@ class UVVis(object):
 
     def banded_fits(self, wl_start=700, wl_stop=900, voltage=1, fittype='exp'):
         '''
-        Returns the fits from a range of spectra_vs_time data for a particular potential
-        
-		:param wl_start: The start wavelength for generating fits
-        :type wl_start: int
-        
-		:param wl_stop: The stop wavelength for generating fits
-		:type wl_stop: int
-            
-        :param voltage: The potential data to analyze in the spectra_vs_time dataFrame
-        :int voltage: float
-            
-        :param fittype:
-        :type fittype: str
-            of 'exp' 'biexp' and 'stretched', the form of the fitting function
-            exp = single exponential (fastest)
-            biexp = two exponentials
-            stretched = stretched expontential
-            
-        Generates
-        -------
-        fits : ndarray list
-            Contains the fit values. Either a single entry list for exp or a list of
-                tuples for biexp and stretched
-        
+        Fits time-resolved absorbance at each wavelength in a band for a given potential.
+
+        Parameters
+        ----------
+        wl_start : int, optional
+            Start wavelength (nm) of the fitting band.
+        wl_stop : int, optional
+            Stop wavelength (nm) of the fitting band.
+        voltage : float, optional
+            Potential key in spectra_vs_time to analyse.
+        fittype : str, optional
+            Fitting function: 'exp' (single exponential, fastest),
+            'biexp' (two exponentials), or 'stretched' (stretched exponential).
+
+        Notes
+        -----
+        Saves results to self.fits as an ndarray. Single values for 'exp',
+        tuples for 'biexp' and 'stretched'.
         '''
 
         wl_x = self.spectra_vs_time[voltage][wl_start:wl_stop]
@@ -398,68 +377,71 @@ class UVVis(object):
 
 def fit_exp(t, y0, A, tau):
     '''
-    :param t:
-    :type t: array-like
+    Single exponential decay: y0 + A * exp(-t / tau).
 
-    :param y0:
-    :type y0:
+    Parameters
+    ----------
+    t : array-like
+        Time values.
+    y0 : float
+        Baseline offset.
+    A : float
+        Amplitude.
+    tau : float
+        Time constant.
 
-    :param A:
-    :type A:
-
-    :param tau:
-    :type tau:
-
-    :returns: exponential fit
-    :rtype: array-like
+    Returns
+    -------
+    ndarray
     '''
     return y0 + A * np.exp(-t / tau)
 
 
 def fit_biexp(t, y0, A1, tau1, A2, tau2):
     '''
-    :param t:
-    :type t: array-like
+    Bi-exponential decay: y0 + A1*exp(-t/tau1) + A2*exp(-t/tau2).
 
-    :param y0:
-    :type y0:
+    Parameters
+    ----------
+    t : array-like
+        Time values.
+    y0 : float
+        Baseline offset.
+    A1 : float
+        Amplitude of first component.
+    tau1 : float
+        Time constant of first component.
+    A2 : float
+        Amplitude of second component.
+    tau2 : float
+        Time constant of second component.
 
-    :param A1:
-    :type A1:
-
-    :param tau1:
-    :type tau:
-
-    :param A2:
-    :type A2:
-
-    :param tau2:
-    :type tau2:
-
-    :returns: exponential fit
-    :rtype: array-like
+    Returns
+    -------
+    ndarray
     '''
     return y0 + A1 * np.exp(-t / tau1) + A2 * np.exp(-t / tau2)
 
 
 def fit_strexp(t, y0, A, tau, beta):
     '''
-    :param t:
-    :type t: array-like
+    Stretched exponential decay: y0 + A * exp(-t/tau)^beta.
 
-    :param y0:
-    :type y0:
+    Parameters
+    ----------
+    t : array-like
+        Time values.
+    y0 : float
+        Baseline offset.
+    A : float
+        Amplitude.
+    tau : float
+        Time constant.
+    beta : float
+        Stretching exponent.
 
-    :param A:
-    :type A:
-
-    :param tau:
-    :type tau:
-
-    :param beta:
-    :type beta:
-
-    :returns: exponential fit
-    :rtype: array-like
+    Returns
+    -------
+    ndarray
     '''
     return y0 + A * (np.exp(-t / tau)) ** beta

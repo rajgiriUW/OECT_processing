@@ -32,150 +32,101 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 class OECT:
     '''
-    OECT class for processing transistor data from a folder of text files.
-    The transfer curves must include 'transfer' somewhere in the filename.
-    The output curves similarly should have 'output' somewhere
+    Processes OECT transistor data from a folder of text files.
 
-    This will extract the transfer curves, output curves, transconductance, and
-    threshold voltage from a folder of data. 
-    
-    It splits all traces into a forward and reverse trace and auto-calculates
-    threshold. By default it uses a smoothed derivative to get gm.
-    
-    The important returns are:
-        outputs : DataFrame of all output curves
-        transfers : DataFrame of all transfer curves
-        gms : DataFrame of all transconductances
-        Vts : Array of all calculated threshold voltages
-        
-        
-    :param folder: path to data folder on the computer. Default prompts a file dialog
-    :type folder: string, optional
-    
-    :param dimDict: dictionary in format of {parentfolder1: {subfolder1: w1, l1}, {subfolder2: w2, l2}, parentfolder2...}
-    :type dimDict: dict
-    
-    :param params:
-        Optionally, can explicitly pass device parameters, typically Width (W), length (L), thickness (d)
-        Otherwise thes are read from the .cfg file
-        Can also pass c_star (volumetric capacitance) here
+    Transfer curve files must contain 'transfer' in the filename; output curve
+    files must contain 'output'. Splits all traces into forward and reverse sweeps
+    and auto-calculates threshold voltage. Uses a Savitzky-Golay smoothed derivative
+    for gm by default.
 
-        W : float (in microns)
-        L : float (in microns)
-        d : float (in nanometers, converted to meters)
-            Width, length, thickness
-        capacitance: float, optional
-            In Farads
-            If provided, will calculate the mobility. This should be a sanity check
-            against the calculated uC*, since this is somewhat circular logic
-        c_star : float, optional
-            in Farad / cm^3 NOTE THE CENTIMETERS^3 units
-            This value is calculated from EIS or so
-    :type params: dict, optional
-    
-    :param options:
-        processing optional parameters (for transfer curves only)
-
+    Parameters
+    ----------
+    folder : str, optional
+        Path to the data folder. Prompts a file dialog if not provided.
+    dimDict : dict, optional
+        Explicit dimensions in the form
+        {parentfolder: {subfolder: (W, L), ...}, ...}.
+    params : dict, optional
+        Device parameters (override the .cfg file):
+        W : float, microns
+        L : float, microns
+        d : float, nanometres (converted to metres internally)
+        capacitance : float, Farads
+        c_star : float, F/cm^3 (volumetric capacitance from EIS)
+    options : dict, optional
         Reverse : bool
-            Whether to use the reverse trace or just the forward trace
+            Use the reverse sweep (default True).
         Average : bool
-            Whether instead to average forward and reverse trace
-            Reverse XOR Average must be true
+            Average forward and reverse sweeps (mutually exclusive with Reverse).
         gm_method : str
-            For calculating gm from the transfer curve Id-Vg
-            'sg' = Savitsky_golay smoothed derivative
-            'raw' = raw derivative
-            'poly' = 8th order polynomial fit
+            'sg' (Savitzky-Golay), 'raw' (np.gradient), or 'poly' (polynomial).
         overwrite : bool
-            Overwrites the associated config file. For debugging
+            Overwrite the config file.
         V_low : bool
-            Detects if there is a non-monotonic transfer curve (sometimes occurs at very negative voltages)
-    :type options: dict, optional
-        
+            Detect non-monotonic transfer curves at very negative voltages.
+
     Usage
-    --------
+    -----
     >>> import oect_processing as oect
-    >>>
-    >>> path = '../device_data/pixel_01'
-    >>>
-    >>> device = oect.OECT(path)
+    >>> device = oect.OECT('../device_data/pixel_01')
     >>> device.calc_gms()
     >>> device.thresh()
-    >>> 
     >>> from oect_processing.oect_utils import oect_plot
     >>> oect_plot.plot_transfers_gm(device)
     >>> oect_plot.plot_outputs(device)
 
     Attributes
     ----------
-    Important attributes:
-        
-        outputs : DataFrame
-            Single DataFrame of all outputs in one file.
-            Assumes all data taken on same Vd range (as during an experiment)
-        transfers : DataFrame
-            single dataFrame with all transfer curves
-        gms : DataFrame
-            Transconductance for all sweeps (in Siemens) as one DataFrame
-        Vts : ndarray
-            Threshold voltage for forward and reverse trace
-            Element 0: forward, 1: reverse
-        VgVts : ndarray
-            The Vg for peak gm minus the Threshold, used in uC* calculation
-        WdL : float
-            The value of W*d/L, d=thickness, W=width, L=length of the device
-        c_star : float
-            Volumetric capacitance in F/cm^3. Manually provided by the user
-        capacitance : float
-            In Farads. Manually provided, then scaled internally to F/cm^3
-        VgVts_spl : ndarray
-            Same as VgVts above, but uses values acquired via spline fitting
-            
-    Other attributes:
-        
-        output : dict
-            dict of DataFrames
-            Each DataFrame is Id-Vd, with index of DataFrame set to Vd.
-            All other columns removed (Id-error, Ig, Ig-error)
-        output_raw : dict
-            dict of DataFrames
-            same as output except columns maintained
-    
-        transfer : dict
-            dict of DataFrames
-            DataFrame of Id-Vg, with index of DataFrame set to Vg
-            All other columns removed (Ig-error)
-        transfer_raw : dict
-            dict of DataFrames
-            DataFrame of Id-Vg, with index of DataFrame set to Vg
-            same as transfer except all columns maintained
-    
-        Vg_array : list of str
-            list of gate voltages (Vg) used during Id-Vd sweeps
-        Vg_labels: list of floats
-            list of gate voltages (Vg) used during Id-Vd sweeps for plot labels
-        transfer_avgs : int
-            averages taken per point in transfer curve
-    
-        gm_fwd : dict
-            dict of Dataframes of all forward sweep gms
-        gm_bwd : dict
-            dict of Dataframes of all backward sweep gms
-        gm_peaks : ndarray
-            Peak gms calculated by taking simple peak
-        peak_gm : ndarray
-            Peak gm values
-        gm_peaks_spl : ndarray
-            Peak gms calculated by using spline
-        peak_gm_spl : ndarray
-            Peak gm values from spline averages
-        Vt : float
-            Threshold voltage calculated from sqrt(Id) fit
-    
-        reverse : bool
-            If a reverse trace exists
-        rev_point : float
-            Voltage where the Id trace starts reverse sweep
+    outputs : DataFrame
+        All output curves (Id-Vd), assumes the same Vd range across files.
+    transfers : DataFrame
+        All transfer curves (Id-Vg).
+    gms : DataFrame
+        Transconductance for all sweeps (Siemens).
+    Vts : ndarray
+        Threshold voltages; element 0 = forward, 1 = reverse.
+    VgVts : ndarray
+        Vg at peak gm minus Vt; used in uC* calculation.
+    WdL : float
+        W * d / L prefactor (metres).
+    c_star : float
+        Volumetric capacitance (F/cm^3), user-supplied.
+    capacitance : float
+        Total capacitance (F), user-supplied, scaled internally to c_star.
+    VgVts_spl : ndarray
+        VgVts computed via spline fitting.
+    output : dict
+        Per-gate-voltage Id-Vd DataFrames (Id column only).
+    output_raw : dict
+        Per-gate-voltage Id-Vd DataFrames (all columns).
+    transfer : dict
+        Per-Vd Id-Vg DataFrames (Id column only).
+    transfer_raw : dict
+        Per-Vd Id-Vg DataFrames (all columns).
+    Vg_array : list
+        Gate voltages used during Id-Vd sweeps.
+    Vg_labels : list
+        Gate voltage labels for plotting.
+    transfer_avgs : int
+        Averages taken per point in the transfer curve.
+    gm_fwd : dict
+        Forward-sweep transconductance DataFrames.
+    gm_bwd : dict
+        Backward-sweep transconductance DataFrames.
+    gm_peaks : DataFrame
+        Peak gm values and voltages (smoothed derivative).
+    peak_gm : ndarray
+        Peak gm values.
+    gm_peaks_spl : DataFrame
+        Peak gm values and voltages (spline).
+    peak_gm_spl : ndarray
+        Peak gm values from spline.
+    Vt : float
+        Mean threshold voltage from sqrt(Id) fit.
+    reverse : bool
+        Whether a reverse sweep was detected.
+    rev_point : float
+        Voltage index where the sweep reverses.
     '''
 
     def __init__(self,
@@ -269,19 +220,18 @@ class OECT:
 
     def set_params(self, par, opt, params, options):
         '''
-        Sets the default parameters and reads in passed parameters/options
-        
-        :param par: from config file
-        :type par:
-        
-        :param opt: from config file
-        :type opt:
-        
-        :param params: from function call
-        :type params:
-        
-        :param options: from function call
-        :type options: 
+        Merges config-file parameters with caller-supplied overrides.
+
+        Parameters
+        ----------
+        par : dict
+            Parameters from the config file.
+        opt : dict
+            Options from the config file.
+        params : dict
+            Parameters passed at construction (override par).
+        options : dict
+            Options passed at construction (override opt).
         '''
         # processing and device parameters
         self.params = {}
@@ -315,15 +265,22 @@ class OECT:
         return
 
     def _reverse(self, v, transfer=False):
-        """if reverse trace exists, return inflection-point index and flag
-        :param v:
-        :type v:
-        
-        :param transfer: We only want to save rev_point and rev_v for the transfer curve
-        :type transfer: bool, optional
-            
-        :returns: index where the voltage reverses
-        :rtype: int
+        """
+        Detects whether a reverse sweep exists and returns the inflection index.
+
+        Parameters
+        ----------
+        v : array-like
+            Voltage array to inspect.
+        transfer : bool, optional
+            If True, saves rev_point and rev_v as instance attributes.
+
+        Returns
+        -------
+        mx : int
+            Index of the voltage inflection point.
+        reverse : bool
+            True if a reverse sweep was detected.
         """
 
         # find inflection point where trace reverses
@@ -433,18 +390,30 @@ class OECT:
 
     def _calc_gm(self, df):
         """
-        Calculates single gm curve in Siemens
-        Splits data into "forward" and "backward"
-        Assumes curves taken neg to positive Vg
+        Calculates the transconductance for one transfer curve in Siemens.
 
-        :param df:
-        :type df: dataframe
-        :returns: tuple (gm_fwd, gm_bwd, gm_peaks, gm_peaks_spl)
-            WHERE
-            [pandas DataFrame] gm_fwd is the transconductance in forward sweep
-            [pandas DataFrame] gm_bwd is the transconductance in reverse sweep
-            [pandas DataFrame] gm_peaks is a list of voltages and peak transconductances
-            [pandas DataFrame] gm_peaks_spl is the same using a smoothed spline to interpolate
+        Splits into forward and backward sweeps. Assumes curves go from
+        negative to positive Vg.
+
+        Parameters
+        ----------
+        df : DataFrame
+            Single transfer curve (Id-Vg) with voltage as index.
+
+        Returns
+        -------
+        gm_fwd : DataFrame
+            Forward-sweep transconductance.
+        gm_bwd : DataFrame
+            Backward-sweep transconductance (empty if no reverse sweep).
+        gm_peaks : DataFrame
+            Peak gm values and voltages (smoothed derivative).
+        gm_fwd_spl : DataFrame
+            Forward-sweep gm from spline.
+        gm_bwd_spl : DataFrame
+            Backward-sweep gm from spline.
+        gm_peaks_spl : DataFrame
+            Peak gm values and voltages (spline).
         """
 
         v = np.array(df.index)
@@ -536,30 +505,24 @@ class OECT:
 
     def thresh(self, plot=False, c_star=None, cap=None):
         """
-        Finds the threshold voltage by fitting sqrt(Id) vs (Vg-Vt) and finding
-            x-offset
-            
-        Id_sat = uC*/2 * Wd/L * (Vgs-Vt)^2 for high Vd > Vg - Vt
-        Id_sat^0.5 = sqrt(uC*/2 * Wd/L) * (Vg-Vt)
-        Meaning from the fit to find Vt, which fits Id_sat^0.5  = mx + b
-        u = (fit[1] / (-Vt * sqrt(C*/2 * Wd/L) ))**2
+        Finds the threshold voltage by fitting sqrt(Id) vs Vg.
 
-        :param plot: To show the threshold fit and line
-        :type: bool, Optional
-        
-        :param c_star:
-            Farad / cm^3 volumetric Capacitance
-            This looks for C_star first before using capacitance
-        :type c_star: float, optional
-        
-        :param cap: Capacitance in Farads, manually scaled by W*d*L in this Class to get C*
-        :type cap: float, optional
-        
-        :returns: if plot = True: tuple (fig, ax)
-            WHERE
-            [type] fig is...
-            [type] ax is...
-        
+        Uses Id_sat^0.5 = sqrt(uC*/2 * Wd/L) * (Vg - Vt), fitting a line to
+        find the x-intercept Vt.
+
+        Parameters
+        ----------
+        plot : bool, optional
+            If True, plots the sqrt(Id) trace and fit line.
+        c_star : float, optional
+            Volumetric capacitance (F/cm^3). Takes priority over cap.
+        cap : float, optional
+            Total capacitance (F), scaled internally to F/cm^3 via W*d*L.
+
+        Returns
+        -------
+        fig, ax : matplotlib Figure and Axes
+            Only returned when plot=True.
         """
 
         if not hasattr(self, 'gm_peaks'):
@@ -650,17 +613,21 @@ class OECT:
     # find minimum residual through fitting a line to several found peaks
     def _min_fit(self, Id, V):
         """
-        Calculates the best linear fit through the Id_saturation regime by
-        iterating through several potential peaks in the second derivative
-        
-        :param Id:
-        :type Id:
-        
-        :param V:
-        :type V:
-        
-        :returns:
-        :rtype:
+        Finds the best linear fit to the saturation regime by minimising residuals.
+
+        Iterates over candidate inflection points from the second derivative.
+
+        Parameters
+        ----------
+        Id : ndarray
+            sqrt(|Id|) values.
+        V : ndarray
+            Corresponding gate voltages.
+
+        Returns
+        -------
+        ndarray
+            Best-fit coefficients [slope, intercept].
         """
         _residuals = np.array([])
         _fits = np.array([0, 0])
@@ -712,21 +679,21 @@ class OECT:
     @staticmethod
     def _find_peak(I, V, width=15):
         """
-        Uses spline to find the transition point then return it for fitting Vt
-          to sqrt(Id) vs Vg (find second derivative peak)
+        Finds the saturation-regime transition point via the second derivative of a spline.
 
+        Parameters
+        ----------
+        I : ndarray
+            Drain current values (sqrt-scaled).
+        V : ndarray
+            Gate voltage values.
+        width : int, optional
+            Minimum peak width passed to find_peaks.
 
-        :param I: Id vs Vg, currents
-        :type I: array
-        
-        :param V: Id vs Vg, voltages
-        :type V: array
-        
-        :param width: Width to use in CWT peak-finder. 
-        :type width: int
-
-        :returns: index of the maximum transition point for threshold voltage calculation
-        :rtype: list
+        Returns
+        -------
+        list of int
+            Indices in the original V array of candidate transition points.
         """
 
         # uses second derivative for transition point
@@ -817,10 +784,12 @@ class OECT:
 
     def get_metadata(self, fl):
         """
-        Called in load_data to extract file-specific parameters
-        
-        :param fl:
-        :type fl:
+        Extracts Vds, Vg, and optional device dimensions from a data file header.
+
+        Parameters
+        ----------
+        fl : Path
+            Path to the data file.
         """
 
         # search params in first file in this folder for missing params
@@ -843,10 +812,12 @@ class OECT:
 
     def output_curve(self, path):
         """
-        Loads Id-Vd output curves from a folder as Series in a list
-        
-        :param path: folder from which to load curves
-        :type path: str
+        Loads a single Id-Vd output curve file into self.output.
+
+        Parameters
+        ----------
+        path : Path
+            Path to the output curve text file.
         """
 
         V = self.Vg
@@ -898,12 +869,13 @@ class OECT:
         return
 
     def transfer_curve(self, path):
-
         """
-        Loads Id-Vg transfer curve from a path
-        
-        :param path: folder from which to load transfer curve
-        :type path: str
+        Loads a single Id-Vg transfer curve file into self.transfer.
+
+        Parameters
+        ----------
+        path : Path
+            Path to the transfer curve text file.
         """
         transfer_raw = pd.read_csv(path, delimiter='\t', engine='python')
 

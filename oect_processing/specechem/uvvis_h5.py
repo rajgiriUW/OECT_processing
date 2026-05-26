@@ -9,13 +9,14 @@ from .uvvis import UVVis
 
 def save_h5(data, filename):
     '''
-    Saves the to two HDF5 files (.h5)
-    
-    :param data: data to save to h5
-    :type data: dataframe
-    
-    :param filename: file path to save to
-    :type filename: str
+    Saves UVVis data to an HDF5 file (.h5).
+
+    Parameters
+    ----------
+    data : UVVis
+        UVVis object containing spectra_vs_time, current, charge, and potentials.
+    filename : str or Path
+        File path to save to.
     '''
 
     if isinstance(filename, str):
@@ -49,17 +50,17 @@ def save_h5(data, filename):
 
 def convert_h5(h5file):
     '''
-    Converts a saved hdf5 to uvvis Class format
-    
-    axis0 = time
-    axis1 = wavelength
-    block0_items
-    
-    :param h5file:
-    :type h5file: str
-    
-    :returns: h5file in uvvis class format
-    :rtype: uvvis class object
+    Loads a saved HDF5 file and returns a UVVis object.
+
+    Parameters
+    ----------
+    h5file : str or Path
+        Path to the HDF5 file to load.
+
+    Returns
+    -------
+    UVVis
+        UVVis object populated with spectra_vs_time, current, charge, and potentials.
     '''
     data = UVVis(None, None, None)
 
