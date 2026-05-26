@@ -22,22 +22,27 @@ def save_h5(data, filename):
         filename = Path(filename)
 
     with h5py.File(filename, 'w') as f:
-        dset = f.create_dataset('potentials', (len(data.potentials),))
-        dset[:] = data.potentials[:]
+        f.create_dataset('potentials', data=data.potentials)
+
         try:
-            dset = f.create_dataset('charge', (len(data.charge.values[0]),))
-            dset[:] = data.charge.values[0][:]
+            f.create_dataset('charge', data=data.charge.values[0])
         except:
             pass
-    f.close()
 
-    for p in data.spectra_vs_time:
-        data.spectra_vs_time[p].to_hdf(filename, key=str(p), mode='a')
+        for p in data.spectra_vs_time:
+            df = data.spectra_vs_time[p]
+            grp = f.create_group(str(p))
+            grp.create_dataset('data', data=df.values)
+            grp.create_dataset('index', data=df.index.values)
+            grp.create_dataset('columns', data=df.columns.values.astype(float))
 
-    try:
-        data.current.to_hdf(filename, key='current', mode='a')
-    except:
-        pass
+        try:
+            grp = f.create_group('current')
+            grp.create_dataset('data', data=data.current.values)
+            grp.create_dataset('index', data=data.current.index.values)
+            grp.create_dataset('columns', data=data.current.columns.values.astype(float))
+        except:
+            pass
 
     return
 
@@ -57,52 +62,39 @@ def convert_h5(h5file):
     :rtype: uvvis class object
     '''
     data = UVVis(None, None, None)
-    file = h5py.File(h5file, 'r')
-    data.potentials = file['potentials'][()]
 
-    folders = []
-    for f in file:
-        folders.append(f)
-    non_potentials = ['current', 'charge', 'potentials']
-    _fold_temp = [c if c not in non_potentials else None for c in folders]
-    folders = [c for c in _fold_temp if (c)]
+    with h5py.File(h5file, 'r') as file:
+        data.potentials = file['potentials'][()]
 
-    try:
-        folders_num = [float(p) for p in folders[:]]
-    except:  # for old 'x-1.0V' style, crops 'x'
-        folders_num = [float(p[1:]) for p in folders[:]]
+        non_data = {'current', 'charge', 'potentials'}
+        folders = [k for k in file.keys() if k not in non_data]
 
-    # The spectra_vs_time data
-    df_dict = {}
-    for v, n in zip(folders, folders_num):
         try:
-            spec_file = file[v]
-        except:
-            p = 'x' + v
-            spec_file = file[p]
+            folders_num = [float(p) for p in folders]
+        except:  # for old 'x-1.0V' style, crops 'x'
+            folders_num = [float(p[1:]) for p in folders]
 
-        df = pd.DataFrame(data=spec_file['block0_values'][()],
-                          index=spec_file['axis1'][()],
-                          columns=spec_file['axis0'])
-        df.index.name = 'Wavelength (nm)'
-        df.columns.name = 'Time (s)'
-        df_dict[n] = df
-        data.tx = np.round(spec_file['axis0'], 2)
+        df_dict = {}
+        for v, n in zip(folders, folders_num):
+            grp = file[v]
+            df = pd.DataFrame(data=grp['data'][()],
+                               index=grp['index'][()],
+                               columns=grp['columns'][()])
+            df.index.name = 'Wavelength (nm)'
+            df.columns.name = 'Time (s)'
+            df_dict[n] = df
+            data.tx = np.round(grp['columns'][()], 2)
 
-    data.spectra_vs_time = df_dict
+        data.spectra_vs_time = df_dict
 
-    # Now get the current data
-    current = pd.DataFrame(data=file['current']['block0_values'][()],
-                           index=file['current']['axis1'][()],
-                           columns=file['current']['axis0'])
-    current.index.name = 'Time (s)'
-    current.columns.name = 'Potential (V)'
+        grp = file['current']
+        data.current = pd.DataFrame(data=grp['data'][()],
+                                    index=grp['index'][()],
+                                    columns=grp['columns'][()])
+        data.current.index.name = 'Time (s)'
+        data.current.columns.name = 'Potential (V)'
 
-    data.current = current
-
-    data.charge = pd.DataFrame(data=file['charge'][()],
-                               index=data.potentials.T)
-
-    file.close()
+        data.charge = pd.DataFrame(data=file['charge'][()],
+                                   index=data.potentials.T)
 
     return data

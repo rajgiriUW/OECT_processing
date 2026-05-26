@@ -145,11 +145,9 @@ class UVVis(object):
         per_run = int(len(pp) / runs[-1])
         wl = pp['Wavelength (nm)'][0:per_run]
 
-        # Set up dataframe
-        df = pd.DataFrame(index=wl)
-        if digits:
-            df = df.set_index(np.round(df.index.values, digits))  # rounds wavelengths
+        index = np.round(wl.values, digits) if digits else wl.values
 
+        cols = {}
         for k, t in zip(runs, times):
 
             try:
@@ -161,7 +159,9 @@ class UVVis(object):
             if smooth:
                 data = sg.fftconvolve(data, np.ones(smooth) / smooth, mode='same')
 
-            df[np.round(t, 2)] = pd.Series(data, index=df.index)
+            cols[np.round(t, 2)] = data
+
+        df = pd.DataFrame(cols, index=index)
 
         return df
 
@@ -192,23 +192,19 @@ class UVVis(object):
 
         wl = self.spectra_vs_time[self.potentials[0]].index.values
 
-        # Set up dataFrame
-        df = pd.DataFrame(index=wl)
-
-        # Set up a "smoothed" dataFrame
-        dfs = pd.DataFrame(index=wl)
+        cols = {}
+        cols_sm = {}
 
         for v in self.spectra_vs_time:
             col = np.searchsorted(self.spectra_vs_time[v].columns.values, time)
             col = self.spectra_vs_time[v].columns.values[col]
 
             data = self.spectra_vs_time[v][col]
-            df[v] = pd.Series(data, index=df.index, name=str(v))
-            data = sg.fftconvolve(data, np.ones(smooth) / smooth, mode='same')
-            dfs[v] = pd.Series(data, index=df.index, name=str(v))
+            cols[v] = data.values
+            cols_sm[v] = sg.fftconvolve(data, np.ones(smooth) / smooth, mode='same')
 
-        self.spectra = df
-        self.spectra_sm = dfs
+        self.spectra = pd.DataFrame(cols, index=wl)
+        self.spectra_sm = pd.DataFrame(cols_sm, index=wl)
 
         return
 
@@ -246,19 +242,18 @@ class UVVis(object):
         '''
 
         tx = []
+        cols = {}
 
         for fl, v in zip(stepfiles, self.potentials):
 
             pp = pd.read_csv(fl, sep='\t')
-            data = pp['WE(1).Current (A)']
 
             if not any(tx):
-                tx = pp['Corrected time (s)']
-                df = pd.DataFrame(index=np.round(tx, 2))
+                tx = np.round(pp['Corrected time (s)'].values, 2)
 
-            df[v] = pd.Series(data.values, index=df.index)
+            cols[v] = pp['WE(1).Current (A)'].values
 
-        self.current = df
+        self.current = pd.DataFrame(cols, index=tx)
 
         charge = pd.DataFrame(columns=self.current.columns, index=[0])
         charge.columns.name = 'Potential (V)'
