@@ -55,6 +55,8 @@ def read_files(path):
         full = os.path.join(path, name)
         if 'dedopingspectra(' in name:
             dedopespecfiles.append(full)
+        elif 'dedopingsteps(' in name:
+            dedopestepfiles.append(full)
         elif 'dedoping(' in name:
             dedopestepfiles.append(full)
         elif 'spectra(' in name:
@@ -74,15 +76,15 @@ def read_files(path):
     dedopespecfiles = natural_sort(dedopespecfiles)
 
     # detect potential column from first file only, then read one row per file
-    first = pd.read_csv(stepfiles[0], header=0, sep='\t', nrows=1)
+    first = pd.read_csv(specfiles[0], header=0, sep='\t', nrows=1)
     try:
         pot = [n for n in first.columns if 'Potential' in n][0]
     except:
         pot = [n for n in first.columns if 'Vf' in n][0]
 
-    potentials = np.zeros(len(stepfiles))
+    potentials = np.zeros(len(specfiles))
     potentials[0] = np.round(first[pot][0], 2)
-    for x, fl in enumerate(stepfiles[1:], start=1):
+    for x, fl in enumerate(specfiles[1:], start=1):
         pp = pd.read_csv(fl, header=0, sep='\t', nrows=1)
         potentials[x] = np.round(pp[pot][0], 2)
 
