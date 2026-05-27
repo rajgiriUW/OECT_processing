@@ -47,39 +47,43 @@ def read_files(path):
 
     filelist = os.listdir(path)
 
-    stepfiles = [os.path.join(path, name)
-                 for name in filelist if (name[-3:] == 'txt' and 'steps(' in name)]
-    specfiles = [os.path.join(path, name)
-                 for name in filelist if (name[-3:] == 'txt' and 'spectra(' in name
-                                          and 'dedoping' not in name)]
-    dedopestepfiles = [os.path.join(path, name)
-                       for name in filelist if (name[-3:] == 'txt' and 'dedoping(' in name)]
-    dedopespecfiles = [os.path.join(path, name)
-                       for name in filelist if (name[-3:] == 'txt' and 'dedopingspectra(' in name)]
-
-    ''' Need to "human sort" the filenames or sorts 1,10,11,2,3,4, etc'''
+    # single pass to categorise all txt files
+    stepfiles, specfiles, dedopestepfiles, dedopespecfiles = [], [], [], []
+    for name in filelist:
+        if not name.endswith('.txt'):
+            continue
+        full = os.path.join(path, name)
+        if 'dedopingspectra(' in name:
+            dedopespecfiles.append(full)
+        elif 'dedoping(' in name:
+            dedopestepfiles.append(full)
+        elif 'spectra(' in name:
+            specfiles.append(full)
+        elif 'steps(' in name:
+            stepfiles.append(full)
 
     # https://stackoverflow.com/questions/4836710/does-python-have-a-built-in-function-for-string-natural-sort
     def natural_sort(l):
-        convert = lambda text: int(text) if text.isdigit() else text.lower()
-        alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+        def alphanum_key(key):
+            return [int(c) if c.isdigit() else c.lower() for c in re.split('([0-9]+)', key)]
         return sorted(l, key=alphanum_key)
 
-    specfiles = natural_sort(specfiles)
     stepfiles = natural_sort(stepfiles)
-    dedopespecfiles = natural_sort(dedopespecfiles)
+    specfiles = natural_sort(specfiles)
     dedopestepfiles = natural_sort(dedopestepfiles)
+    dedopespecfiles = natural_sort(dedopespecfiles)
 
-    potentials = np.zeros([len(stepfiles)])
-
-    pp = pd.read_csv(stepfiles[0], header=0, sep='\t')
+    # detect potential column from first file only, then read one row per file
+    first = pd.read_csv(stepfiles[0], header=0, sep='\t', nrows=1)
     try:
-        pot = [n for n in pp.columns if 'Potential' in n][0]
+        pot = [n for n in first.columns if 'Potential' in n][0]
     except:
-        pot = [n for n in pp.columns if 'Vf' in n][0]
+        pot = [n for n in first.columns if 'Vf' in n][0]
 
-    for fl, x in zip(stepfiles, np.arange(len(potentials))):
-        pp = pd.read_csv(fl, header=0, sep='\t')
+    potentials = np.zeros(len(stepfiles))
+    potentials[0] = np.round(first[pot][0], 2)
+    for x, fl in enumerate(stepfiles[1:], start=1):
+        pp = pd.read_csv(fl, header=0, sep='\t', nrows=1)
         potentials[x] = np.round(pp[pot][0], 2)
 
     return stepfiles, specfiles, potentials, dedopestepfiles, dedopespecfiles
