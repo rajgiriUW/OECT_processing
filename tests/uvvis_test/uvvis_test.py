@@ -14,8 +14,6 @@ import h5py
 import pandas as pd
 import pickle as pkl
 import pickle
-import deepdiff
-from deepdiff import DeepDiff
 
 sys.path.insert(0, '../..')
 
@@ -86,11 +84,11 @@ class TestUVVis:
                                                 droptimes=uvvis_inputs.droptimes)
             spectra_vs_time = data_load[dataset].spectra_vs_time
             expected_spectra_vs_time = np.load(expected_values_folder, allow_pickle=True).item()
-            assert not DeepDiff(spectra_vs_time, expected_spectra_vs_time)
+            assert spectra_vs_time.keys() == expected_spectra_vs_time.keys()
+            assert all(spectra_vs_time[k].equals(expected_spectra_vs_time[k]) for k in spectra_vs_time)
         except:
             assert False
 
-    @pytest.mark.dependency(depends=["test_time_dep_spectra"])
     @pytest.fixture
     def time_dep_spectra(self, read_files, data_load):
         data_load["doping"].time_dep_spectra(read_files["specs"], smooth=uvvis_inputs.time_dep_smooth,

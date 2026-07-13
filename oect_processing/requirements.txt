@@ -6,4 +6,3 @@ matplotlib
 seaborn
 h5py
 configparser
-deepdiff
