@@ -46,7 +46,7 @@ class TestUVVis:
     @pytest.mark.parametrize("dataset, specs, expected_values_folder", \
                              [("doping", "specs",
                                os.path.join(expected_values_folder, "expected_data_single_time_spectra.pkl")), \
-                              ("dedoping", "specs",
+                              ("dedoping", "dedopespecs",
                                os.path.join(expected_values_folder, "expected_dedata_single_time_spectra.pkl"))])
 
     def test_single_time_spectra(self, read_files, data_load, dataset, specs, expected_values_folder):

@@ -76,15 +76,26 @@ def read_files(path):
     dedopespecfiles = natural_sort(dedopespecfiles)
 
     # detect potential column from first file only, then read one row per file
+    def potential_column(df):
+        for key in ('Potential', 'Vf'):
+            cols = [n for n in df.columns if key in n]
+            if cols:
+                return cols[0]
+        return None
+
+    # Newer files carry the potential in the spectra file; older files only
+    # have it in the steps file, so fall back to that format if needed.
     first = pd.read_csv(specfiles[0], header=0, sep='\t', nrows=1)
-    try:
-        pot = [n for n in first.columns if 'Potential' in n][0]
-    except:
-        pot = [n for n in first.columns if 'Vf' in n][0]
+    pot = potential_column(first)
+    potential_files = specfiles
+    if pot is None:
+        first = pd.read_csv(stepfiles[0], header=0, sep='\t', nrows=1)
+        pot = potential_column(first)
+        potential_files = stepfiles
 
     potentials = np.zeros(len(specfiles))
     potentials[0] = np.round(first[pot][0], 2)
-    for x, fl in enumerate(specfiles[1:], start=1):
+    for x, fl in enumerate(potential_files[1:], start=1):
         pp = pd.read_csv(fl, header=0, sep='\t', nrows=1)
         potentials[x] = np.round(pp[pot][0], 2)
 
