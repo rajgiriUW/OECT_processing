@@ -24,7 +24,6 @@ setup(
                       'scipy >=1.14',
                       'matplotlib >=3.6.0',
                       'seaborn',
-                      'h5py >= 3.2.0',
                       'configparser'
                       ],
 

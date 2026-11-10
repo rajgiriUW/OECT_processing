@@ -11,7 +11,7 @@ rgiri@uw.edu
 
 This package processes sets of OECT device measurements in Python via Pandas, with primary users being the Ginger Lab at University of Washington.
 It includes some simplified extraction and processing of recorded data.  
-There is also simplified scripts for extracting and processing spectroelectrochemistry data. 
+Spectroelectrochemistry (UV-Vis), CV, and EIS processing now live in a separate package, [specechem_processing](https://github.com/rajgiriUW/specechem_processing).
 Included is a simple **Streamlit app**, see below.
 
 All pixels are expected to have a .cfg file or will auto-generate one. These files contain:
