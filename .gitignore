@@ -54,3 +54,5 @@ build/lib/oect_processing/specechem/uvvis.py
 build/lib/oect_processing/transient.py
 
 dist/oect-0.0.1-py3.8.egg
+
+**/.ipynb_checkpoints/
